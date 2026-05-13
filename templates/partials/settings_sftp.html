@@ -1,0 +1,37 @@
+<div>
+    <h2 class="settings-section-title">Armazenamento SFTP</h2>
+    <p class="settings-section-desc">Configure o servidor SFTP para exportação automática de backups.</p>
+
+    <form action="/settings/sftp/save" method="POST">
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Host / IP</label>
+                <input type="text" name="host" class="form-input font-mono" value="{{ .Sftp.Host }}" placeholder="sftp.empresa.com" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Porta</label>
+                <input type="number" name="port" class="form-input" value="{{ .Sftp.Port }}" placeholder="22" />
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Usuário</label>
+                <input type="text" name="username" class="form-input" value="{{ .Sftp.Username }}" placeholder="sftp_user" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Senha</label>
+                <input type="password" name="password" class="form-input" placeholder="Deixe em branco para manter" />
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Caminho Remoto</label>
+            <input type="text" name="path" class="form-input font-mono" value="{{ .Sftp.Path }}" placeholder="/backups/network" />
+            <div class="form-hint">Diretórios ausentes serão criados automaticamente.</div>
+        </div>
+        <div class="form-actions" style="border-top: none; margin-top: 16px;">
+            <button type="submit" class="btn btn-primary">
+                <i class="bx bx-save"></i> Salvar Configurações
+            </button>
+        </div>
+    </form>
+</div>

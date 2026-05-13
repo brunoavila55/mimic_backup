@@ -1,0 +1,37 @@
+# Environment and Secrets
+.env
+.env.local
+*.env
+!.env.example
+
+# Go Binaries
+mimic
+netbackup
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Build directories
+build/
+bin/
+dist/
+
+# IDEs and Tools
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Go Modules and dependencies
+vendor/
+
+# PostgreSQL data (if mapped locally)
+.docker_data/
+postgres_data/
+
+# Logs
+*.log
+Process Group PGID: 82015

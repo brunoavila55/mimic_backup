@@ -1,0 +1,68 @@
+<div class="page-enter">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Configurações</h1>
+            <p class="page-desc">Gerencie usuários, credenciais, rotinas e integrações do sistema.</p>
+        </div>
+    </div>
+
+    <div class="settings-layout">
+        <nav class="settings-nav">
+            <div class="settings-nav-section">Gerenciamento</div>
+            <a href="/settings/users"
+               hx-get="/settings/users" hx-target="#settings-content" hx-push-url="true"
+               class="settings-tab {{ if eq .ActiveTab "users" }}active{{ end }}">
+                <i class="bx bx-group"></i> Usuários
+            </a>
+
+
+            <div class="settings-nav-section">Sistema</div>
+            <a href="/settings/sftp"
+               hx-get="/settings/sftp" hx-target="#settings-content" hx-push-url="true"
+               class="settings-tab {{ if eq .ActiveTab "sftp" }}active{{ end }}">
+                <i class="bx bx-cloud-upload"></i> SFTP
+            </a>
+            <a href="/settings/export"
+               hx-get="/settings/export" hx-target="#settings-content" hx-push-url="true"
+               class="settings-tab {{ if eq .ActiveTab "export" }}active{{ end }}">
+                <i class="bx bx-export"></i> Exportar
+            </a>
+            <a href="/settings/logs"
+               hx-get="/settings/logs" hx-target="#settings-content" hx-push-url="true"
+               class="settings-tab {{ if eq .ActiveTab "logs" }}active{{ end }}">
+                <i class="bx bx-list-ul"></i> Logs
+            </a>
+
+            <div class="settings-nav-section">Conta</div>
+            <a href="/settings/profile"
+               hx-get="/settings/profile" hx-target="#settings-content" hx-push-url="true"
+               class="settings-tab {{ if eq .ActiveTab "profile" }}active{{ end }}">
+                <i class="bx bx-user"></i> Meu Perfil
+            </a>
+        </nav>
+
+        <div id="settings-content" class="settings-content">
+            {{ if eq .ActiveTab "users" }}{{ template "partials/settings_users" . }}
+            {{ else if eq .ActiveTab "credentials" }}{{ template "partials/settings_credentials" . }}
+            {{ else if eq .ActiveTab "routines" }}{{ template "partials/settings_routines" . }}
+            {{ else if eq .ActiveTab "sftp" }}{{ template "partials/settings_sftp" . }}
+            {{ else if eq .ActiveTab "export" }}{{ template "partials/settings_export" . }}
+            {{ else if eq .ActiveTab "logs" }}{{ template "partials/settings_logs" . }}
+            {{ else if eq .ActiveTab "profile" }}{{ template "partials/settings_profile" . }}
+            {{ end }}
+        </div>
+    </div>
+</div>
+
+<script>
+    // Update active tab on HTMX swap
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        if (evt.detail.target.id === 'settings-content') {
+            const url = evt.detail.xhr.responseURL || '';
+            document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.settings-tab').forEach(t => {
+                if (url.includes(t.getAttribute('hx-get'))) t.classList.add('active');
+            });
+        }
+    });
+</script>

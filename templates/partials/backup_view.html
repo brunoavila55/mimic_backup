@@ -1,0 +1,14 @@
+<div>
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h3 style="font-size: 14px; font-weight: 600; color: var(--text);">{{ .Backup.Node.Name }} — v{{ .Backup.Version }}</h3>
+            <p class="text-secondary" style="font-size: 12px; margin-top: 2px;">{{ .Backup.CreatedAt.Format "02/01/2006 15:04:05" }}</p>
+        </div>
+        <span class="badge {{ if eq .Backup.Status "success" }}badge-success{{ else }}badge-danger{{ end }}">{{ .Backup.Status }}</span>
+    </div>
+    {{ if .Backup.Config }}
+    <div class="code-block">{{ .Backup.Config }}</div>
+    {{ else }}
+    <div class="text-center text-muted" style="padding: 24px;">Sem conteúdo disponível.</div>
+    {{ end }}
+</div>

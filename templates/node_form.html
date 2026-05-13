@@ -1,0 +1,126 @@
+<div class="page-enter" style="max-width: 700px; margin: 0 auto;">
+    <div class="page-header">
+        <div class="flex items-center gap-3">
+            <a href="/nodes" class="btn btn-ghost btn-icon"><i class="bx bx-arrow-back"></i></a>
+            <h1 class="page-title">{{ .Title }}</h1>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form action="{{ if .Node.ID }}/nodes/save/{{ .Node.ID }}{{ else }}/nodes/save{{ end }}" method="POST">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Nome</label>
+                        <input type="text" name="name" class="form-input" value="{{ .Node.Name }}" placeholder="Switch-Core-01" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fabricante</label>
+                        <select name="vendor" class="form-input">
+                            <option value="cisco" {{ if eq .Node.Vendor "cisco" }}selected{{ end }}>Cisco</option>
+                            <option value="mikrotik" {{ if eq .Node.Vendor "mikrotik" }}selected{{ end }}>MikroTik</option>
+                            <option value="huawei" {{ if eq .Node.Vendor "huawei" }}selected{{ end }}>Huawei</option>
+                            <option value="juniper" {{ if eq .Node.Vendor "juniper" }}selected{{ end }}>Juniper</option>
+                            <option value="fortigate" {{ if eq .Node.Vendor "fortigate" }}selected{{ end }}>FortiGate</option>
+                            <option value="linux" {{ if eq .Node.Vendor "linux" }}selected{{ end }}>Linux</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Endereço IP</label>
+                        <input type="text" name="ip" class="form-input font-mono" value="{{ .Node.IP }}" placeholder="192.168.1.1" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Porta SSH</label>
+                        <input type="number" name="port" class="form-input" value="{{ if .Node.Port }}{{ .Node.Port }}{{ else }}22{{ end }}" />
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Usuário SSH</label>
+                        <input type="text" name="username" class="form-input" value="{{ .Node.Username }}" placeholder="admin" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Senha SSH</label>
+                        <input type="password" name="password" class="form-input" placeholder="{{ if .Node.ID }}Deixe em branco para manter{{ else }}Senha de acesso{{ end }}" />
+                    </div>
+                </div>
+
+                {{ if .Credentials }}
+                <div class="form-group">
+                    <label class="form-label">Credencial (opcional)</label>
+                    <select name="credential_id" class="form-input">
+                        <option value="">— Nenhuma —</option>
+                        {{ range .Credentials }}
+                        <option value="{{ .ID }}" {{ if $.Node.CredentialID }}{{ if eq .ID (deref $.Node.CredentialID) }}selected{{ end }}{{ end }}>{{ .Name }} ({{ .Username }})</option>
+                        {{ end }}
+                    </select>
+                    <div class="form-hint">Se selecionada, substitui o usuário/senha acima.</div>
+                </div>
+                {{ end }}
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Grupo</label>
+                        <input type="text" name="group" class="form-input" value="{{ .Node.Group }}" placeholder="General" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tags</label>
+                        <input type="text" name="tags" class="form-input" value="{{ .Node.Tags }}" placeholder="core, datacenter" />
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Tipo de Agendamento</label>
+                        <select name="schedule_type" class="form-input">
+                            <option value="individual" {{ if eq .Node.ScheduleType "individual" }}selected{{ end }}>Individual</option>
+                            <option value="routine" {{ if eq .Node.ScheduleType "routine" }}selected{{ end }}>Rotina</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Frequência (horas)</label>
+                        <select name="frequency" class="form-input">
+                            <option value="1" {{ if eq .Node.Frequency "1" }}selected{{ end }}>1 hora</option>
+                            <option value="6" {{ if eq .Node.Frequency "6" }}selected{{ end }}>6 horas</option>
+                            <option value="12" {{ if eq .Node.Frequency "12" }}selected{{ end }}>12 horas</option>
+                            <option value="24" {{ if eq .Node.Frequency "24" }}selected{{ end }}>24 horas</option>
+                            <option value="168" {{ if eq .Node.Frequency "168" }}selected{{ end }}>7 dias</option>
+                        </select>
+                    </div>
+                </div>
+
+                {{ if .Routines }}
+                <div class="form-group">
+                    <label class="form-label">Rotina (se tipo = Rotina)</label>
+                    <select name="routine_id" class="form-input">
+                        <option value="">— Nenhuma —</option>
+                        {{ range .Routines }}
+                        <option value="{{ .ID }}" {{ if $.Node.RoutineID }}{{ if eq .ID (deref $.Node.RoutineID) }}selected{{ end }}{{ end }}>{{ .Name }}</option>
+                        {{ end }}
+                    </select>
+                </div>
+                {{ end }}
+
+                <div class="form-group">
+                    <label class="form-check">
+                        <input type="checkbox" name="enabled" {{ if or (not .Node.ID) .Node.Enabled }}checked{{ end }} />
+                        <span>Node habilitado para backup automático</span>
+                    </label>
+                </div>
+
+                <div class="form-actions">
+                    <a href="/nodes" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bx bx-save"></i>
+                        Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

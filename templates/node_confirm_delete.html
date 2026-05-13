@@ -1,0 +1,21 @@
+<div class="page-enter">
+    <div class="confirm-card card">
+        <div class="card-body" style="padding: 40px;">
+            <div class="confirm-icon">
+                <i class="bx bx-trash"></i>
+            </div>
+            <h2 class="page-title" style="margin-bottom: 8px;">Excluir {{ .Node.Name }}?</h2>
+            <p class="confirm-text">
+                Esta ação é irreversível. Todos os backups associados a este node serão permanentemente removidos.
+            </p>
+            <div class="flex gap-3" style="justify-content: center;">
+                <a href="/nodes" class="btn btn-secondary">Cancelar</a>
+                <form action="/nodes/{{ .Node.ID }}/delete" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bx bx-trash"></i> Excluir
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

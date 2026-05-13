@@ -1,0 +1,145 @@
+package scheduler
+
+import (
+	"crypto/sha256"
+	"fmt"
+	"log"
+	"mimic/internal/models"
+	"mimic/internal/services/ssh"
+	"strconv"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"gorm.io/gorm"
+)
+
+type SchedulerService struct {
+	db  *gorm.DB
+	ssh *ssh.SSHService
+	isRunning int32
+}
+
+func NewScheduler(db *gorm.DB) *SchedulerService {
+	return &SchedulerService{
+		db:  db,
+		ssh: &ssh.SSHService{DB: db},
+	}
+}
+
+func (s *SchedulerService) Start() {
+	ticker := time.NewTicker(1 * time.Minute)
+	go func() {
+		for range ticker.C {
+			s.CheckBackups()
+		}
+	}()
+}
+
+func (s *SchedulerService) CheckBackups() {
+	if !atomic.CompareAndSwapInt32(&s.isRunning, 0, 1) {
+		log.Println("[Scheduler] Previous cycle is still running, skipping this tick.")
+		return
+	}
+	defer atomic.StoreInt32(&s.isRunning, 0)
+
+	var nodes []models.Node
+	now := time.Now()
+	// Find nodes that need backup
+	s.db.Where("enabled = ? AND (next_backup_at IS NULL OR next_backup_at <= ?)", true, now).Find(&nodes)
+
+	if len(nodes) == 0 {
+		return
+	}
+
+	log.Printf("[Scheduler] Found %d nodes pending backup. Starting worker pool...", len(nodes))
+
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 20) // Limit concurrency to 20
+
+	for _, node := range nodes {
+		n := node // Shadow variable for goroutine safety
+		wg.Add(1)
+		sem <- struct{}{} // Acquire semaphore slot
+
+		go func(target *models.Node) {
+			defer wg.Done()
+			defer func() { <-sem }() // Release slot
+			s.RunBackup(target)
+		}(&n)
+	}
+
+	wg.Wait()
+	log.Println("[Scheduler] All backups in this cycle have completed.")
+}
+
+func (s *SchedulerService) RunBackup(node *models.Node) {
+	log.Printf("Starting backup for node: %s", node.Name)
+	config, err := s.ssh.PerformBackup(node)
+	
+	status := "success"
+	errorMessage := ""
+	configHash := ""
+	if err != nil {
+		status = "error"
+		errorMessage = err.Error()
+		log.Printf("Backup failed for node %s: %v", node.Name, err)
+	} else {
+		configHash = fmt.Sprintf("%x", sha256.Sum256([]byte(config)))
+	}
+
+	// Logic for versioning: only create new backup if successful and hash changed
+	if status == "success" {
+		var lastBackup models.NodeBackup
+		s.db.Where("node_id = ? AND status = 'success'", node.ID).Order("version desc").First(&lastBackup)
+
+		version := 1
+		if lastBackup.ID != 0 {
+			version = lastBackup.Version
+			if lastBackup.Hash != configHash {
+				version++
+				backup := models.NodeBackup{
+					NodeID:  node.ID,
+					Config:  config,
+					Hash:    configHash,
+					Status:  status,
+					Error:   errorMessage,
+					Version: version,
+				}
+				s.db.Create(&backup)
+			}
+		} else {
+			backup := models.NodeBackup{
+				NodeID:  node.ID,
+				Config:  config,
+				Hash:    configHash,
+				Status:  status,
+				Error:   errorMessage,
+				Version: 1,
+			}
+			s.db.Create(&backup)
+		}
+	}
+
+	// Update Node status
+	node.LastStatus = status
+	node.LastError = errorMessage
+	now := time.Now()
+	node.LastBackupAt = &now
+	
+	// Calculate next backup time based on frequency
+	freqHours := 24
+	if node.ScheduleType == "routine" && node.RoutineID != nil {
+		var routine models.BackupRoutine
+		s.db.First(&routine, node.RoutineID)
+		freqHours, _ = strconv.Atoi(routine.Frequency)
+	} else {
+		freqHours, _ = strconv.Atoi(node.Frequency)
+	}
+	if freqHours == 0 { freqHours = 24 }
+	
+	next := now.Add(time.Duration(freqHours) * time.Hour)
+	node.NextBackupAt = &next
+	
+	s.db.Save(node)
+}

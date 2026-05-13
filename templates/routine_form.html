@@ -1,0 +1,69 @@
+<div class="page-enter" style="max-width: 500px; margin: 0 auto;">
+    <div class="page-header">
+        <div class="flex items-center gap-3">
+            <a href="/settings/routines" class="btn btn-ghost btn-icon"><i class="bx bx-arrow-back"></i></a>
+            <h1 class="page-title">{{ .Title }}</h1>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form action="{{ if .Routine.ID }}/settings/routines/save/{{ .Routine.ID }}{{ else }}/settings/routines/save{{ end }}" method="POST">
+                <div class="form-group">
+                    <label class="form-label">Nome</label>
+                    <input type="text" name="name" class="form-input" value="{{ .Routine.Name }}" placeholder="Backup Diário" required />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Descrição</label>
+                    <textarea name="description" class="form-input" placeholder="Descreva o propósito desta rotina...">{{ .Routine.Description }}</textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Frequência</label>
+                        <select name="frequency" class="form-input">
+                            <option value="1" {{ if eq .Routine.Frequency "1" }}selected{{ end }}>1 hora</option>
+                            <option value="6" {{ if eq .Routine.Frequency "6" }}selected{{ end }}>6 horas</option>
+                            <option value="12" {{ if eq .Routine.Frequency "12" }}selected{{ end }}>12 horas</option>
+                            <option value="24" {{ if eq .Routine.Frequency "24" }}selected{{ end }}>24 horas</option>
+                            <option value="168" {{ if eq .Routine.Frequency "168" }}selected{{ end }}>7 dias</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Horário</label>
+                        <input type="time" name="backup_hour" class="form-input" value="{{ .Routine.BackupHour }}" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Dia da Semana (se semanal)</label>
+                    <select name="backup_day" class="form-input">
+                        <option value="">— Qualquer —</option>
+                        <option value="0" {{ if eq .Routine.BackupDay "0" }}selected{{ end }}>Segunda-feira</option>
+                        <option value="1" {{ if eq .Routine.BackupDay "1" }}selected{{ end }}>Terça-feira</option>
+                        <option value="2" {{ if eq .Routine.BackupDay "2" }}selected{{ end }}>Quarta-feira</option>
+                        <option value="3" {{ if eq .Routine.BackupDay "3" }}selected{{ end }}>Quinta-feira</option>
+                        <option value="4" {{ if eq .Routine.BackupDay "4" }}selected{{ end }}>Sexta-feira</option>
+                        <option value="5" {{ if eq .Routine.BackupDay "5" }}selected{{ end }}>Sábado</option>
+                        <option value="6" {{ if eq .Routine.BackupDay "6" }}selected{{ end }}>Domingo</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-check">
+                        <input type="checkbox" name="enabled" {{ if or (not .Routine.ID) .Routine.Enabled }}checked{{ end }} />
+                        <span>Rotina ativa</span>
+                    </label>
+                </div>
+
+                <div class="form-actions">
+                    <a href="/settings/routines" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bx bx-save"></i> Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

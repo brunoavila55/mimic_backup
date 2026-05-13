@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mimic | Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico" />
+    <link rel="stylesheet" href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" />
+    <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+    <div class="auth-page">
+        <div class="auth-card">
+
+            <div class="auth-logo">
+                <img src="/static/img/logo_texto.svg" alt="Logo Mimic" style="height: 180px; width: auto;" />
+            </div>
+
+            <div class="auth-form">
+                <h2 class="auth-form-title">Entrar</h2>
+                <p class="auth-form-desc">Insira suas credenciais para acessar o sistema.</p>
+
+                {{ if .Error }}
+                <div class="auth-error">
+                    <i class="bx bx-error-circle"></i>
+                    <span>{{ .Error }}</span>
+                </div>
+                {{ end }}
+
+                <form action="/login" method="POST">
+                    <div class="form-group">
+                        <label class="form-label">Usuário</label>
+                        <input type="text" name="username" class="form-input"
+                               value="{{ .LoginUsername }}"
+                               placeholder="Seu usuário" required autocomplete="username" />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Senha</label>
+                        <input type="password" name="password" class="form-input"
+                               placeholder="Sua senha" required autocomplete="current-password" />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-full" style="padding: 10px; margin-top: 8px;">
+                        <i class="bx bx-log-in-circle"></i>
+                        Entrar
+                    </button>
+                </form>
+            </div>
+
+            <div class="auth-footer">
+                Mimic Backup Systems v2.0
+            </div>
+        </div>
+    </div>
+</body>
+</html>

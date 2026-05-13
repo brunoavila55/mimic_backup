@@ -1,0 +1,63 @@
+{{ if .Nodes }}
+    {{ range .Nodes }}
+    <tr>
+        <td>
+            <a href="/nodes/{{ .ID }}" style="font-weight: 600; color: var(--text);">{{ .Name }}</a>
+        </td>
+        <td><span class="font-mono">{{ .IP }}</span></td>
+        <td>{{ .Vendor }}</td>
+        <td>
+            {{ if eq .LastStatus "success" }}
+                <span class="badge badge-success">OK</span>
+            {{ else if eq .LastStatus "error" }}
+                <span class="badge badge-danger">Erro</span>
+            {{ else }}
+                <span class="badge badge-muted">Pendente</span>
+            {{ end }}
+        </td>
+        <td>
+            {{ if .LastBackupAt }}
+                <span class="text-secondary">{{ .LastBackupAt.Format "02/01/2006 15:04" }}</span>
+            {{ else }}
+                <span class="text-muted">—</span>
+            {{ end }}
+        </td>
+        <td>
+            {{ if .Enabled }}
+                <span class="text-success"><i class="bx bx-check-circle"></i></span>
+            {{ else }}
+                <span class="text-muted"><i class="bx bx-minus-circle"></i></span>
+            {{ end }}
+        </td>
+        <td>
+            <div class="action-group">
+                <a href="/nodes/{{ .ID }}" class="action-btn" title="Detalhes">
+                    <i class="bx bx-show"></i>
+                </a>
+                <a href="/nodes/{{ .ID }}/edit" class="action-btn" title="Editar">
+                    <i class="bx bx-edit-alt"></i>
+                </a>
+                <button hx-post="/nodes/{{ .ID }}/trigger" hx-swap="none" class="action-btn" title="Backup Manual">
+                    <i class="bx bx-play-circle"></i>
+                </button>
+                <button hx-delete="/nodes/{{ .ID }}"
+                        hx-confirm="Excluir este node?"
+                        hx-target="closest tr"
+                        hx-swap="outerHTML"
+                        class="action-btn danger"
+                        title="Excluir">
+                    <i class="bx bx-trash"></i>
+                </button>
+            </div>
+        </td>
+    </tr>
+    {{ end }}
+{{ else }}
+    <tr>
+        <td colspan="7" class="table-empty">
+            <i class="bx bx-server" style="font-size: 28px; margin-bottom: 8px; display: block;"></i>
+            Nenhum node cadastrado.
+            <a href="/nodes/new" style="color: var(--accent); font-weight: 600; margin-left: 4px;">Adicionar agora</a>
+        </td>
+    </tr>
+{{ end }}

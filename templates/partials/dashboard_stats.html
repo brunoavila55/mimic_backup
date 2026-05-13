@@ -1,0 +1,80 @@
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Total de Nodes</div>
+        <div class="stat-value">{{ .Stats.TotalNodes }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Nodes Ativos</div>
+        <div class="stat-value accent">{{ .Stats.ActiveNodes }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Backups Realizados</div>
+        <div class="stat-value success">{{ .Stats.TotalBackups }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Falhas</div>
+        <div class="stat-value danger">{{ .Stats.FailedBackups }}</div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+
+    <!-- Recent Backups -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Últimos Backups</span>
+        </div>
+        <div class="card-body">
+            {{ if .RecentBackups }}
+            <div class="activity-list">
+                {{ range .RecentBackups }}
+                <div class="activity-item">
+                    <div class="activity-dot" style="background: {{ if eq .Status "success" }}var(--success){{ else }}var(--danger){{ end }};"></div>
+                    <div class="activity-content">
+                        <div class="flex items-center justify-between">
+                            <span class="activity-title">{{ .Node.Name }}</span>
+                            <span class="badge {{ if eq .Status "success" }}badge-success{{ else }}badge-danger{{ end }}">{{ .Status }}</span>
+                        </div>
+                        <div class="activity-text">Versão {{ .Version }} &mdash; {{ .CreatedAt.Format "02/01/2006 15:04" }}</div>
+                    </div>
+                </div>
+                {{ end }}
+            </div>
+            {{ else }}
+            <div class="text-center text-muted" style="padding: 24px 0; font-size: 13px;">
+                Nenhum backup realizado ainda.
+            </div>
+            {{ end }}
+        </div>
+    </div>
+
+    <!-- Recent Logs -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Atividade Recente</span>
+            <a href="/settings/logs" class="btn btn-ghost btn-sm">Ver todos</a>
+        </div>
+        <div class="card-body">
+            {{ if .RecentLogs }}
+            <div class="activity-list">
+                {{ range .RecentLogs }}
+                <div class="activity-item">
+                    <div class="activity-dot" style="background: {{ if eq .Level "success" }}var(--success){{ else if eq .Level "error" }}var(--danger){{ else if eq .Level "warning" }}var(--warning){{ else }}var(--accent){{ end }};"></div>
+                    <div class="activity-content">
+                        <div class="flex items-center justify-between">
+                            <span class="activity-title">{{ .Category }}</span>
+                            <span class="activity-time">{{ .CreatedAt.Format "15:04" }}</span>
+                        </div>
+                        <div class="activity-text">{{ .Message }}</div>
+                    </div>
+                </div>
+                {{ end }}
+            </div>
+            {{ else }}
+            <div class="text-center text-muted" style="padding: 24px 0; font-size: 13px;">
+                Nenhuma atividade registrada.
+            </div>
+            {{ end }}
+        </div>
+    </div>
+</div>

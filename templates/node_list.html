@@ -1,0 +1,40 @@
+<div class="page-enter">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Nodes</h1>
+            <p class="page-desc">Gerenciamento de todos os equipamentos de rede.</p>
+        </div>
+        <div class="flex gap-2">
+            <button hx-post="/trigger-backups" hx-swap="none" class="btn btn-secondary">
+                <i class="bx bx-refresh"></i>
+                Sincronizar
+            </button>
+            <a href="/nodes/new" class="btn btn-primary">
+                <i class="bx bx-plus"></i>
+                Novo Node
+            </a>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body" style="padding: 12px 16px;">
+            <div class="search-box">
+                <i class="bx bx-search"></i>
+                <input type="text"
+                       name="search"
+                       value="{{ .Search }}"
+                       placeholder="Buscar por nome, IP ou fabricante..."
+                       class="form-input"
+                       style="background: transparent; border-color: transparent;"
+                       hx-get="/nodes"
+                       hx-trigger="keyup changed delay:400ms, search"
+                       hx-target="#node-table-container"
+                       hx-push-url="true" />
+            </div>
+        </div>
+    </div>
+
+    <div id="node-table-container">
+        {{ template "partials/node_table" . }}
+    </div>
+</div>

@@ -1,0 +1,35 @@
+<div>
+    <h2 class="settings-section-title">Logs do Sistema</h2>
+    <p class="settings-section-desc">Últimos 200 registros de atividade do sistema.</p>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nível</th>
+                    <th>Categoria</th>
+                    <th>Mensagem</th>
+                    <th>Data</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ if .Logs }}
+                {{ range .Logs }}
+                <tr>
+                    <td>
+                        <span class="badge {{ if eq .Level "success" }}badge-success{{ else if eq .Level "error" }}badge-danger{{ else if eq .Level "warning" }}badge-warning{{ else }}badge-info{{ end }}">
+                            {{ .Level }}
+                        </span>
+                    </td>
+                    <td class="text-secondary">{{ .Category }}</td>
+                    <td>{{ .Message }}</td>
+                    <td class="text-secondary" style="white-space: nowrap;">{{ .CreatedAt.Format "02/01/2006 15:04:05" }}</td>
+                </tr>
+                {{ end }}
+                {{ else }}
+                <tr><td colspan="4" class="table-empty">Nenhum log registrado.</td></tr>
+                {{ end }}
+            </tbody>
+        </table>
+    </div>
+</div>

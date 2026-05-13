@@ -1,0 +1,59 @@
+<div>
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="settings-section-title">Usuários</h2>
+            <p class="settings-section-desc">Gerencie os usuários e permissões de acesso ao sistema.</p>
+        </div>
+        <a href="/settings/users/new" class="btn btn-primary btn-sm">
+            <i class="bx bx-plus"></i> Novo Usuário
+        </a>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Usuário</th>
+                    <th>E-mail</th>
+                    <th>Papel</th>
+                    <th>Criado em</th>
+                    <th style="width: 80px;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ if .Users }}
+                {{ range .Users }}
+                <tr>
+                    <td style="font-weight: 600;">{{ .Username }}</td>
+                    <td class="text-secondary">{{ if .Email }}{{ .Email }}{{ else }}—{{ end }}</td>
+                    <td>
+                        {{ if eq .Role "Administrator" }}
+                            <span class="badge badge-accent">Admin</span>
+                        {{ else }}
+                            <span class="badge badge-muted">Viewer</span>
+                        {{ end }}
+                    </td>
+                    <td class="text-secondary">{{ .CreatedAt.Format "02/01/2006" }}</td>
+                    <td>
+                        <div class="action-group">
+                            <a href="/settings/users/{{ .ID }}/edit" class="action-btn" title="Editar">
+                                <i class="bx bx-edit-alt"></i>
+                            </a>
+                            <button hx-delete="/settings/users/{{ .ID }}"
+                                    hx-confirm="Excluir este usuário?"
+                                    hx-target="closest tr"
+                                    hx-swap="outerHTML"
+                                    class="action-btn danger" title="Excluir">
+                                <i class="bx bx-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {{ end }}
+                {{ else }}
+                <tr><td colspan="5" class="table-empty">Nenhum usuário cadastrado.</td></tr>
+                {{ end }}
+            </tbody>
+        </table>
+    </div>
+</div>

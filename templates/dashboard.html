@@ -1,0 +1,9 @@
+<div class="page-enter">
+    <div id="dashboard-content"
+         hx-get="/"
+         hx-trigger="every 60s"
+         hx-target="this"
+         hx-swap="innerHTML">
+        {{ template "partials/dashboard_stats" . }}
+    </div>
+</div>

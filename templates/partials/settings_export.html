@@ -1,0 +1,66 @@
+<div>
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="settings-section-title">Exportar Backups</h2>
+            <p class="settings-section-desc">Sincronize os últimos backups de todos os nodes ativos com o servidor SFTP.</p>
+        </div>
+        <button hx-post="/settings/export/sync" hx-swap="none" class="btn btn-primary btn-sm">
+            <i class="bx bx-sync"></i> Sincronizar Todos
+        </button>
+    </div>
+
+    {{ if .Sftp.Host }}
+    <div class="card mb-4" style="border: none; background: var(--bg-tertiary);">
+        <div class="card-body" style="padding: 14px 16px;">
+            <div class="flex items-center gap-3">
+                <i class="bx bx-cloud-upload text-accent" style="font-size: 20px;"></i>
+                <div>
+                    <div style="font-size: 13px; font-weight: 600; color: var(--text);">
+                        {{ .Sftp.Host }}:{{ .Sftp.Port }}
+                    </div>
+                    <div class="text-secondary" style="font-size: 12px;">
+                        {{ if .Sftp.LastExportAt }}
+                            Última exportação: {{ .Sftp.LastExportAt.Format "02/01/2006 15:04" }}
+                            — <span class="{{ if eq .Sftp.LastExportStatus "success" }}text-success{{ else }}text-danger{{ end }}">{{ .Sftp.LastExportStatus }}</span>
+                        {{ else }}
+                            Nenhuma exportação realizada
+                        {{ end }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{ else }}
+    <div class="card mb-4" style="border: none; background: var(--bg-tertiary);">
+        <div class="card-body text-center text-muted" style="padding: 20px;">
+            SFTP não configurado. <a href="/settings/sftp" class="text-accent" style="font-weight: 600;">Configurar agora</a>
+        </div>
+    </div>
+    {{ end }}
+
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Node</th><th>IP</th><th>Último Backup</th><th>Status</th></tr></thead>
+            <tbody>
+            {{ if .Nodes }}
+                {{ range .Nodes }}
+                <tr>
+                    <td style="font-weight: 600;">{{ .Name }}</td>
+                    <td class="font-mono">{{ .IP }}</td>
+                    <td class="text-secondary">
+                        {{ if .LastBackupAt }}{{ .LastBackupAt.Format "02/01/2006 15:04" }}{{ else }}—{{ end }}
+                    </td>
+                    <td>
+                        <span class="badge {{ if eq .LastStatus "success" }}badge-success{{ else if eq .LastStatus "error" }}badge-danger{{ else }}badge-muted{{ end }}">
+                            {{ if eq .LastStatus "success" }}OK{{ else if eq .LastStatus "error" }}Erro{{ else }}Pendente{{ end }}
+                        </span>
+                    </td>
+                </tr>
+                {{ end }}
+            {{ else }}
+                <tr><td colspan="4" class="table-empty">Nenhum node ativo.</td></tr>
+            {{ end }}
+            </tbody>
+        </table>
+    </div>
+</div>

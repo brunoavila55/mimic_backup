@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mimic | Configuração Inicial</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico" />
+    <link rel="stylesheet" href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" />
+    <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+    <div class="auth-page">
+        <div class="auth-card">
+
+            <div class="auth-logo">
+                <img src="/static/img/logo_texto.svg" alt="Logo Mimic" style="height: 180px; width: auto;" />
+            </div>
+
+            <div class="setup-stepper">
+                <div class="setup-step active">
+                    <div class="setup-step-num">1</div>
+                    <span>Banco de Dados</span>
+                </div>
+                <div class="setup-divider"></div>
+                <div class="setup-step">
+                    <div class="setup-step-num">2</div>
+                    <span>Administrador</span>
+                </div>
+            </div>
+
+            <div class="auth-form">
+                <h2 class="auth-form-title">Banco de Dados</h2>
+                <p class="auth-form-desc">Verifique a conexão e a estrutura do banco de dados.</p>
+
+                <div class="setup-status">
+                    <div class="setup-status-icon {{ if .DBOk }}ok{{ else }}pending{{ end }}">
+                        <i class="bx {{ if .DBOk }}bx-check{{ else }}bx-x{{ end }}"></i>
+                    </div>
+                    <div>
+                        <div class="setup-status-text">{{ if .DBOk }}Conexão estabelecida{{ else }}Falha na conexão{{ end }}</div>
+                        <div class="setup-status-detail">PostgreSQL</div>
+                    </div>
+                </div>
+
+                <div class="setup-status">
+                    <div class="setup-status-icon {{ if .TablesOk }}ok{{ else }}pending{{ end }}">
+                        <i class="bx {{ if .TablesOk }}bx-check{{ else }}bx-x{{ end }}"></i>
+                    </div>
+                    <div>
+                        <div class="setup-status-text">{{ if .TablesOk }}Tabelas criadas{{ else }}Tabelas pendentes{{ end }}</div>
+                        <div class="setup-status-detail">Estrutura do sistema</div>
+                    </div>
+                </div>
+
+                {{ if .Error }}
+                <div class="auth-error">
+                    <i class="bx bx-error-circle"></i>
+                    <span>{{ .Error }}</span>
+                </div>
+                {{ end }}
+
+                <form action="/setup" method="POST" style="margin-top: 24px;">
+                    <button type="submit" class="btn btn-primary w-full" style="padding: 10px;">
+                        Continuar
+                        <i class="bx bx-right-arrow-alt"></i>
+                    </button>
+                </form>
+            </div>
+
+            <div class="auth-footer">
+                Mimic Backup Systems &mdash; Configuração Inicial
+            </div>
+        </div>
+    </div>
+</body>
+</html>

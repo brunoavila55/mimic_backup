@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mimic | {{ .Title }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico" />
+    <link rel="stylesheet" href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" />
+    <link rel="stylesheet" href="/static/css/style.css?v=1.3" />
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>[x-cloak] { display: none !important; }</style>
+</head>
+<body x-data="{ modalOpen: false }" @keydown.escape="modalOpen = false">
+
+    <div class="layout">
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <img src="/static/img/logo.svg" alt="Logo Mimic" style="height: 28px; width: auto;" />
+                <span class="sidebar-logo-text">Mimic</span>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="sidebar-section">Principal</div>
+                <a href="/" class="sidebar-link {{ if eq .CurrentRoute "dashboard" }}active{{ end }}">
+                    <i class="bx bx-grid-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/nodes" class="sidebar-link {{ if eq .CurrentRoute "nodes" }}active{{ end }}">
+                    <i class="bx bx-server"></i>
+                    <span>Nodes</span>
+                </a>
+                <a href="/settings/credentials" class="sidebar-link {{ if or (eq .CurrentRoute "credentials") (eq .ActiveTab "credentials") }}active{{ end }}">
+                    <i class="bx bx-key"></i>
+                    <span>Credenciais</span>
+                </a>
+                <a href="/settings/routines" class="sidebar-link {{ if or (eq .CurrentRoute "routines") (eq .ActiveTab "routines") }}active{{ end }}">
+                    <i class="bx bx-time-five"></i>
+                    <span>Rotinas</span>
+                </a>
+
+                <div class="sidebar-section">Sistema</div>
+                <a href="/settings" class="sidebar-link {{ if or (eq .CurrentRoute "settings") (eq .CurrentRoute "users") (eq .CurrentRoute "sftp") (eq .CurrentRoute "export") (eq .CurrentRoute "logs") (eq .CurrentRoute "profile") }}active{{ end }}">
+                    <i class="bx bx-cog"></i>
+                    <span>Configurações</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-user">
+                <div class="sidebar-user-inner">
+                    <div class="user-avatar">
+                        <img src="{{ if .Avatar }}{{ .Avatar }}{{ else }}https://ui-avatars.com/api/?name={{ .Username }}&background=1c1f28&color=e8eaed&bold=true&size=60{{ end }}"
+                             alt="{{ .Username }}" />
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name">{{ .Username }}</div>
+                        <div class="user-role">{{ .Role }}</div>
+                    </div>
+                    <form action="/logout" method="post">
+                        <button type="submit" class="user-logout" title="Sair">
+                            <i class="bx bx-log-out"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <main class="main">
+            <header class="header">
+                <div class="header-left">
+                    <div class="breadcrumb">
+                        <span class="breadcrumb-root">Mimic</span>
+                        <span class="breadcrumb-sep">/</span>
+                        <span class="breadcrumb-current">{{ .Title }}</span>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div id="global-loader" class="htmx-indicator header-indicator">
+                        <i class="bx bx-loader-alt spin"></i>
+                        <span>Carregando...</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content page-enter">
+                {{ embed }}
+            </div>
+
+            <footer class="app-footer">
+                &copy; 2026 Mimic Backup Systems v2.0
+            </footer>
+        </main>
+    </div>
+
+    <!-- Notifications -->
+    <div id="notification-container"></div>
+
+    <!-- Modal -->
+    <div x-show="modalOpen" x-cloak class="modal-overlay"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0">
+        <div class="modal-box" @click.outside="modalOpen = false"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100">
+            <div id="modal-content-area" class="modal-body">
+                <div style="padding: 40px; text-align: center; color: var(--text-muted);">
+                    <i class="bx bx-loader-alt spin" style="font-size: 24px; color: var(--accent);"></i>
+                    <div style="margin-top: 8px; font-size: 12px;">Carregando...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        document.body.addEventListener('showNotification', (event) => {
+            const data = event.detail;
+            window.notify(data.message, data.type || 'success');
+        });
+
+        window.notify = function(message, type = 'success') {
+            const container = document.getElementById('notification-container');
+            if (!container) return;
+
+            const colors = {
+                success: { icon: 'bx-check-circle', color: 'var(--success)', label: 'Sucesso' },
+                error:   { icon: 'bx-x-circle',     color: 'var(--danger)',  label: 'Erro' },
+                warning: { icon: 'bx-error',         color: 'var(--warning)', label: 'Atenção' },
+                info:    { icon: 'bx-info-circle',   color: 'var(--info)',    label: 'Info' },
+            };
+
+            const c = colors[type] || colors.success;
+            const el = document.createElement('div');
+            el.className = 'notification';
+            el.style.cssText = 'opacity:0; transform:translateX(16px);';
+            el.innerHTML = `
+                <i class="bx ${c.icon} notif-icon" style="color:${c.color}"></i>
+                <div>
+                    <div class="notif-label">${c.label}</div>
+                    <div class="notif-message">${message}</div>
+                </div>
+            `;
+            container.appendChild(el);
+
+            requestAnimationFrame(() => {
+                el.style.transition = 'all 0.3s ease';
+                el.style.opacity = '1';
+                el.style.transform = 'translateX(0)';
+            });
+
+            setTimeout(() => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateX(16px)';
+                setTimeout(() => el.remove(), 300);
+            }, 4000);
+        };
+    </script>
+</body>
+</html>

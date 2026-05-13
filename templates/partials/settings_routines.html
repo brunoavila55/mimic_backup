@@ -1,0 +1,66 @@
+<div>
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="settings-section-title">Rotinas de Backup</h2>
+            <p class="settings-section-desc">Agendamentos automáticos de backup para grupos de nodes.</p>
+        </div>
+        <a href="/settings/routines/new" class="btn btn-primary btn-sm">
+            <i class="bx bx-plus"></i> Nova Rotina
+        </a>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Descrição</th>
+                    <th>Frequência</th>
+                    <th>Status</th>
+                    <th style="width: 80px;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ if .Routines }}
+                {{ range .Routines }}
+                <tr>
+                    <td style="font-weight: 600;">{{ .Name }}</td>
+                    <td class="text-secondary truncate" style="max-width: 200px;">{{ .Description }}</td>
+                    <td>
+                        {{ if eq .Frequency "1" }}1 hora
+                        {{ else if eq .Frequency "6" }}6 horas
+                        {{ else if eq .Frequency "12" }}12 horas
+                        {{ else if eq .Frequency "24" }}24 horas
+                        {{ else if eq .Frequency "168" }}7 dias
+                        {{ else }}{{ .Frequency }}h{{ end }}
+                    </td>
+                    <td>
+                        {{ if .Enabled }}
+                            <span class="badge badge-success">Ativa</span>
+                        {{ else }}
+                            <span class="badge badge-muted">Inativa</span>
+                        {{ end }}
+                    </td>
+                    <td>
+                        <div class="action-group">
+                            <a href="/settings/routines/{{ .ID }}/edit" class="action-btn" title="Editar">
+                                <i class="bx bx-edit-alt"></i>
+                            </a>
+                            <button hx-delete="/settings/routines/{{ .ID }}"
+                                    hx-confirm="Excluir esta rotina?"
+                                    hx-target="closest tr"
+                                    hx-swap="outerHTML"
+                                    class="action-btn danger" title="Excluir">
+                                <i class="bx bx-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {{ end }}
+                {{ else }}
+                <tr><td colspan="5" class="table-empty">Nenhuma rotina cadastrada.</td></tr>
+                {{ end }}
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"encoding/csv"
+	"fmt"
 	"mimic/internal/models"
 	"mimic/internal/services/sftp"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/session"
@@ -116,6 +119,49 @@ func (h *NodeHandler) GetBackupContent(c *fiber.Ctx) error {
 	return c.Render("partials/backup_view", fiber.Map{
 		"Backup": backup,
 	})
+}
+
+func (h *NodeHandler) ExportNodesCSV(c *fiber.Ctx) error {
+	var nodes []models.Node
+	h.DB.Order("name asc").Find(&nodes)
+
+	filename := fmt.Sprintf("mimic_nodes_%s.csv", time.Now().Format("2006-01-02"))
+	c.Set("Content-Type", "text/csv; charset=utf-8")
+	c.Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+
+	// Write BOM for Excel UTF-8 compatibility
+	c.Write([]byte{0xEF, 0xBB, 0xBF})
+
+	writer := csv.NewWriter(c)
+
+	// Header
+	writer.Write([]string{
+		"name", "vendor", "ip", "port", "username", "password",
+		"group", "tags", "frequency", "enabled",
+	})
+
+	for _, node := range nodes {
+		enabled := "true"
+		if !node.Enabled {
+			enabled = "false"
+		}
+
+		writer.Write([]string{
+			node.Name,
+			node.Vendor,
+			node.IP,
+			fmt.Sprintf("%d", node.Port),
+			node.Username,
+			"", // password omitted for security
+			node.Group,
+			node.Tags,
+			node.Frequency,
+			enabled,
+		})
+	}
+
+	writer.Flush()
+	return nil
 }
 
 // ── Settings Hub ───────────────────────────────────────

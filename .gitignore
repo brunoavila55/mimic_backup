@@ -5,7 +5,7 @@
 !.env.example
 
 # Go Binaries
-mimic
+/mimic
 netbackup
 *.exe
 *.exe~

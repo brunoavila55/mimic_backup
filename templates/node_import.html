@@ -1,0 +1,112 @@
+<div class="page-enter" style="max-width: 700px; margin: 0 auto;">
+    <div class="page-header">
+        <div class="flex items-center gap-3">
+            <a href="/nodes" class="btn btn-ghost btn-icon"><i class="bx bx-arrow-back"></i></a>
+            <h1 class="page-title">Importar Nodes via CSV</h1>
+        </div>
+    </div>
+
+    {{ if .Success }}
+    <div style="padding: 16px 20px; background: var(--success-soft); border: 1px solid rgba(107,203,119,0.2); border-radius: var(--radius-lg); margin-bottom: 20px; display: flex; align-items: center; gap: 12px;">
+        <i class="bx bx-check-circle" style="font-size: 22px; color: var(--success);"></i>
+        <div>
+            <div style="font-weight: 600; color: var(--success); font-size: 14px;">{{ .Success }}</div>
+            {{ if .ErrorCount }}
+            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">{{ .ErrorCount }} linha(s) com erro.</div>
+            {{ end }}
+        </div>
+    </div>
+
+    {{ if .Errors }}
+    <div class="card" style="margin-bottom: 20px;">
+        <div class="card-header">
+            <span class="card-title" style="color: var(--danger);"><i class="bx bx-error"></i> Erros encontrados</span>
+        </div>
+        <div class="card-body" style="padding: 12px 20px;">
+            {{ range .Errors }}
+            <div style="font-size: 12px; color: var(--text-secondary); padding: 4px 0; border-bottom: 1px solid var(--border-light); font-family: var(--font-mono);">{{ . }}</div>
+            {{ end }}
+        </div>
+    </div>
+    {{ end }}
+
+    <div style="text-align: center; margin-top: 8px;">
+        <a href="/nodes" class="btn btn-primary">
+            <i class="bx bx-server"></i>
+            Ver Nodes
+        </a>
+    </div>
+    {{ else }}
+
+    {{ if .Error }}
+    <div style="padding: 14px 18px; background: var(--danger-soft); border: 1px solid rgba(239,68,68,0.2); border-radius: var(--radius-lg); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--danger);">
+        <i class="bx bx-error-circle" style="font-size: 18px;"></i>
+        <span>{{ .Error }}</span>
+    </div>
+    {{ end }}
+
+    <div class="card" style="margin-bottom: 20px;">
+        <div class="card-header">
+            <span class="card-title"><i class="bx bx-info-circle"></i> Formato do CSV</span>
+        </div>
+        <div class="card-body">
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+                O arquivo CSV deve conter um cabeçalho na primeira linha com as colunas abaixo. As colunas <strong>name</strong>, <strong>ip</strong> e <strong>vendor</strong> são obrigatórias.
+            </p>
+            <div style="background: var(--bg-tertiary); border-radius: var(--radius); padding: 12px 16px; font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); overflow-x: auto; line-height: 1.8;">
+                <div style="color: var(--accent); font-weight: 600;">name,vendor,ip,port,username,password,group,tags,frequency,enabled</div>
+                <div>Switch-Core-01,cisco,192.168.1.1,22,admin,senha123,Datacenter,core,24,true</div>
+                <div>Router-Edge-01,mikrotik,10.0.0.1,22,admin,,POP-SP,edge,12,true</div>
+            </div>
+
+            <div style="margin-top: 16px;">
+                <table style="width: 100%; font-size: 12px;">
+                    <thead>
+                        <tr style="background: var(--bg-tertiary);">
+                            <th style="padding: 8px 12px; text-align: left; color: var(--text-muted); font-weight: 600;">Coluna</th>
+                            <th style="padding: 8px 12px; text-align: left; color: var(--text-muted); font-weight: 600;">Obrigatório</th>
+                            <th style="padding: 8px 12px; text-align: left; color: var(--text-muted); font-weight: 600;">Padrão</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">name</td><td style="padding: 6px 12px;"><span class="badge badge-danger">Sim</span></td><td style="padding: 6px 12px; color: var(--text-muted);">—</td></tr>
+                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">vendor</td><td style="padding: 6px 12px;"><span class="badge badge-danger">Sim</span></td><td style="padding: 6px 12px; color: var(--text-muted);">—</td></tr>
+                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">ip</td><td style="padding: 6px 12px;"><span class="badge badge-danger">Sim</span></td><td style="padding: 6px 12px; color: var(--text-muted);">—</td></tr>
+                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">port</td><td style="padding: 6px 12px;"><span class="badge badge-muted">Não</span></td><td style="padding: 6px 12px; color: var(--text-muted);">22</td></tr>
+                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">username</td><td style="padding: 6px 12px;"><span class="badge badge-muted">Não</span></td><td style="padding: 6px 12px; color: var(--text-muted);">vazio</td></tr>
+                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">password</td><td style="padding: 6px 12px;"><span class="badge badge-muted">Não</span></td><td style="padding: 6px 12px; color: var(--text-muted);">vazio</td></tr>
+                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">group</td><td style="padding: 6px 12px;"><span class="badge badge-muted">Não</span></td><td style="padding: 6px 12px; color: var(--text-muted);">General</td></tr>
+                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">tags</td><td style="padding: 6px 12px;"><span class="badge badge-muted">Não</span></td><td style="padding: 6px 12px; color: var(--text-muted);">vazio</td></tr>
+                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">frequency</td><td style="padding: 6px 12px;"><span class="badge badge-muted">Não</span></td><td style="padding: 6px 12px; color: var(--text-muted);">24 (horas)</td></tr>
+                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">enabled</td><td style="padding: 6px 12px;"><span class="badge badge-muted">Não</span></td><td style="padding: 6px 12px; color: var(--text-muted);">true</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title"><i class="bx bx-upload"></i> Upload do Arquivo</span>
+        </div>
+        <div class="card-body">
+            <form action="/nodes/import" method="POST" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label class="form-label">Arquivo CSV</label>
+                    <input type="file" name="csv_file" accept=".csv" class="form-input" required
+                           style="padding: 10px; cursor: pointer;" />
+                    <div class="form-hint">Selecione um arquivo .csv com os nodes para importar.</div>
+                </div>
+
+                <div class="form-actions">
+                    <a href="/nodes" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bx bx-upload"></i>
+                        Importar Nodes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {{ end }}
+</div>

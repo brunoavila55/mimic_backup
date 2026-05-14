@@ -5,6 +5,14 @@
             <p class="page-desc">Gerenciamento de todos os equipamentos de rede.</p>
         </div>
         <div class="flex gap-2">
+            <a href="/nodes/export" class="btn btn-secondary">
+                <i class="bx bx-download"></i>
+                Exportar CSV
+            </a>
+            <a href="/nodes/import" class="btn btn-secondary">
+                <i class="bx bx-upload"></i>
+                Importar CSV
+            </a>
             <button hx-post="/trigger-backups" hx-swap="none" class="btn btn-secondary">
                 <i class="bx bx-refresh"></i>
                 Sincronizar

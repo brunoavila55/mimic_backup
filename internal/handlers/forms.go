@@ -1,11 +1,14 @@
 package handlers
 
 import (
+	"encoding/csv"
 	"fmt"
+	"io"
 	"mimic/internal/models"
 	"mimic/internal/services/sftp"
 	"mimic/pkg/crypto"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -163,6 +166,183 @@ func (h *FormHandler) DeleteNode(c *fiber.Ctx) error {
 	}
 
 	return c.Redirect("/nodes")
+}
+
+// ── Node Import/Export ─────────────────────────────────
+
+func (h *FormHandler) ImportNodesForm(c *fiber.Ctx) error {
+	return c.Render("node_import", fiber.Map{
+		"Title":        "Importar Nodes",
+		"Username":     c.Locals("username"),
+		"Avatar":       c.Locals("avatar"),
+		"Role":         c.Locals("role"),
+		"CurrentRoute": "nodes",
+	}, "base")
+}
+
+func (h *FormHandler) ImportNodesCSV(c *fiber.Ctx) error {
+	file, err := c.FormFile("csv_file")
+	if err != nil {
+		return c.Render("node_import", fiber.Map{
+			"Title":        "Importar Nodes",
+			"Username":     c.Locals("username"),
+			"Avatar":       c.Locals("avatar"),
+			"Role":         c.Locals("role"),
+			"CurrentRoute": "nodes",
+			"Error":        "Nenhum arquivo selecionado.",
+		}, "base")
+	}
+
+	f, err := file.Open()
+	if err != nil {
+		return c.Status(500).SendString("Erro ao abrir arquivo")
+	}
+	defer f.Close()
+
+	reader := csv.NewReader(f)
+	reader.TrimLeadingSpace = true
+	reader.LazyQuotes = true
+
+	// Read header row
+	header, err := reader.Read()
+	if err != nil {
+		return c.Render("node_import", fiber.Map{
+			"Title":        "Importar Nodes",
+			"Username":     c.Locals("username"),
+			"Avatar":       c.Locals("avatar"),
+			"Role":         c.Locals("role"),
+			"CurrentRoute": "nodes",
+			"Error":        "Arquivo CSV vazio ou inválido.",
+		}, "base")
+	}
+
+	// Map header columns to indices
+	colMap := make(map[string]int)
+	for i, col := range header {
+		colMap[strings.TrimSpace(strings.ToLower(col))] = i
+	}
+
+	// Validate required columns
+	requiredCols := []string{"name", "ip", "vendor"}
+	for _, col := range requiredCols {
+		if _, ok := colMap[col]; !ok {
+			return c.Render("node_import", fiber.Map{
+				"Title":        "Importar Nodes",
+				"Username":     c.Locals("username"),
+				"Avatar":       c.Locals("avatar"),
+				"Role":         c.Locals("role"),
+				"CurrentRoute": "nodes",
+				"Error":        fmt.Sprintf("Coluna obrigatória '%s' não encontrada no CSV.", col),
+			}, "base")
+		}
+	}
+
+	successCount := 0
+	errorCount := 0
+	var errors []string
+	lineNum := 1
+
+	for {
+		record, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		lineNum++
+		if err != nil {
+			errorCount++
+			errors = append(errors, fmt.Sprintf("Linha %d: erro de leitura", lineNum))
+			continue
+		}
+
+		getCol := func(name string) string {
+			if idx, ok := colMap[name]; ok && idx < len(record) {
+				return strings.TrimSpace(record[idx])
+			}
+			return ""
+		}
+
+		nodeName := getCol("name")
+		nodeIP := getCol("ip")
+		nodeVendor := getCol("vendor")
+
+		if nodeName == "" || nodeIP == "" {
+			errorCount++
+			errors = append(errors, fmt.Sprintf("Linha %d: nome ou IP vazio", lineNum))
+			continue
+		}
+
+		port, _ := strconv.Atoi(getCol("port"))
+		if port == 0 {
+			port = 22
+		}
+
+		frequency := getCol("frequency")
+		if frequency == "" {
+			frequency = "24"
+		}
+
+		group := getCol("group")
+		if group == "" {
+			group = "General"
+		}
+
+		enabled := true
+		enabledStr := strings.ToLower(getCol("enabled"))
+		if enabledStr == "false" || enabledStr == "0" || enabledStr == "no" {
+			enabled = false
+		}
+
+		node := models.Node{
+			Name:      nodeName,
+			Vendor:    nodeVendor,
+			IP:        nodeIP,
+			Port:      port,
+			Username:  getCol("username"),
+			Group:     group,
+			Tags:      getCol("tags"),
+			Frequency: frequency,
+			Enabled:   enabled,
+		}
+
+		// Encrypt password if provided
+		rawPass := getCol("password")
+		if rawPass != "" {
+			encPass, err := crypto.Encrypt(rawPass)
+			if err == nil {
+				node.Password = encPass
+			}
+		}
+
+		if err := h.DB.Create(&node).Error; err != nil {
+			errorCount++
+			errors = append(errors, fmt.Sprintf("Linha %d (%s): %v", lineNum, nodeName, err))
+			continue
+		}
+
+		successCount++
+	}
+
+	if successCount == 0 && errorCount == 0 {
+		return c.Render("node_import", fiber.Map{
+			"Title":        "Importar Nodes",
+			"Username":     c.Locals("username"),
+			"Avatar":       c.Locals("avatar"),
+			"Role":         c.Locals("role"),
+			"CurrentRoute": "nodes",
+			"Error":        "Nenhum node encontrado no arquivo CSV.",
+		}, "base")
+	}
+
+	return c.Render("node_import", fiber.Map{
+		"Title":        "Importar Nodes",
+		"Username":     c.Locals("username"),
+		"Avatar":       c.Locals("avatar"),
+		"Role":         c.Locals("role"),
+		"CurrentRoute": "nodes",
+		"Success":      fmt.Sprintf("%d nodes importados com sucesso.", successCount),
+		"ErrorCount":   errorCount,
+		"Errors":       errors,
+	}, "base")
 }
 
 // ── User Forms ─────────────────────────────────────────

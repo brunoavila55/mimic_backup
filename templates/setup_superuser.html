@@ -10,68 +10,116 @@
     <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico" />
     <link rel="stylesheet" href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" />
     <link rel="stylesheet" href="/static/css/style.css" />
+    <link rel="stylesheet" href="/static/css/login.css" />
 </head>
 <body>
-    <div class="auth-page">
-        <div class="auth-card">
-
-            <div class="auth-logo">
-                <img src="/static/img/logo_texto.svg" alt="Logo Mimic" style="height: 180px; width: auto;" />
+    <div class="login-split">
+        <!-- ===== Left Panel: Setup Branding ===== -->
+        <div class="login-brand">
+            <div class="login-brand-content">
+                <img src="/static/img/logo_texto.svg" alt="Logo Mimic" class="login-logo" />
+                
+                <div class="login-brand-features">
+                    <div class="login-feature">
+                        <div class="login-feature-icon">
+                            <i class="bx bx-user-voice"></i>
+                        </div>
+                        <div>
+                            <div class="login-feature-title">Acesso Total</div>
+                            <div class="login-feature-desc">Seu primeiro usuário terá permissões administrativas globais.</div>
+                        </div>
+                    </div>
+                    <div class="login-feature">
+                        <div class="login-feature-icon">
+                            <i class="bx bx-lock-alt"></i>
+                        </div>
+                        <div>
+                            <div class="login-feature-title">Segurança Máxima</div>
+                            <div class="login-feature-desc">Utilizamos hashing de última geração para proteger sua senha.</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="setup-stepper">
-                <div class="setup-step done">
-                    <div class="setup-step-num"><i class="bx bx-check" style="font-size: 14px;"></i></div>
-                    <span>Banco de Dados</span>
-                </div>
-                <div class="setup-divider"></div>
-                <div class="setup-step active">
-                    <div class="setup-step-num">2</div>
-                    <span>Administrador</span>
-                </div>
+            <div class="login-brand-footer">
+                &copy; 2025 Mimic Backup Systems
             </div>
+        </div>
 
-            <div class="auth-form">
-                <h2 class="auth-form-title">Criar Administrador</h2>
-                <p class="auth-form-desc">Configure o primeiro usuário administrador do sistema.</p>
+        <!-- ===== Right Panel: Admin Form ===== -->
+        <div class="login-form-panel">
+            <div class="login-form-wrapper">
+                
+                <div class="setup-stepper" style="margin-bottom: 40px; justify-content: flex-start;">
+                    <div class="setup-step done">
+                        <div class="setup-step-num"><i class="bx bx-check"></i></div>
+                        <span>Banco de Dados</span>
+                    </div>
+                    <div class="setup-divider"></div>
+                    <div class="setup-step active">
+                        <div class="setup-step-num">2</div>
+                        <span>Administrador</span>
+                    </div>
+                </div>
+
+                <div class="login-greeting" style="margin-bottom: 24px;">
+                    <h1 class="login-title">Administrador</h1>
+                    <p class="login-subtitle">Configure o acesso principal ao sistema.</p>
+                </div>
 
                 {{ if .Error }}
-                <div class="auth-error">
+                <div class="login-error">
                     <i class="bx bx-error-circle"></i>
                     <span>{{ .Error }}</span>
                 </div>
                 {{ end }}
 
-                <form action="/setup/superuser" method="POST">
-                    <div class="form-group">
-                        <label class="form-label">Usuário</label>
-                        <input type="text" name="username" class="form-input" placeholder="admin" required autocomplete="username" />
+                <form action="/setup/superuser" method="POST" class="login-form">
+                    <div class="login-field">
+                        <label for="setup-user">
+                            <i class="bx bx-user"></i>
+                            Usuário
+                        </label>
+                        <input id="setup-user" type="text" name="username" 
+                               placeholder="Ex: admin" required autocomplete="username" />
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">E-mail (opcional)</label>
-                        <input type="email" name="email" class="form-input" placeholder="admin@empresa.com" autocomplete="email" />
+                    <div class="login-field">
+                        <label for="setup-email">
+                            <i class="bx bx-envelope"></i>
+                            E-mail (opcional)
+                        </label>
+                        <input id="setup-email" type="email" name="email" 
+                               placeholder="admin@empresa.com" autocomplete="email" />
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Senha</label>
-                        <input type="password" name="password" class="form-input" placeholder="Mínimo 6 caracteres" required minlength="6" autocomplete="new-password" />
+                    <div class="login-field">
+                        <label for="setup-pass">
+                            <i class="bx bx-lock-open-alt"></i>
+                            Senha
+                        </label>
+                        <input id="setup-pass" type="password" name="password" 
+                               placeholder="Mínimo 6 caracteres" required minlength="6" autocomplete="new-password" />
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Confirmar Senha</label>
-                        <input type="password" name="confirm_password" class="form-input" placeholder="Repita a senha" required minlength="6" autocomplete="new-password" />
+                    <div class="login-field">
+                        <label for="setup-confirm">
+                            <i class="bx bx-lock-alt"></i>
+                            Confirmar Senha
+                        </label>
+                        <input id="setup-confirm" type="password" name="confirm_password" 
+                               placeholder="Repita a senha" required minlength="6" autocomplete="new-password" />
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-full" style="padding: 10px; margin-top: 8px;">
+                    <button type="submit" class="login-btn">
+                        <span>Criar Administrador</span>
                         <i class="bx bx-user-plus"></i>
-                        Criar Administrador
                     </button>
                 </form>
-            </div>
 
-            <div class="auth-footer">
-                Mimic Backup Systems &mdash; Configuração Inicial
+                <div class="login-form-footer" style="margin-top: 24px;">
+                    Mimic Backup Systems <span>v2.0</span>
+                </div>
             </div>
         </div>
     </div>

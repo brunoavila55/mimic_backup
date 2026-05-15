@@ -14,16 +14,16 @@
 
     --border:        #2a2d37;
     --border-light:  #1f2430;
-    --border-focus:  #6C63A6;
+    --border-focus:  #58E75F;
 
     --text:          #F2F0E6;
     --text-secondary:#b0b2ba;
     --text-muted:    #6b6e7a;
     --text-dim:      #3a3f4b;
 
-    --accent:        #6C63A6;
-    --accent-hover:  #524C86;
-    --accent-soft:   rgba(108, 99, 166, 0.1);
+    --accent:        #58E75F;
+    --accent-hover:  #45c44b;
+    --accent-soft:   rgba(88, 231, 95, 0.1);
 
     --success:       #6BCB77;
     --success-soft:  rgba(107, 203, 119, 0.1);
@@ -709,6 +709,13 @@ tbody tr:hover { background: var(--bg-hover); }
     margin-bottom: 20px;
 }
 
+/* === tsParticles Background === */
+#tsparticles {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+}
+
 /* === Login/Setup Pages === */
 .auth-page {
     min-height: 100vh;
@@ -717,11 +724,42 @@ tbody tr:hover { background: var(--bg-hover); }
     justify-content: center;
     background: var(--bg);
     padding: 24px;
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+}
+
+/* Ambient glow behind the card */
+.auth-page::before {
+    content: '';
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 600px;
+    height: 600px;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(108,99,166,0.12) 0%, rgba(139,92,246,0.06) 40%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+    animation: ambientPulse 6s ease-in-out infinite alternate;
+}
+
+@keyframes ambientPulse {
+    0%   { opacity: 0.6; transform: translate(-50%, -50%) scale(0.9); }
+    100% { opacity: 1;   transform: translate(-50%, -50%) scale(1.15); }
 }
 
 .auth-card {
     width: 100%;
     max-width: 400px;
+    position: relative;
+    z-index: 2;
+    animation: cardSlideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes cardSlideIn {
+    from { opacity: 0; transform: translateY(24px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .auth-logo {
@@ -730,6 +768,13 @@ tbody tr:hover { background: var(--bg-hover); }
     justify-content: center;
     gap: 10px;
     margin-bottom: 32px;
+    filter: drop-shadow(0 0 20px rgba(108,99,166,0.3));
+    animation: logoFadeIn 0.8s ease-out 0.2s both;
+}
+
+@keyframes logoFadeIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to   { opacity: 1; transform: scale(1); }
 }
 
 .auth-logo-icon {
@@ -750,11 +795,48 @@ tbody tr:hover { background: var(--bg-hover); }
     color: var(--text);
 }
 
+/* Glassmorphism auth form */
 .auth-form {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
+    background: rgba(23, 27, 38, 0.65);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    border: 1px solid rgba(108, 99, 166, 0.18);
     border-radius: var(--radius-xl);
     padding: 32px;
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(108, 99, 166, 0.08) inset,
+        0 1px 0 rgba(255, 255, 255, 0.03) inset;
+    transition: border-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+.auth-form:hover {
+    border-color: rgba(108, 99, 166, 0.3);
+    box-shadow:
+        0 8px 40px rgba(0, 0, 0, 0.5),
+        0 0 60px rgba(108, 99, 166, 0.06),
+        0 0 0 1px rgba(108, 99, 166, 0.12) inset,
+        0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+/* Subtle gradient shimmer on the card top edge */
+.auth-form::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(108,99,166,0.4) 25%,
+        rgba(139,92,246,0.6) 50%,
+        rgba(108,99,166,0.4) 75%,
+        transparent 100%
+    );
+    opacity: 0.7;
 }
 
 .auth-form-title {
@@ -770,9 +852,59 @@ tbody tr:hover { background: var(--bg-hover); }
     margin-bottom: 24px;
 }
 
+/* Login form inputs — glass style */
+.auth-form .form-input {
+    background: rgba(30, 35, 48, 0.6);
+    border: 1px solid rgba(42, 45, 55, 0.8);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+
+.auth-form .form-input:hover {
+    border-color: rgba(108, 99, 166, 0.3);
+    background: rgba(30, 35, 48, 0.8);
+}
+
+.auth-form .form-input:focus {
+    border-color: var(--accent);
+    background: rgba(30, 35, 48, 0.9);
+    box-shadow: 0 0 0 3px rgba(108, 99, 166, 0.12), 0 0 16px rgba(108, 99, 166, 0.08);
+}
+
+/* Login button — enhanced glow */
+.auth-form .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #45c44b);
+    border: none;
+    box-shadow: 0 4px 16px rgba(88, 231, 95, 0.25);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.auth-form .btn-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.auth-form .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 24px rgba(88, 231, 95, 0.35), 0 0 40px rgba(88, 231, 95, 0.1);
+}
+
+.auth-form .btn-primary:hover::before {
+    opacity: 1;
+}
+
+.auth-form .btn-primary:active {
+    transform: translateY(0) scale(0.98);
+}
+
 .auth-error {
     padding: 10px 14px;
-    background: var(--danger-soft);
+    background: rgba(239, 68, 68, 0.08);
     border: 1px solid rgba(239, 68, 68, 0.2);
     border-radius: var(--radius);
     display: flex;
@@ -781,6 +913,7 @@ tbody tr:hover { background: var(--bg-hover); }
     margin-bottom: 16px;
     font-size: 13px;
     color: var(--danger);
+    backdrop-filter: blur(8px);
 }
 
 .auth-footer {
@@ -788,6 +921,7 @@ tbody tr:hover { background: var(--bg-hover); }
     margin-top: 16px;
     font-size: 11px;
     color: var(--text-dim);
+    letter-spacing: 0.04em;
 }
 
 /* Setup Stepper */

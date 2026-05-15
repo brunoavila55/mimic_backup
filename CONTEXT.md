@@ -4,7 +4,7 @@ Este documento serve como referência centralizada para desenvolvedores e agente
 
 ## 📌 Visão Geral
 
-O **Mimic** é um sistema de automação para backup de equipamentos de rede (MikroTik, Cisco, Huawei, Juniper, FortiGate, Linux). Conecta-se via SSH, coleta a configuração, normaliza o texto e armazena versões no banco de dados com hash SHA-256 para deduplicação.
+O **Mimic** é um sistema de automação para backup de equipamentos de rede (MikroTik, Cisco, Huawei, Juniper, Ubiquiti). Conecta-se via SSH, coleta a configuração, normaliza o texto e armazena versões no banco de dados com hash SHA-256 para deduplicação.
 
 ## 🏗️ Arquitetura
 

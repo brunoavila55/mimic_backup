@@ -46,7 +46,7 @@ func (s *SchedulerService) CheckBackups() {
 	var nodes []models.Node
 	now := time.Now()
 	// Find nodes that need backup
-	s.db.Where("enabled = ? AND (next_backup_at IS NULL OR next_backup_at <= ?)", true, now).Find(&nodes)
+	s.db.Preload("Credential").Preload("AccessAgent").Preload("Routine").Where("enabled = ? AND (next_backup_at IS NULL OR next_backup_at <= ?)", true, now).Find(&nodes)
 
 	if len(nodes) == 0 {
 		return

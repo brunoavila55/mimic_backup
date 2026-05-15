@@ -104,6 +104,8 @@ func (h *FormHandler) SaveNode(c *fiber.Ctx) error {
 	node.Tags = c.FormValue("tags")
 	node.ScheduleType = c.FormValue("schedule_type")
 	node.Frequency = c.FormValue("frequency")
+	node.BackupHour = c.FormValue("backup_hour")
+	node.BackupDay = c.FormValue("backup_day")
 
 	routineID, _ := strconv.Atoi(c.FormValue("routine_id"))
 	if routineID > 0 {
@@ -158,11 +160,13 @@ func (h *FormHandler) DeleteNodeConfirm(c *fiber.Ctx) error {
 
 func (h *FormHandler) DeleteNode(c *fiber.Ctx) error {
 	id := c.Params("id")
+	// Also delete associated backups to avoid orphan records
+	h.DB.Where("node_id = ?", id).Delete(&models.NodeBackup{})
 	h.DB.Where("id = ?", id).Delete(&models.Node{})
 
 	if c.Get("HX-Request") == "true" {
 		c.Set("HX-Trigger", `{"showNotification": {"message": "Node excluído", "type": "success"}}`)
-		return c.SendStatus(200)
+		return c.SendString("")
 	}
 
 	return c.Redirect("/nodes")

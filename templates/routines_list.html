@@ -20,6 +20,7 @@
                             <th>Nome</th>
                             <th>Descrição</th>
                             <th>Frequência</th>
+                            <th>Horário</th>
                             <th>Status</th>
                             <th style="width: 80px;">Ações</th>
                         </tr>
@@ -37,6 +38,25 @@
                                 {{ else if eq .Frequency "24" }}24 horas
                                 {{ else if eq .Frequency "168" }}7 dias
                                 {{ else }}{{ .Frequency }}h{{ end }}
+                            </td>
+                            <td>
+                                {{ if .BackupHour }}
+                                    <span class="font-mono">{{ .BackupHour }}</span>
+                                    {{ if .BackupDay }}
+                                        <span class="text-secondary" style="margin-left: 4px;">
+                                            {{ if eq .BackupDay "0" }}Seg
+                                            {{ else if eq .BackupDay "1" }}Ter
+                                            {{ else if eq .BackupDay "2" }}Qua
+                                            {{ else if eq .BackupDay "3" }}Qui
+                                            {{ else if eq .BackupDay "4" }}Sex
+                                            {{ else if eq .BackupDay "5" }}Sáb
+                                            {{ else if eq .BackupDay "6" }}Dom
+                                            {{ end }}
+                                        </span>
+                                    {{ end }}
+                                {{ else }}
+                                    <span class="text-muted">—</span>
+                                {{ end }}
                             </td>
                             <td>
                                 {{ if .Enabled }}
@@ -62,7 +82,7 @@
                         </tr>
                         {{ end }}
                         {{ else }}
-                        <tr><td colspan="5" class="table-empty">Nenhuma rotina cadastrada.</td></tr>
+                        <tr><td colspan="6" class="table-empty">Nenhuma rotina cadastrada.</td></tr>
                         {{ end }}
                     </tbody>
                 </table>

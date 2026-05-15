@@ -1,4 +1,5 @@
-<div class="page-enter" style="max-width: 700px; margin: 0 auto;">
+<div class="page-enter" style="max-width: 700px; margin: 0 auto;"
+     x-data="{ scheduleType: '{{ if .Node.ScheduleType }}{{ .Node.ScheduleType }}{{ else }}individual{{ end }}' }">
     <div class="page-header">
         <div class="flex items-center gap-3">
             <a href="/nodes" class="btn btn-ghost btn-icon"><i class="bx bx-arrow-back"></i></a>
@@ -77,12 +78,12 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Tipo de Agendamento</label>
-                        <select name="schedule_type" class="form-input">
+                        <select name="schedule_type" class="form-input" x-model="scheduleType">
                             <option value="individual" {{ if eq .Node.ScheduleType "individual" }}selected{{ end }}>Individual</option>
                             <option value="routine" {{ if eq .Node.ScheduleType "routine" }}selected{{ end }}>Rotina</option>
                         </select>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" x-show="scheduleType === 'individual'">
                         <label class="form-label">Frequência (horas)</label>
                         <select name="frequency" class="form-input">
                             <option value="1" {{ if eq .Node.Frequency "1" }}selected{{ end }}>1 hora</option>
@@ -94,9 +95,32 @@
                     </div>
                 </div>
 
+                <div x-show="scheduleType === 'individual'">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Horário do Backup</label>
+                            <input type="time" name="backup_hour" class="form-input" value="{{ .Node.BackupHour }}" />
+                            <div class="form-hint">Horário preferencial para execução do backup.</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Dia da Semana (se semanal)</label>
+                            <select name="backup_day" class="form-input">
+                                <option value="">— Qualquer —</option>
+                                <option value="0" {{ if eq .Node.BackupDay "0" }}selected{{ end }}>Segunda-feira</option>
+                                <option value="1" {{ if eq .Node.BackupDay "1" }}selected{{ end }}>Terça-feira</option>
+                                <option value="2" {{ if eq .Node.BackupDay "2" }}selected{{ end }}>Quarta-feira</option>
+                                <option value="3" {{ if eq .Node.BackupDay "3" }}selected{{ end }}>Quinta-feira</option>
+                                <option value="4" {{ if eq .Node.BackupDay "4" }}selected{{ end }}>Sexta-feira</option>
+                                <option value="5" {{ if eq .Node.BackupDay "5" }}selected{{ end }}>Sábado</option>
+                                <option value="6" {{ if eq .Node.BackupDay "6" }}selected{{ end }}>Domingo</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
                 {{ if .Routines }}
-                <div class="form-group">
-                    <label class="form-label">Rotina (se tipo = Rotina)</label>
+                <div class="form-group" x-show="scheduleType === 'routine'">
+                    <label class="form-label">Rotina</label>
                     <select name="routine_id" class="form-input">
                         <option value="">— Nenhuma —</option>
                         {{ range .Routines }}

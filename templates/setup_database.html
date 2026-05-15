@@ -10,30 +10,62 @@
     <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico" />
     <link rel="stylesheet" href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" />
     <link rel="stylesheet" href="/static/css/style.css" />
+    <link rel="stylesheet" href="/static/css/login.css" />
 </head>
 <body>
-    <div class="auth-page">
-        <div class="auth-card">
-
-            <div class="auth-logo">
-                <img src="/static/img/logo_texto.svg" alt="Logo Mimic" style="height: 180px; width: auto;" />
+    <div class="login-split">
+        <!-- ===== Left Panel: Setup Branding ===== -->
+        <div class="login-brand">
+            <div class="login-brand-content">
+                <img src="/static/img/logo_texto.svg" alt="Logo Mimic" class="login-logo" />
+                
+                <div class="login-brand-features">
+                    <div class="login-feature">
+                        <div class="login-feature-icon">
+                            <i class="bx bx-cog"></i>
+                        </div>
+                        <div>
+                            <div class="login-feature-title">Configuração Assistida</div>
+                            <div class="login-feature-desc">Preparamos tudo para você começar em minutos.</div>
+                        </div>
+                    </div>
+                    <div class="login-feature">
+                        <div class="login-feature-icon">
+                            <i class="bx bx-data"></i>
+                        </div>
+                        <div>
+                            <div class="login-feature-title">Integridade de Dados</div>
+                            <div class="login-feature-desc">Verificamos tabelas e conexões automaticamente.</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="setup-stepper">
-                <div class="setup-step active">
-                    <div class="setup-step-num">1</div>
-                    <span>Banco de Dados</span>
-                </div>
-                <div class="setup-divider"></div>
-                <div class="setup-step">
-                    <div class="setup-step-num">2</div>
-                    <span>Administrador</span>
-                </div>
+            <div class="login-brand-footer">
+                &copy; 2025 Mimic Backup Systems
             </div>
+        </div>
 
-            <div class="auth-form">
-                <h2 class="auth-form-title">Banco de Dados</h2>
-                <p class="auth-form-desc">Verifique a conexão e a estrutura do banco de dados.</p>
+        <!-- ===== Right Panel: Setup Status ===== -->
+        <div class="login-form-panel">
+            <div class="login-form-wrapper">
+                
+                <div class="setup-stepper" style="margin-bottom: 40px; justify-content: flex-start;">
+                    <div class="setup-step active">
+                        <div class="setup-step-num">1</div>
+                        <span>Banco de Dados</span>
+                    </div>
+                    <div class="setup-divider"></div>
+                    <div class="setup-step">
+                        <div class="setup-step-num">2</div>
+                        <span>Administrador</span>
+                    </div>
+                </div>
+
+                <div class="login-greeting" style="margin-bottom: 24px;">
+                    <h1 class="login-title">Banco de Dados</h1>
+                    <p class="login-subtitle">Verificando a infraestrutura básica do sistema.</p>
+                </div>
 
                 <div class="setup-status">
                     <div class="setup-status-icon {{ if .DBOk }}ok{{ else }}pending{{ end }}">
@@ -45,7 +77,7 @@
                     </div>
                 </div>
 
-                <div class="setup-status">
+                <div class="setup-status" style="margin-bottom: 32px;">
                     <div class="setup-status-icon {{ if .TablesOk }}ok{{ else }}pending{{ end }}">
                         <i class="bx {{ if .TablesOk }}bx-check{{ else }}bx-x{{ end }}"></i>
                     </div>
@@ -56,22 +88,22 @@
                 </div>
 
                 {{ if .Error }}
-                <div class="auth-error">
+                <div class="login-error">
                     <i class="bx bx-error-circle"></i>
                     <span>{{ .Error }}</span>
                 </div>
                 {{ end }}
 
-                <form action="/setup" method="POST" style="margin-top: 24px;">
-                    <button type="submit" class="btn btn-primary w-full" style="padding: 10px;">
-                        Continuar
+                <form action="/setup" method="POST">
+                    <button type="submit" class="login-btn">
+                        <span>Continuar</span>
                         <i class="bx bx-right-arrow-alt"></i>
                     </button>
                 </form>
-            </div>
 
-            <div class="auth-footer">
-                Mimic Backup Systems &mdash; Configuração Inicial
+                <div class="login-form-footer">
+                    Mimic Backup Systems <span>v2.0</span>
+                </div>
             </div>
         </div>
     </div>

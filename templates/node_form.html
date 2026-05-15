@@ -1,5 +1,8 @@
 <div class="page-enter" style="max-width: 700px; margin: 0 auto;"
-     x-data="{ scheduleType: '{{ if .Node.ScheduleType }}{{ .Node.ScheduleType }}{{ else }}individual{{ end }}' }">
+     x-data="{
+        scheduleType: '{{ if .Node.ScheduleType }}{{ .Node.ScheduleType }}{{ else }}individual{{ end }}',
+        credentialId: '{{ if .Node.CredentialID }}{{ deref .Node.CredentialID }}{{ else }}{{ end }}'
+     }">
     <div class="page-header">
         <div class="flex items-center gap-3">
             <a href="/nodes" class="btn btn-ghost btn-icon"><i class="bx bx-arrow-back"></i></a>
@@ -39,29 +42,31 @@
                     </div>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Usuário SSH</label>
-                        <input type="text" name="username" class="form-input" value="{{ .Node.Username }}" placeholder="admin" />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Senha SSH</label>
-                        <input type="password" name="password" class="form-input" placeholder="{{ if .Node.ID }}Deixe em branco para manter{{ else }}Senha de acesso{{ end }}" />
-                    </div>
-                </div>
-
                 {{ if .Credentials }}
                 <div class="form-group">
-                    <label class="form-label">Credencial (opcional)</label>
-                    <select name="credential_id" class="form-input">
-                        <option value="">— Nenhuma —</option>
+                    <label class="form-label">Credencial SSH</label>
+                    <select name="credential_id" class="form-input" x-model="credentialId">
+                        <option value="">— Usar login/senha manual —</option>
                         {{ range .Credentials }}
-                        <option value="{{ .ID }}" {{ if $.Node.CredentialID }}{{ if eq .ID (deref $.Node.CredentialID) }}selected{{ end }}{{ end }}>{{ .Name }} ({{ .Username }})</option>
+                        <option value="{{ .ID }}" {{ if $.Node.CredentialID }}{{ if eq .ID (deref $.Node.CredentialID) }}selected{{ end }}{{ end }}>{{ .Name }} ({{ .Username }}:{{ .Port }})</option>
                         {{ end }}
                     </select>
-                    <div class="form-hint">Se selecionada, substitui o usuário/senha acima.</div>
+                    <div class="form-hint" x-show="credentialId">Usando credencial salva. Usuário e senha da credencial serão utilizados.</div>
                 </div>
                 {{ end }}
+
+                <div x-show="!credentialId">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Usuário SSH</label>
+                            <input type="text" name="username" class="form-input" value="{{ .Node.Username }}" placeholder="admin" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Senha SSH</label>
+                            <input type="password" name="password" class="form-input" placeholder="{{ if .Node.ID }}Deixe em branco para manter{{ else }}Senha de acesso{{ end }}" />
+                        </div>
+                    </div>
+                </div>
 
                 <div class="form-row">
                     <div class="form-group">

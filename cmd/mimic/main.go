@@ -180,7 +180,7 @@ ________________________________________________`)
 	app.Post("/nodes/:id/trigger", func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		var node models.Node
-		if err := db.Where("id = ?", id).First(&node).Error; err == nil {
+		if err := db.Preload("Credential").Preload("AccessAgent").Where("id = ?", id).First(&node).Error; err == nil {
 			go sch.RunBackup(&node)
 			c.Set("HX-Trigger", `{"showNotification": {"message": "Backup manual iniciado", "type": "success"}}`)
 		}

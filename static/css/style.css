@@ -496,6 +496,22 @@ button { font-family: inherit; }
 
 select.form-input { cursor: pointer; }
 
+/* Time input — dark theme compatibility */
+input[type="time"].form-input {
+    color-scheme: dark;
+}
+
+input[type="time"].form-input::-webkit-calendar-picker-indicator {
+    filter: invert(0.8);
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity var(--transition);
+}
+
+input[type="time"].form-input::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
 textarea.form-input { resize: vertical; min-height: 80px; }
 
 .form-row {

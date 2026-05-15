@@ -1,17 +1,20 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mimic | Login</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet" />
     <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico" />
     <link rel="stylesheet" href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" />
     <link rel="stylesheet" href="/static/css/style.css" />
     <link rel="stylesheet" href="/static/css/login.css" />
 </head>
+
 <body>
     <div class="login-split">
 
@@ -38,7 +41,7 @@
                         </div>
                         <div>
                             <div class="login-feature-title">Multi-Vendor</div>
-                            <div class="login-feature-desc">Switches, roteadores, OLTs e firewalls</div>
+                            <div class="login-feature-desc">Switches, roteadores e firewalls</div>
                         </div>
                     </div>
                     <div class="login-feature">
@@ -46,15 +49,15 @@
                             <i class="bx bx-lock-alt"></i>
                         </div>
                         <div>
-                            <div class="login-feature-title">Criptografia AES-256</div>
-                            <div class="login-feature-desc">Credenciais protegidas com AES-GCM</div>
+                            <div class="login-feature-title">Backup seguro</div>
+                            <div class="login-feature-desc">Backups protegidos com criptografia AES 256</div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="login-brand-footer">
-                &copy; 2025 Mimic Backup Systems
+                &copy; 2026 Mimic Backup Systems
             </div>
         </div>
 
@@ -80,9 +83,8 @@
                             <i class="bx bx-user"></i>
                             Usuário
                         </label>
-                        <input id="login-user" type="text" name="username"
-                               value="{{ .LoginUsername }}"
-                               placeholder="Digite seu usuário" required autocomplete="username" />
+                        <input id="login-user" type="text" name="username" value="{{ .LoginUsername }}"
+                            placeholder="Digite seu usuário" required autocomplete="username" />
                     </div>
 
                     <div class="login-field">
@@ -91,8 +93,8 @@
                             Senha
                         </label>
                         <div class="login-password-wrap">
-                            <input id="login-pass" type="password" name="password"
-                                   placeholder="Digite sua senha" required autocomplete="current-password" />
+                            <input id="login-pass" type="password" name="password" placeholder="Digite sua senha"
+                                required autocomplete="current-password" />
                             <button type="button" class="login-eye" onclick="togglePassword()" tabindex="-1">
                                 <i class="bx bx-hide" id="eye-icon"></i>
                             </button>
@@ -215,4 +217,5 @@
         }
     </script>
 </body>
+
 </html>

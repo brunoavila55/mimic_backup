@@ -11,6 +11,7 @@ O **Mimic** é um sistema de automação para backup de equipamentos de rede (Mi
 - **Backend**: Go 1.25 + framework **Fiber v2**.
 - **Frontend**: **Go Templates** renderizados no servidor + **HTMX** para interatividade reativa + **Alpine.js** para estados de UI (modais, menus).
 - **Estilização**: CSS customizado com design system neutro/escuro (Inter + JetBrains Mono). Sem frameworks CSS externos.
+- **Versionamento**: O sistema conta dinamicamente o número de commits (`git rev-list`) no boot e injeta a versão (`v0.1.X`) em todos os templates via a função `AppVersion`.
 - **ORM**: **GORM** com driver PostgreSQL.
 - **Concorrência**: Goroutines com Worker Pool para backups paralelos.
 - **Criptografia**: AES-GCM 256-bit para senhas de rede e credenciais SSH (pacote `pkg/crypto`).

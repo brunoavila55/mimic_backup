@@ -9,6 +9,8 @@ import (
 	"mimic/internal/services/scheduler"
 	"mimic/internal/services/sftp"
 	"os"
+	"os/exec"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/session"
@@ -69,9 +71,19 @@ ________________________________________________`)
 	sch := scheduler.NewScheduler(db)
 	sch.Start()
 
+	// Get Version from Git
+	appVersion := "0.0.10" // fallback
+	if out, err := exec.Command("git", "rev-list", "--count", "HEAD").Output(); err == nil {
+		count := strings.TrimSpace(string(out))
+		appVersion = "0.1." + count
+	}
+
 	// Template Engine
 	engine := html.New("./templates", ".html")
 	engine.Reload(true)
+	engine.AddFunc("AppVersion", func() string {
+		return appVersion
+	})
 	engine.AddFunc("seq", func(start, end int) []int {
 		s := make([]int, end-start+1)
 		for i := range s {

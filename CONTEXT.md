@@ -1,4 +1,4 @@
-# Contexto do Projeto: Mimic Backup Systems v2.0
+# Contexto do Projeto: Mimic Backup Systems v0.1.X
 
 Este documento serve como referência centralizada para desenvolvedores e agentes de IA entenderem o estado atual, a arquitetura e as decisões do projeto.
 

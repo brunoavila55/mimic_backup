@@ -1,14 +1,14 @@
 <div>
-    <h2 class="settings-section-title">Logs do Sistema</h2>
+    <h2 class="settings-section-title">System Logs</h2>
     <p class="settings-section-desc">Últimos 200 registros de atividade do sistema.</p>
 
     <div class="table-wrap">
         <table>
             <thead>
                 <tr>
-                    <th>Nível</th>
-                    <th>Categoria</th>
-                    <th>Mensagem</th>
+                    <th>Level</th>
+                    <th>Category</th>
+                    <th>Message</th>
                     <th>Data</th>
                 </tr>
             </thead>
@@ -27,7 +27,7 @@
                 </tr>
                 {{ end }}
                 {{ else }}
-                <tr><td colspan="4" class="table-empty">Nenhum log registrado.</td></tr>
+                <tr><td colspan="4" class="table-empty">No logs recorded.</td></tr>
                 {{ end }}
             </tbody>
         </table>

@@ -23,7 +23,7 @@
                             Última exportação: {{ .Sftp.LastExportAt.Format "02/01/2006 15:04" }}
                             — <span class="{{ if eq .Sftp.LastExportStatus "success" }}text-success{{ else }}text-danger{{ end }}">{{ .Sftp.LastExportStatus }}</span>
                         {{ else }}
-                            Nenhuma exportação realizada
+                            No exports performed
                         {{ end }}
                     </div>
                 </div>
@@ -40,7 +40,7 @@
 
     <div class="table-wrap">
         <table>
-            <thead><tr><th>Node</th><th>IP</th><th>Último Backup</th><th>Status</th></tr></thead>
+            <thead><tr><th>Node</th><th>IP</th><th>Last Backup</th><th>Status</th></tr></thead>
             <tbody>
             {{ if .Nodes }}
                 {{ range .Nodes }}
@@ -58,7 +58,7 @@
                 </tr>
                 {{ end }}
             {{ else }}
-                <tr><td colspan="4" class="table-empty">Nenhum node ativo.</td></tr>
+                <tr><td colspan="4" class="table-empty">No active nodes.</td></tr>
             {{ end }}
             </tbody>
         </table>

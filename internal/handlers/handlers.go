@@ -103,7 +103,7 @@ func (h *NodeHandler) NodeDetails(c *fiber.Ctx) error {
 	if err := h.DB.Preload("Backups", func(db *gorm.DB) *gorm.DB {
 		return db.Order("version desc")
 	}).Preload("Credential").Where("id = ?", id).First(&node).Error; err != nil {
-		return c.Status(404).SendString("Node não encontrado")
+		return c.Status(404).SendString("Node not found")
 	}
 
 	data := fiber.Map{
@@ -122,7 +122,7 @@ func (h *NodeHandler) GetBackupContent(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var backup models.NodeBackup
 	if err := h.DB.Preload("Node").Where("id = ?", id).First(&backup).Error; err != nil {
-		return c.Status(404).SendString("Backup não encontrado")
+		return c.Status(404).SendString("Backup not found")
 	}
 
 	return c.Render("partials/backup_view", fiber.Map{
@@ -187,18 +187,18 @@ func (h *SettingsHandler) GetSettings(c *fiber.Ctx) error {
 
 func (h *SettingsHandler) renderTab(c *fiber.Ctx, tab string, data fiber.Map) error {
 	titles := map[string]string{
-		"users":       "Usuários",
-		"credentials": "Credenciais SSH",
-		"routines":    "Rotinas de Backup",
-		"sftp":        "Configuração SFTP",
-		"export":      "Exportação",
-		"logs":        "Logs do Sistema",
-		"profile":     "Meu Perfil",
+		"users":       "Users",
+		"credentials": "SSH Credentials",
+		"routines":    "Backup Routines",
+		"sftp":        "SFTP Configuration",
+		"export":      "Export",
+		"logs":        "System Logs",
+		"profile":     "My Profile",
 	}
 
 	data["Title"] = titles[tab]
 	if data["Title"] == "" {
-		data["Title"] = "Configurações"
+		data["Title"] = "Settings"
 	}
 
 	data["Username"] = c.Locals("username")

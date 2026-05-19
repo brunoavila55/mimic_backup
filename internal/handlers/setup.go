@@ -22,7 +22,7 @@ func (h *SetupHandler) GetDatabaseSetup(c *fiber.Ctx) error {
 	tablesOk := h.DB.Migrator().HasTable(&models.User{})
 
 	return c.Render("setup_database", fiber.Map{
-		"Title":    "Configuração Inicial",
+		"Title":    "Initial Setup",
 		"Step":     1,
 		"DBOk":     dbOk,
 		"TablesOk": tablesOk,
@@ -39,7 +39,7 @@ func (h *SetupHandler) GetCreateSuperuser(c *fiber.Ctx) error {
 	}
 
 	return c.Render("setup_superuser", fiber.Map{
-		"Title": "Criar Administrador",
+		"Title": "Create Administrator",
 		"Step":  2,
 	})
 }
@@ -52,25 +52,25 @@ func (h *SetupHandler) PostCreateSuperuser(c *fiber.Ctx) error {
 
 	if username == "" || password == "" {
 		return c.Render("setup_superuser", fiber.Map{
-			"Title": "Criar Administrador",
+			"Title": "Create Administrator",
 			"Step":  2,
-			"Error": "Usuário e senha são obrigatórios",
+			"Error": "Username and password are required",
 		})
 	}
 
 	if len(password) < 6 {
 		return c.Render("setup_superuser", fiber.Map{
-			"Title": "Criar Administrador",
+			"Title": "Create Administrator",
 			"Step":  2,
-			"Error": "A senha deve ter pelo menos 6 caracteres",
+			"Error": "Password must be at least 6 characters long",
 		})
 	}
 
 	if password != confirm {
 		return c.Render("setup_superuser", fiber.Map{
-			"Title": "Criar Administrador",
+			"Title": "Create Administrator",
 			"Step":  2,
-			"Error": "As senhas não coincidem",
+			"Error": "Passwords do not match",
 		})
 	}
 
@@ -84,9 +84,9 @@ func (h *SetupHandler) PostCreateSuperuser(c *fiber.Ctx) error {
 
 	if err := h.DB.Create(&user).Error; err != nil {
 		return c.Render("setup_superuser", fiber.Map{
-			"Title": "Criar Administrador",
+			"Title": "Create Administrator",
 			"Step":  2,
-			"Error": "Erro ao criar usuário: " + err.Error(),
+			"Error": "Error creating user: " + err.Error(),
 		})
 	}
 

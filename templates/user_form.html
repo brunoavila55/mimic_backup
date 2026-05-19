@@ -10,33 +10,33 @@
         <div class="card-body">
             <form action="{{ if .EditUser.ID }}/settings/users/save/{{ .EditUser.ID }}{{ else }}/settings/users/save{{ end }}" method="POST">
                 <div class="form-group">
-                    <label class="form-label">Usuário</label>
-                    <input type="text" name="username" class="form-input" value="{{ .EditUser.Username }}" placeholder="nome_usuario" required />
+                    <label class="form-label">Username</label>
+                    <input type="text" name="username" class="form-input" value="{{ .EditUser.Username }}" placeholder="username" required />
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">E-mail</label>
-                    <input type="email" name="email" class="form-input" value="{{ .EditUser.Email }}" placeholder="usuario@empresa.com" />
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-input" value="{{ .EditUser.Email }}" placeholder="user@company.com" />
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Senha</label>
-                    <input type="password" name="password" class="form-input" placeholder="{{ if .EditUser.ID }}Deixe em branco para manter{{ else }}Senha de acesso{{ end }}" {{ if not .EditUser.ID }}required{{ end }} autocomplete="new-password" />
+                    <label class="form-label">Password</label>
+                    <input type="password" name="password" class="form-input" placeholder="{{ if .EditUser.ID }}Leave blank to keep{{ else }}Access password{{ end }}" {{ if not .EditUser.ID }}required{{ end }} autocomplete="new-password" />
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Papel</label>
+                    <label class="form-label">Role</label>
                     <select name="role" class="form-input">
-                        <option value="Administrator" {{ if eq .EditUser.Role "Administrator" }}selected{{ end }}>Administrador</option>
-                        <option value="Viewer" {{ if eq .EditUser.Role "Viewer" }}selected{{ end }}>Visualizador</option>
+                        <option value="Administrator" {{ if eq .EditUser.Role "Administrator" }}selected{{ end }}>Administrator</option>
+                        <option value="Viewer" {{ if eq .EditUser.Role "Viewer" }}selected{{ end }}>Viewer</option>
                     </select>
-                    <div class="form-hint">Administradores têm acesso total. Visualizadores só podem consultar.</div>
+                    <div class="form-hint">Administrators have full access. Viewers can only view.</div>
                 </div>
 
                 <div class="form-actions">
-                    <a href="/settings/users" class="btn btn-secondary">Cancelar</a>
+                    <a href="/settings/users" class="btn btn-secondary">Cancel</a>
                     <button type="submit" class="btn btn-primary">
-                        <i class="bx bx-save"></i> Salvar
+                        <i class="bx bx-save"></i> Save
                     </button>
                 </div>
             </form>

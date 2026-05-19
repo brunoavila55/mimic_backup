@@ -28,16 +28,16 @@ func (h *AuthHandler) PostLogin(c *fiber.Ctx) error {
 
 	var user models.User
 	if err := h.DB.Where("username = ?", username).First(&user).Error; err != nil {
-		return c.Render("login", fiber.Map{"Title": "Login", "Error": "Credenciais inválidas", "LoginUsername": username})
+		return c.Render("login", fiber.Map{"Title": "Login", "Error": "Invalid credentials", "LoginUsername": username})
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		return c.Render("login", fiber.Map{"Title": "Login", "Error": "Credenciais inválidas", "LoginUsername": username})
+		return c.Render("login", fiber.Map{"Title": "Login", "Error": "Invalid credentials", "LoginUsername": username})
 	}
 
 	sess, err := h.Store.Get(c)
 	if err != nil {
-		return c.Render("login", fiber.Map{"Title": "Login", "Error": "Erro de sessão", "LoginUsername": username})
+		return c.Render("login", fiber.Map{"Title": "Login", "Error": "Session error", "LoginUsername": username})
 	}
 
 	sess.Set("user_id", user.ID)
@@ -45,7 +45,7 @@ func (h *AuthHandler) PostLogin(c *fiber.Ctx) error {
 	sess.Set("role", user.Role)
 	sess.Set("avatar", user.Avatar)
 	if err := sess.Save(); err != nil {
-		return c.Render("login", fiber.Map{"Title": "Login", "Error": "Erro ao salvar sessão", "LoginUsername": username})
+		return c.Render("login", fiber.Map{"Title": "Login", "Error": "Error saving session", "LoginUsername": username})
 	}
 
 	return c.Redirect("/", 302)

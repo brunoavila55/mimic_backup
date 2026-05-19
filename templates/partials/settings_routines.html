@@ -13,12 +13,12 @@
         <table>
             <thead>
                 <tr>
-                    <th>Nome</th>
+                    <th>Name</th>
                     <th>Descrição</th>
-                    <th>Frequência</th>
-                    <th>Horário</th>
+                    <th>Frequency</th>
+                    <th>Time</th>
                     <th>Status</th>
-                    <th style="width: 80px;">Ações</th>
+                    <th style="width: 80px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -63,14 +63,14 @@
                     </td>
                     <td>
                         <div class="action-group">
-                            <a href="/settings/routines/{{ .ID }}/edit" class="action-btn" title="Editar">
+                            <a href="/settings/routines/{{ .ID }}/edit" class="action-btn" title="Edit">
                                 <i class="bx bx-edit-alt"></i>
                             </a>
                             <button hx-delete="/settings/routines/{{ .ID }}"
                                     hx-confirm="Excluir esta rotina?"
                                     hx-target="closest tr"
                                     hx-swap="outerHTML"
-                                    class="action-btn danger" title="Excluir">
+                                    class="action-btn danger" title="Delete">
                                 <i class="bx bx-trash"></i>
                             </button>
                         </div>
@@ -78,7 +78,7 @@
                 </tr>
                 {{ end }}
                 {{ else }}
-                <tr><td colspan="6" class="table-empty">Nenhuma rotina cadastrada.</td></tr>
+                <tr><td colspan="6" class="table-empty">No routines registered.</td></tr>
                 {{ end }}
             </tbody>
         </table>

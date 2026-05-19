@@ -1,4 +1,4 @@
-# Mimic — Backup Systems v2.0
+# Mimic — Backup Systems v0.1.X
 
 Plataforma de alta performance para automação, versionamento e centralização de backups de equipamentos de rede (switches, roteadores, OLTs, firewalls). Conecta-se aos dispositivos via SSH, captura a configuração e mantém um histórico completo para auditoria e recuperação.
 

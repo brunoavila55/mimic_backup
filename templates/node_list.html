@@ -2,24 +2,24 @@
     <div class="page-header">
         <div>
             <h1 class="page-title">Nodes</h1>
-            <p class="page-desc">Gerenciamento de todos os equipamentos de rede.</p>
+            <p class="page-desc">Management of all network equipment.</p>
         </div>
         <div class="flex gap-2">
             <a href="/nodes/export" class="btn btn-secondary">
                 <i class="bx bx-download"></i>
-                Exportar CSV
+                Export CSV
             </a>
             <a href="/nodes/import" class="btn btn-secondary">
                 <i class="bx bx-upload"></i>
-                Importar CSV
+                Import CSV
             </a>
             <button hx-post="/trigger-backups" hx-swap="none" class="btn btn-secondary">
                 <i class="bx bx-refresh"></i>
-                Sincronizar
+                Synchronize
             </button>
             <a href="/nodes/new" class="btn btn-primary">
                 <i class="bx bx-plus"></i>
-                Novo Node
+                New Node
             </a>
         </div>
     </div>
@@ -31,7 +31,7 @@
                 <input type="text"
                        name="search"
                        value="{{ .Search }}"
-                       placeholder="Buscar por nome, IP ou fabricante..."
+                       placeholder="Search by name, IP or vendor..."
                        class="form-input"
                        style="background: transparent; border-color: transparent;"
                        hx-get="/nodes"

@@ -26,7 +26,7 @@
             </div>
 
             <nav class="sidebar-nav">
-                <div class="sidebar-section">Principal</div>
+                <div class="sidebar-section">Main</div>
                 <a href="/" class="sidebar-link {{ if eq .CurrentRoute "dashboard" }}active{{ end }}">
                     <i class="bx bx-grid-alt"></i>
                     <span>Dashboard</span>
@@ -37,17 +37,17 @@
                 </a>
                 <a href="/settings/credentials" class="sidebar-link {{ if or (eq .CurrentRoute "credentials") (eq .ActiveTab "credentials") }}active{{ end }}">
                     <i class="bx bx-key"></i>
-                    <span>Credenciais</span>
+                    <span>Credentials</span>
                 </a>
                 <a href="/settings/routines" class="sidebar-link {{ if or (eq .CurrentRoute "routines") (eq .ActiveTab "routines") }}active{{ end }}">
                     <i class="bx bx-time-five"></i>
-                    <span>Rotinas</span>
+                    <span>Routines</span>
                 </a>
 
-                <div class="sidebar-section">Sistema</div>
+                <div class="sidebar-section">System</div>
                 <a href="/settings" class="sidebar-link {{ if or (eq .CurrentRoute "settings") (eq .CurrentRoute "users") (eq .CurrentRoute "sftp") (eq .CurrentRoute "export") (eq .CurrentRoute "logs") (eq .CurrentRoute "profile") }}active{{ end }}">
                     <i class="bx bx-cog"></i>
-                    <span>Configurações</span>
+                    <span>Settings</span>
                 </a>
             </nav>
 
@@ -62,7 +62,7 @@
                         <div class="user-role">{{ .Role }}</div>
                     </div>
                     <form action="/logout" method="post">
-                        <button type="submit" class="user-logout" title="Sair">
+                        <button type="submit" class="user-logout" title="Sign Out">
                             <i class="bx bx-log-out"></i>
                         </button>
                     </form>
@@ -83,7 +83,7 @@
                 <div class="header-right">
                     <div id="global-loader" class="htmx-indicator header-indicator">
                         <i class="bx bx-loader-alt spin"></i>
-                        <span>Carregando...</span>
+                        <span>Loading...</span>
                     </div>
                 </div>
             </header>
@@ -116,7 +116,7 @@
             <div id="modal-content-area" class="modal-body">
                 <div style="padding: 40px; text-align: center; color: var(--text-muted);">
                     <i class="bx bx-loader-alt spin" style="font-size: 24px; color: var(--accent);"></i>
-                    <div style="margin-top: 8px; font-size: 12px;">Carregando...</div>
+                    <div style="margin-top: 8px; font-size: 12px;">Loading...</div>
                 </div>
             </div>
         </div>

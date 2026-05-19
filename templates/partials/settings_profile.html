@@ -1,10 +1,10 @@
 <div>
-    <h2 class="settings-section-title">Meu Perfil</h2>
+    <h2 class="settings-section-title">My Profile</h2>
     <p class="settings-section-desc">Atualize suas informações pessoais e senha.</p>
 
     <form action="/settings/profile/save" method="POST" style="max-width: 480px;">
         <div class="form-group">
-            <label class="form-label">Usuário</label>
+            <label class="form-label">User</label>
             <input type="text" name="username" class="form-input" value="{{ .ProfileUser.Username }}" required />
         </div>
 

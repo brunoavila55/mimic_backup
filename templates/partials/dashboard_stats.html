@@ -1,18 +1,18 @@
 <div class="stats-grid">
     <div class="stat-card">
-        <div class="stat-label">Total de Nodes</div>
+        <div class="stat-label">Total Nodes</div>
         <div class="stat-value">{{ .Stats.TotalNodes }}</div>
     </div>
     <div class="stat-card">
-        <div class="stat-label">Nodes Ativos</div>
+        <div class="stat-label">Active Nodes</div>
         <div class="stat-value accent">{{ .Stats.ActiveNodes }}</div>
     </div>
     <div class="stat-card">
-        <div class="stat-label">Backups Realizados</div>
+        <div class="stat-label">Total Backups</div>
         <div class="stat-value success">{{ .Stats.TotalBackups }}</div>
     </div>
     <div class="stat-card">
-        <div class="stat-label">Falhas</div>
+        <div class="stat-label">Failures</div>
         <div class="stat-value danger">{{ .Stats.FailedBackups }}</div>
     </div>
 </div>
@@ -22,7 +22,7 @@
     <!-- Failed Nodes -->
     <div class="card" style="border-left: 3px solid var(--danger);">
         <div class="card-header">
-            <span class="card-title" style="color: var(--danger);">Nodes em Falha</span>
+            <span class="card-title" style="color: var(--danger);">Failed Nodes</span>
         </div>
         <div class="card-body">
             {{ if .FailedNodes }}
@@ -42,7 +42,7 @@
             </div>
             {{ else }}
             <div class="text-center text-muted" style="padding: 24px 0; font-size: 13px;">
-                Nenhum node em estado de falha! 🎉
+                No failed nodes! 🎉
             </div>
             {{ end }}
         </div>
@@ -51,7 +51,7 @@
     <!-- Recent Backups -->
     <div class="card">
         <div class="card-header">
-            <span class="card-title">Últimos Backups</span>
+            <span class="card-title">Recent Backups</span>
         </div>
         <div class="card-body">
             {{ if .RecentBackups }}
@@ -71,7 +71,7 @@
             </div>
             {{ else }}
             <div class="text-center text-muted" style="padding: 24px 0; font-size: 13px;">
-                Nenhum backup realizado ainda.
+                No backups performed yet.
             </div>
             {{ end }}
         </div>
@@ -80,7 +80,7 @@
     <!-- Next Backups -->
     <div class="card">
         <div class="card-header">
-            <span class="card-title">Próximos Backups</span>
+            <span class="card-title">Upcoming Backups</span>
         </div>
         <div class="card-body">
             {{ if .NextBackups }}
@@ -100,7 +100,7 @@
             </div>
             {{ else }}
             <div class="text-center text-muted" style="padding: 24px 0; font-size: 13px;">
-                Nenhum backup agendado no momento.
+                No scheduled backups at the moment.
             </div>
             {{ end }}
         </div>
@@ -109,7 +109,7 @@
     <!-- Recent Logs -->
     <div class="card">
         <div class="card-header">
-            <span class="card-title">Atividade Recente</span>
+            <span class="card-title">Recent Activity</span>
             <a href="/settings/logs" class="btn btn-ghost btn-sm">Ver todos</a>
         </div>
         <div class="card-body">
@@ -130,7 +130,7 @@
             </div>
             {{ else }}
             <div class="text-center text-muted" style="padding: 24px 0; font-size: 13px;">
-                Nenhuma atividade registrada.
+                No recorded activity.
             </div>
             {{ end }}
         </div>

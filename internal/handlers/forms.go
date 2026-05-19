@@ -36,7 +36,7 @@ func (h *FormHandler) NewNode(c *fiber.Ctx) error {
 	h.DB.Find(&agents)
 
 	return c.Render("node_form", fiber.Map{
-		"Title":        "Novo Node",
+		"Title":        "New Node",
 		"Username":     c.Locals("username"),
 		"Avatar":       c.Locals("avatar"),
 		"Role":         c.Locals("role"),
@@ -51,7 +51,7 @@ func (h *FormHandler) EditNode(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var node models.Node
 	if err := h.DB.Where("id = ?", id).First(&node).Error; err != nil {
-		return c.Status(404).SendString("Node não encontrado")
+		return c.Status(404).SendString("Node not found")
 	}
 
 	var routines []models.BackupRoutine
@@ -64,7 +64,7 @@ func (h *FormHandler) EditNode(c *fiber.Ctx) error {
 	h.DB.Find(&agents)
 
 	return c.Render("node_form", fiber.Map{
-		"Title":        "Editar " + node.Name,
+		"Title":        "Edit " + node.Name,
 		"Username":     c.Locals("username"),
 		"Avatar":       c.Locals("avatar"),
 		"Role":         c.Locals("role"),
@@ -93,7 +93,7 @@ func (h *FormHandler) SaveNode(c *fiber.Ctx) error {
 	if rawPass != "" {
 		encPass, err := crypto.Encrypt(rawPass)
 		if err != nil {
-			return c.Status(500).SendString("Erro ao criptografar senha: " + err.Error())
+			return c.Status(500).SendString("Error encrypting password: " + err.Error())
 		}
 		node.Password = encPass
 	}
@@ -137,7 +137,7 @@ func (h *FormHandler) SaveNode(c *fiber.Ctx) error {
 		return c.Status(500).SendString(err.Error())
 	}
 
-	c.Set("HX-Trigger", `{"showNotification": {"message": "Node salvo com sucesso", "type": "success"}}`)
+	c.Set("HX-Trigger", `{"showNotification": {"message": "Node saved successfully", "type": "success"}}`)
 	return c.Redirect("/nodes")
 }
 
@@ -145,11 +145,11 @@ func (h *FormHandler) DeleteNodeConfirm(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var node models.Node
 	if err := h.DB.Where("id = ?", id).First(&node).Error; err != nil {
-		return c.Status(404).SendString("Node não encontrado")
+		return c.Status(404).SendString("Node not found")
 	}
 
 	return c.Render("node_confirm_delete", fiber.Map{
-		"Title":        "Excluir " + node.Name,
+		"Title":        "Delete " + node.Name,
 		"Username":     c.Locals("username"),
 		"Avatar":       c.Locals("avatar"),
 		"Role":         c.Locals("role"),
@@ -165,7 +165,7 @@ func (h *FormHandler) DeleteNode(c *fiber.Ctx) error {
 	h.DB.Where("id = ?", id).Delete(&models.Node{})
 
 	if c.Get("HX-Request") == "true" {
-		c.Set("HX-Trigger", `{"showNotification": {"message": "Node excluído", "type": "success"}}`)
+		c.Set("HX-Trigger", `{"showNotification": {"message": "Node deleted", "type": "success"}}`)
 		return c.SendString("")
 	}
 
@@ -176,7 +176,7 @@ func (h *FormHandler) DeleteNode(c *fiber.Ctx) error {
 
 func (h *FormHandler) ImportNodesForm(c *fiber.Ctx) error {
 	return c.Render("node_import", fiber.Map{
-		"Title":        "Importar Nodes",
+		"Title":        "Import Nodes",
 		"Username":     c.Locals("username"),
 		"Avatar":       c.Locals("avatar"),
 		"Role":         c.Locals("role"),
@@ -188,18 +188,18 @@ func (h *FormHandler) ImportNodesCSV(c *fiber.Ctx) error {
 	file, err := c.FormFile("csv_file")
 	if err != nil {
 		return c.Render("node_import", fiber.Map{
-			"Title":        "Importar Nodes",
+			"Title":        "Import Nodes",
 			"Username":     c.Locals("username"),
 			"Avatar":       c.Locals("avatar"),
 			"Role":         c.Locals("role"),
 			"CurrentRoute": "nodes",
-			"Error":        "Nenhum arquivo selecionado.",
+			"Error":        "No file selected.",
 		}, "base")
 	}
 
 	f, err := file.Open()
 	if err != nil {
-		return c.Status(500).SendString("Erro ao abrir arquivo")
+		return c.Status(500).SendString("Error opening file")
 	}
 	defer f.Close()
 
@@ -211,12 +211,12 @@ func (h *FormHandler) ImportNodesCSV(c *fiber.Ctx) error {
 	header, err := reader.Read()
 	if err != nil {
 		return c.Render("node_import", fiber.Map{
-			"Title":        "Importar Nodes",
+			"Title":        "Import Nodes",
 			"Username":     c.Locals("username"),
 			"Avatar":       c.Locals("avatar"),
 			"Role":         c.Locals("role"),
 			"CurrentRoute": "nodes",
-			"Error":        "Arquivo CSV vazio ou inválido.",
+			"Error":        "Empty or invalid CSV file.",
 		}, "base")
 	}
 
@@ -231,12 +231,12 @@ func (h *FormHandler) ImportNodesCSV(c *fiber.Ctx) error {
 	for _, col := range requiredCols {
 		if _, ok := colMap[col]; !ok {
 			return c.Render("node_import", fiber.Map{
-				"Title":        "Importar Nodes",
+				"Title":        "Import Nodes",
 				"Username":     c.Locals("username"),
 				"Avatar":       c.Locals("avatar"),
 				"Role":         c.Locals("role"),
 				"CurrentRoute": "nodes",
-				"Error":        fmt.Sprintf("Coluna obrigatória '%s' não encontrada no CSV.", col),
+				"Error":        fmt.Sprintf("Required column '%s' not found in CSV.", col),
 			}, "base")
 		}
 	}
@@ -254,7 +254,7 @@ func (h *FormHandler) ImportNodesCSV(c *fiber.Ctx) error {
 		lineNum++
 		if err != nil {
 			errorCount++
-			errors = append(errors, fmt.Sprintf("Linha %d: erro de leitura", lineNum))
+			errors = append(errors, fmt.Sprintf("Line %d: read error", lineNum))
 			continue
 		}
 
@@ -271,7 +271,7 @@ func (h *FormHandler) ImportNodesCSV(c *fiber.Ctx) error {
 
 		if nodeName == "" || nodeIP == "" {
 			errorCount++
-			errors = append(errors, fmt.Sprintf("Linha %d: nome ou IP vazio", lineNum))
+			errors = append(errors, fmt.Sprintf("Line %d: empty name or IP", lineNum))
 			continue
 		}
 
@@ -319,7 +319,7 @@ func (h *FormHandler) ImportNodesCSV(c *fiber.Ctx) error {
 
 		if err := h.DB.Create(&node).Error; err != nil {
 			errorCount++
-			errors = append(errors, fmt.Sprintf("Linha %d (%s): %v", lineNum, nodeName, err))
+			errors = append(errors, fmt.Sprintf("Line %d (%s): %v", lineNum, nodeName, err))
 			continue
 		}
 
@@ -328,22 +328,22 @@ func (h *FormHandler) ImportNodesCSV(c *fiber.Ctx) error {
 
 	if successCount == 0 && errorCount == 0 {
 		return c.Render("node_import", fiber.Map{
-			"Title":        "Importar Nodes",
+			"Title":        "Import Nodes",
 			"Username":     c.Locals("username"),
 			"Avatar":       c.Locals("avatar"),
 			"Role":         c.Locals("role"),
 			"CurrentRoute": "nodes",
-			"Error":        "Nenhum node encontrado no arquivo CSV.",
+			"Error":        "No nodes found in CSV file.",
 		}, "base")
 	}
 
 	return c.Render("node_import", fiber.Map{
-		"Title":        "Importar Nodes",
+		"Title":        "Import Nodes",
 		"Username":     c.Locals("username"),
 		"Avatar":       c.Locals("avatar"),
 		"Role":         c.Locals("role"),
 		"CurrentRoute": "nodes",
-		"Success":      fmt.Sprintf("%d nodes importados com sucesso.", successCount),
+		"Success":      fmt.Sprintf("%d nodes successfully imported.", successCount),
 		"ErrorCount":   errorCount,
 		"Errors":       errors,
 	}, "base")
@@ -353,7 +353,7 @@ func (h *FormHandler) ImportNodesCSV(c *fiber.Ctx) error {
 
 func (h *FormHandler) NewUser(c *fiber.Ctx) error {
 	return c.Render("user_form", fiber.Map{
-		"Title":        "Novo Usuário",
+		"Title":        "New User",
 		"Username":     c.Locals("username"),
 		"Avatar":       c.Locals("avatar"),
 		"Role":         c.Locals("role"),
@@ -365,11 +365,11 @@ func (h *FormHandler) EditUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var user models.User
 	if err := h.DB.Where("id = ?", id).First(&user).Error; err != nil {
-		return c.Status(404).SendString("Usuário não encontrado")
+		return c.Status(404).SendString("User not found")
 	}
 
 	return c.Render("user_form", fiber.Map{
-		"Title":        "Editar " + user.Username,
+		"Title":        "Edit " + user.Username,
 		"Username":     c.Locals("username"),
 		"Avatar":       c.Locals("avatar"),
 		"Role":         c.Locals("role"),
@@ -400,7 +400,7 @@ func (h *FormHandler) SaveUser(c *fiber.Ctx) error {
 		return c.Status(500).SendString(err.Error())
 	}
 
-	c.Set("HX-Trigger", `{"showNotification": {"message": "Usuário salvo com sucesso", "type": "success"}}`)
+	c.Set("HX-Trigger", `{"showNotification": {"message": "User saved successfully", "type": "success"}}`)
 	return c.Redirect("/settings/users")
 }
 
@@ -409,14 +409,14 @@ func (h *FormHandler) DeleteUser(c *fiber.Ctx) error {
 	if c.Locals("user_id") != nil {
 		localId := fmt.Sprintf("%v", c.Locals("user_id"))
 		if id == localId {
-			return c.Status(400).SendString("Não é possível excluir seu próprio usuário")
+			return c.Status(400).SendString("Cannot delete your own user")
 		}
 	}
 
 	h.DB.Where("id = ?", id).Delete(&models.User{})
 
 	if c.Get("HX-Request") == "true" {
-		c.Set("HX-Trigger", `{"showNotification": {"message": "Usuário excluído", "type": "success"}}`)
+		c.Set("HX-Trigger", `{"showNotification": {"message": "User deleted", "type": "success"}}`)
 		return c.SendStatus(200)
 	}
 
@@ -427,7 +427,7 @@ func (h *FormHandler) DeleteUser(c *fiber.Ctx) error {
 
 func (h *FormHandler) NewCredential(c *fiber.Ctx) error {
 	return c.Render("credential_form", fiber.Map{
-		"Title":        "Nova Credencial",
+		"Title":        "New Credential",
 		"Username":     c.Locals("username"),
 		"Avatar":       c.Locals("avatar"),
 		"Role":         c.Locals("role"),
@@ -439,11 +439,11 @@ func (h *FormHandler) EditCredential(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var credential models.Credential
 	if err := h.DB.Where("id = ?", id).First(&credential).Error; err != nil {
-		return c.Status(404).SendString("Credencial não encontrada")
+		return c.Status(404).SendString("Credential not found")
 	}
 
 	return c.Render("credential_form", fiber.Map{
-		"Title":        "Editar " + credential.Name,
+		"Title":        "Edit " + credential.Name,
 		"Username":     c.Locals("username"),
 		"Avatar":       c.Locals("avatar"),
 		"Role":         c.Locals("role"),
@@ -467,7 +467,7 @@ func (h *FormHandler) SaveCredential(c *fiber.Ctx) error {
 	if rawPass != "" {
 		encPass, err := crypto.Encrypt(rawPass)
 		if err != nil {
-			return c.Status(500).SendString("Erro ao criptografar senha: " + err.Error())
+			return c.Status(500).SendString("Error encrypting password: " + err.Error())
 		}
 		credential.Password = encPass
 	}
@@ -482,7 +482,7 @@ func (h *FormHandler) SaveCredential(c *fiber.Ctx) error {
 		return c.Status(500).SendString(err.Error())
 	}
 
-	c.Set("HX-Trigger", `{"showNotification": {"message": "Credencial salva com sucesso", "type": "success"}}`)
+	c.Set("HX-Trigger", `{"showNotification": {"message": "Credential saved successfully", "type": "success"}}`)
 	return c.Redirect("/settings/credentials")
 }
 
@@ -491,7 +491,7 @@ func (h *FormHandler) DeleteCredential(c *fiber.Ctx) error {
 	h.DB.Where("id = ?", id).Delete(&models.Credential{})
 
 	if c.Get("HX-Request") == "true" {
-		c.Set("HX-Trigger", `{"showNotification": {"message": "Credencial excluída", "type": "success"}}`)
+		c.Set("HX-Trigger", `{"showNotification": {"message": "Credential deleted", "type": "success"}}`)
 		return c.SendStatus(200)
 	}
 
@@ -502,7 +502,7 @@ func (h *FormHandler) DeleteCredential(c *fiber.Ctx) error {
 
 func (h *FormHandler) NewRoutine(c *fiber.Ctx) error {
 	return c.Render("routine_form", fiber.Map{
-		"Title":        "Nova Rotina",
+		"Title":        "New Routine",
 		"Username":     c.Locals("username"),
 		"Avatar":       c.Locals("avatar"),
 		"Role":         c.Locals("role"),
@@ -514,11 +514,11 @@ func (h *FormHandler) EditRoutine(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var routine models.BackupRoutine
 	if err := h.DB.Where("id = ?", id).First(&routine).Error; err != nil {
-		return c.Status(404).SendString("Rotina não encontrada")
+		return c.Status(404).SendString("Routine not found")
 	}
 
 	return c.Render("routine_form", fiber.Map{
-		"Title":        "Editar " + routine.Name,
+		"Title":        "Edit " + routine.Name,
 		"Username":     c.Locals("username"),
 		"Avatar":       c.Locals("avatar"),
 		"Role":         c.Locals("role"),
@@ -546,7 +546,7 @@ func (h *FormHandler) SaveRoutine(c *fiber.Ctx) error {
 		return c.Status(500).SendString(err.Error())
 	}
 
-	c.Set("HX-Trigger", `{"showNotification": {"message": "Rotina salva com sucesso", "type": "success"}}`)
+	c.Set("HX-Trigger", `{"showNotification": {"message": "Routine saved successfully", "type": "success"}}`)
 	return c.Redirect("/settings/routines")
 }
 
@@ -555,7 +555,7 @@ func (h *FormHandler) DeleteRoutine(c *fiber.Ctx) error {
 	h.DB.Where("id = ?", id).Delete(&models.BackupRoutine{})
 
 	if c.Get("HX-Request") == "true" {
-		c.Set("HX-Trigger", `{"showNotification": {"message": "Rotina excluída", "type": "success"}}`)
+		c.Set("HX-Trigger", `{"showNotification": {"message": "Routine deleted", "type": "success"}}`)
 		return c.SendStatus(200)
 	}
 
@@ -577,7 +577,7 @@ func (h *FormHandler) SaveSettings(c *fiber.Ctx) error {
 	if rawPass != "" {
 		encPass, err := crypto.Encrypt(rawPass)
 		if err != nil {
-			return c.Status(500).SendString("Erro ao criptografar senha: " + err.Error())
+			return c.Status(500).SendString("Error encrypting password: " + err.Error())
 		}
 		settings.Password = encPass
 	}
@@ -585,7 +585,7 @@ func (h *FormHandler) SaveSettings(c *fiber.Ctx) error {
 	settings.Path = c.FormValue("path")
 
 	h.DB.Save(&settings)
-	c.Set("HX-Trigger", `{"showNotification": {"message": "Configurações SFTP salvas", "type": "success"}}`)
+	c.Set("HX-Trigger", `{"showNotification": {"message": "SFTP settings saved", "type": "success"}}`)
 	return c.Redirect("/settings/sftp")
 }
 
@@ -595,7 +595,7 @@ func (h *FormHandler) SaveProfile(c *fiber.Ctx) error {
 	userID := c.Locals("user_id")
 	var user models.User
 	if err := h.DB.First(&user, userID).Error; err != nil {
-		return c.Status(404).SendString("Usuário não encontrado")
+		return c.Status(404).SendString("User not found")
 	}
 
 	user.Username = c.FormValue("username")
@@ -619,7 +619,7 @@ func (h *FormHandler) SaveProfile(c *fiber.Ctx) error {
 		sess.Save()
 	}
 
-	c.Set("HX-Trigger", `{"showNotification": {"message": "Perfil atualizado", "type": "success"}}`)
+	c.Set("HX-Trigger", `{"showNotification": {"message": "Profile updated", "type": "success"}}`)
 	return c.Redirect("/settings/profile")
 }
 
@@ -629,28 +629,28 @@ func (h *FormHandler) ExportBackup(c *fiber.Ctx) error {
 	backupID := c.Params("backup_id")
 	var backup models.NodeBackup
 	if err := h.DB.Preload("Node").Where("id = ?", backupID).First(&backup).Error; err != nil {
-		return c.Status(404).SendString("Backup não encontrado")
+		return c.Status(404).SendString("Backup not found")
 	}
 
 	var settings models.SftpSettings
 	if err := h.DB.First(&settings).Error; err != nil {
-		return c.Status(400).SendString("SFTP não configurado")
+		return c.Status(400).SendString("SFTP not configured")
 	}
 
 	if err := h.Sftp.Export(&backup, &settings); err != nil {
 		if c.Get("HX-Request") == "true" {
-			c.Set("HX-Trigger", fmt.Sprintf(`{"showNotification": {"message": "Falha na exportação: %v", "type": "error"}}`, err))
+			c.Set("HX-Trigger", fmt.Sprintf(`{"showNotification": {"message": "Export failed: %v", "type": "error"}}`, err))
 			return c.SendStatus(200)
 		}
-		return c.Status(500).SendString(fmt.Sprintf("Falha na exportação: %v", err))
+		return c.Status(500).SendString(fmt.Sprintf("Export failed: %v", err))
 	}
 
 	if c.Get("HX-Request") == "true" {
-		c.Set("HX-Trigger", `{"showNotification": {"message": "Backup exportado com sucesso", "type": "success"}}`)
+		c.Set("HX-Trigger", `{"showNotification": {"message": "Backup successfully exported", "type": "success"}}`)
 		return c.SendStatus(200)
 	}
 
-	return c.SendString("Backup exportado com sucesso")
+	return c.SendString("Backup successfully exported")
 }
 
 func (h *FormHandler) PostSync(c *fiber.Ctx) error {
@@ -659,7 +659,7 @@ func (h *FormHandler) PostSync(c *fiber.Ctx) error {
 
 	var settings models.SftpSettings
 	if err := h.DB.First(&settings).Error; err != nil {
-		return c.Status(400).SendString("SFTP não configurado")
+		return c.Status(400).SendString("SFTP not configured")
 	}
 
 	successCount := 0
@@ -679,6 +679,6 @@ func (h *FormHandler) PostSync(c *fiber.Ctx) error {
 	settings.LastExportStatus = "success"
 	h.DB.Save(&settings)
 
-	c.Set("HX-Trigger", fmt.Sprintf(`{"showNotification": {"message": "Sincronização concluída: %d nodes exportados", "type": "success"}}`, successCount))
+	c.Set("HX-Trigger", fmt.Sprintf(`{"showNotification": {"message": "Sync complete: %d nodes exported", "type": "success"}}`, successCount))
 	return c.SendStatus(200)
 }

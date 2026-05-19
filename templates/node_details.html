@@ -9,10 +9,10 @@
         </div>
         <div class="flex gap-2">
             <button hx-post="/nodes/{{ .Node.ID }}/trigger" hx-swap="none" class="btn btn-secondary">
-                <i class="bx bx-play-circle"></i> Backup Manual
+                <i class="bx bx-play-circle"></i> Manual Backup
             </button>
             <a href="/nodes/{{ .Node.ID }}/edit" class="btn btn-primary">
-                <i class="bx bx-edit-alt"></i> Editar
+                <i class="bx bx-edit-alt"></i> Edit
             </a>
         </div>
     </div>
@@ -22,31 +22,31 @@
         <div class="detail-item">
             <div class="detail-label">Status</div>
             <div class="detail-value">
-                {{ if eq .Node.LastStatus "success" }}<span class="text-success">Sucesso</span>
-                {{ else if eq .Node.LastStatus "error" }}<span class="text-danger">Erro</span>
-                {{ else }}<span class="text-muted">Pendente</span>{{ end }}
+                {{ if eq .Node.LastStatus "success" }}<span class="text-success">Success</span>
+                {{ else if eq .Node.LastStatus "error" }}<span class="text-danger">Error</span>
+                {{ else }}<span class="text-muted">Pending</span>{{ end }}
             </div>
         </div>
         <div class="detail-item">
-            <div class="detail-label">Último Backup</div>
+            <div class="detail-label">Last Backup</div>
             <div class="detail-value">
                 {{ if .Node.LastBackupAt }}{{ .Node.LastBackupAt.Format "02/01/2006 15:04" }}{{ else }}—{{ end }}
             </div>
         </div>
         <div class="detail-item">
-            <div class="detail-label">Grupo</div>
+            <div class="detail-label">Group</div>
             <div class="detail-value">{{ .Node.Group }}</div>
         </div>
         <div class="detail-item">
-            <div class="detail-label">Habilitado</div>
-            <div class="detail-value">{{ if .Node.Enabled }}Sim{{ else }}Não{{ end }}</div>
+            <div class="detail-label">Enabled</div>
+            <div class="detail-value">{{ if .Node.Enabled }}Yes{{ else }}No{{ end }}</div>
         </div>
     </div>
 
     {{ if .Node.LastError }}
     <div class="card mb-4" style="border-color: rgba(239, 68, 68, 0.2);">
         <div class="card-header">
-            <span class="card-title text-danger"><i class="bx bx-error-circle"></i> Último Erro</span>
+            <span class="card-title text-danger"><i class="bx bx-error-circle"></i> Last Error</span>
         </div>
         <div class="card-body">
             <div class="code-block">{{ .Node.LastError }}</div>
@@ -57,18 +57,18 @@
     <!-- Backups List -->
     <div class="card">
         <div class="card-header">
-            <span class="card-title">Histórico de Backups</span>
-            <span class="badge badge-muted">{{ len .Node.Backups }} versões</span>
+            <span class="card-title">Backup History</span>
+            <span class="badge badge-muted">{{ len .Node.Backups }} versions</span>
         </div>
         {{ if .Node.Backups }}
         <div class="table-wrap" style="border: none; border-radius: 0;">
             <table>
                 <thead>
                     <tr>
-                        <th>Versão</th>
+                        <th>Version</th>
                         <th>Status</th>
-                        <th>Data</th>
-                        <th>Ações</th>
+                        <th>Date</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -84,12 +84,12 @@
                                 <button @click="modalOpen = true"
                                         hx-get="/backups/{{ .ID }}/content"
                                         hx-target="#modal-content-area"
-                                        class="action-btn" title="Ver configuração">
+                                        class="action-btn" title="View configuration">
                                     <i class="bx bx-code-block"></i>
                                 </button>
                                 <button hx-post="/backups/{{ .ID }}/export"
                                         hx-swap="none"
-                                        class="action-btn" title="Exportar SFTP">
+                                        class="action-btn" title="Export to SFTP">
                                     <i class="bx bx-export"></i>
                                 </button>
                             </div>
@@ -102,7 +102,7 @@
         {{ else }}
         <div class="card-body">
             <div class="text-center text-muted" style="padding: 24px 0;">
-                Nenhum backup realizado para este node.
+                No backups performed for this node.
             </div>
         </div>
         {{ end }}

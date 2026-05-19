@@ -130,22 +130,22 @@ func translateSSHError(err error) error {
 	errStr := err.Error()
 
 	if strings.Contains(errStr, "unable to authenticate") || strings.Contains(errStr, "handshake failed") {
-		return fmt.Errorf("Falha de autenticação: usuário ou senha inválidos para este equipamento.")
+		return fmt.Errorf("Authentication failed: invalid username or password for this device.")
 	}
 	if strings.Contains(errStr, "connection refused") {
-		return fmt.Errorf("Conexão recusada: a porta SSH pode estar fechada no equipamento.")
+		return fmt.Errorf("Connection refused: the SSH port may be closed on the device.")
 	}
 	if strings.Contains(errStr, "i/o timeout") || strings.Contains(errStr, "timed out") {
-		return fmt.Errorf("Tempo limite excedido: o equipamento não respondeu (pode estar offline).")
+		return fmt.Errorf("Timeout exceeded: the device did not respond (may be offline).")
 	}
 	if strings.Contains(errStr, "no route to host") {
-		return fmt.Errorf("Rota não encontrada: o IP do equipamento está incorreto ou inacessível.")
+		return fmt.Errorf("Route not found: the device IP is incorrect or unreachable.")
 	}
 	if strings.Contains(errStr, "host key mismatch") {
-		return fmt.Errorf("Alerta de segurança: a chave SSH do equipamento mudou (possível substituição ou ataque).")
+		return fmt.Errorf("Security alert: the device's SSH key has changed (possible replacement or attack).")
 	}
 	if strings.Contains(errStr, "network is unreachable") {
-		return fmt.Errorf("Rede inacessível: sem rota de rede para alcançar o equipamento.")
+		return fmt.Errorf("Network unreachable: no network route to reach the device.")
 	}
 
 	// Caso não reconheça, retorna o erro original (ou uma versão simplificada)

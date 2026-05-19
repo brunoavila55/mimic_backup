@@ -31,8 +31,8 @@
                             <i class="bx bx-shield-quarter"></i>
                         </div>
                         <div>
-                            <div class="login-feature-title">Backup Automatizado</div>
-                            <div class="login-feature-desc">Agendamentos inteligentes para seus equipamentos</div>
+                            <div class="login-feature-title">Automated Backup</div>
+                            <div class="login-feature-desc">Smart scheduling for your devices</div>
                         </div>
                     </div>
                     <div class="login-feature">
@@ -41,7 +41,7 @@
                         </div>
                         <div>
                             <div class="login-feature-title">Multi-Vendor</div>
-                            <div class="login-feature-desc">Switches, roteadores e firewalls</div>
+                            <div class="login-feature-desc">Switches, routers, and firewalls</div>
                         </div>
                     </div>
                     <div class="login-feature">
@@ -49,8 +49,8 @@
                             <i class="bx bx-lock-alt"></i>
                         </div>
                         <div>
-                            <div class="login-feature-title">Backup seguro</div>
-                            <div class="login-feature-desc">Backups protegidos com criptografia AES 256</div>
+                            <div class="login-feature-title">Secure Backup</div>
+                            <div class="login-feature-desc">Backups protected with AES 256 encryption</div>
                         </div>
                     </div>
                 </div>
@@ -66,8 +66,8 @@
             <div class="login-form-wrapper">
 
                 <div class="login-greeting">
-                    <h1 class="login-title">Bem-vindo de volta</h1>
-                    <p class="login-subtitle">Insira suas credenciais para acessar o painel.</p>
+                    <h1 class="login-title">Welcome back</h1>
+                    <p class="login-subtitle">Enter your credentials to access the dashboard.</p>
                 </div>
 
                 {{ if .Error }}
@@ -81,19 +81,19 @@
                     <div class="login-field">
                         <label for="login-user">
                             <i class="bx bx-user"></i>
-                            Usuário
+                            Username
                         </label>
                         <input id="login-user" type="text" name="username" value="{{ .LoginUsername }}"
-                            placeholder="Digite seu usuário" required autocomplete="username" />
+                            placeholder="Enter your username" required autocomplete="username" />
                     </div>
 
                     <div class="login-field">
                         <label for="login-pass">
                             <i class="bx bx-lock-open-alt"></i>
-                            Senha
+                            Password
                         </label>
                         <div class="login-password-wrap">
-                            <input id="login-pass" type="password" name="password" placeholder="Digite sua senha"
+                            <input id="login-pass" type="password" name="password" placeholder="Enter your password"
                                 required autocomplete="current-password" />
                             <button type="button" class="login-eye" onclick="togglePassword()" tabindex="-1">
                                 <i class="bx bx-hide" id="eye-icon"></i>
@@ -102,7 +102,7 @@
                     </div>
 
                     <button type="submit" class="login-btn">
-                        <span>Entrar</span>
+                        <span>Sign In</span>
                         <i class="bx bx-right-arrow-alt"></i>
                     </button>
                 </form>

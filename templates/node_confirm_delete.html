@@ -4,15 +4,15 @@
             <div class="confirm-icon">
                 <i class="bx bx-trash"></i>
             </div>
-            <h2 class="page-title" style="margin-bottom: 8px;">Excluir {{ .Node.Name }}?</h2>
+            <h2 class="page-title" style="margin-bottom: 8px;">Delete {{ .Node.Name }}?</h2>
             <p class="confirm-text">
-                Esta ação é irreversível. Todos os backups associados a este node serão permanentemente removidos.
+                This action is irreversible. All backups associated with this node will be permanently removed.
             </p>
             <div class="flex gap-3" style="justify-content: center;">
-                <a href="/nodes" class="btn btn-secondary">Cancelar</a>
+                <a href="/nodes" class="btn btn-secondary">Cancel</a>
                 <form action="/nodes/{{ .Node.ID }}/delete" method="POST" style="display: inline;">
                     <button type="submit" class="btn btn-danger">
-                        <i class="bx bx-trash"></i> Excluir
+                        <i class="bx bx-trash"></i> Delete
                     </button>
                 </form>
             </div>

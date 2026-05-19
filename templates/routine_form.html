@@ -10,57 +10,57 @@
         <div class="card-body">
             <form action="{{ if .Routine.ID }}/settings/routines/save/{{ .Routine.ID }}{{ else }}/settings/routines/save{{ end }}" method="POST">
                 <div class="form-group">
-                    <label class="form-label">Nome</label>
-                    <input type="text" name="name" class="form-input" value="{{ .Routine.Name }}" placeholder="Backup Diário" required />
+                    <label class="form-label">Name</label>
+                    <input type="text" name="name" class="form-input" value="{{ .Routine.Name }}" placeholder="Daily Backup" required />
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Descrição</label>
-                    <textarea name="description" class="form-input" placeholder="Descreva o propósito desta rotina...">{{ .Routine.Description }}</textarea>
+                    <label class="form-label">Description</label>
+                    <textarea name="description" class="form-input" placeholder="Describe the purpose of this routine...">{{ .Routine.Description }}</textarea>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label">Frequência</label>
+                        <label class="form-label">Frequency</label>
                         <select name="frequency" class="form-input">
-                            <option value="1" {{ if eq .Routine.Frequency "1" }}selected{{ end }}>1 hora</option>
-                            <option value="6" {{ if eq .Routine.Frequency "6" }}selected{{ end }}>6 horas</option>
-                            <option value="12" {{ if eq .Routine.Frequency "12" }}selected{{ end }}>12 horas</option>
-                            <option value="24" {{ if eq .Routine.Frequency "24" }}selected{{ end }}>24 horas</option>
-                            <option value="168" {{ if eq .Routine.Frequency "168" }}selected{{ end }}>7 dias</option>
+                            <option value="1" {{ if eq .Routine.Frequency "1" }}selected{{ end }}>1 hour</option>
+                            <option value="6" {{ if eq .Routine.Frequency "6" }}selected{{ end }}>6 hours</option>
+                            <option value="12" {{ if eq .Routine.Frequency "12" }}selected{{ end }}>12 hours</option>
+                            <option value="24" {{ if eq .Routine.Frequency "24" }}selected{{ end }}>24 hours</option>
+                            <option value="168" {{ if eq .Routine.Frequency "168" }}selected{{ end }}>7 days</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Horário</label>
+                        <label class="form-label">Time</label>
                         <input type="time" name="backup_hour" class="form-input" value="{{ .Routine.BackupHour }}" />
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Dia da Semana (se semanal)</label>
+                    <label class="form-label">Day of the Week (if weekly)</label>
                     <select name="backup_day" class="form-input">
-                        <option value="">— Qualquer —</option>
-                        <option value="0" {{ if eq .Routine.BackupDay "0" }}selected{{ end }}>Segunda-feira</option>
-                        <option value="1" {{ if eq .Routine.BackupDay "1" }}selected{{ end }}>Terça-feira</option>
-                        <option value="2" {{ if eq .Routine.BackupDay "2" }}selected{{ end }}>Quarta-feira</option>
-                        <option value="3" {{ if eq .Routine.BackupDay "3" }}selected{{ end }}>Quinta-feira</option>
-                        <option value="4" {{ if eq .Routine.BackupDay "4" }}selected{{ end }}>Sexta-feira</option>
-                        <option value="5" {{ if eq .Routine.BackupDay "5" }}selected{{ end }}>Sábado</option>
-                        <option value="6" {{ if eq .Routine.BackupDay "6" }}selected{{ end }}>Domingo</option>
+                        <option value="">— Any —</option>
+                        <option value="0" {{ if eq .Routine.BackupDay "0" }}selected{{ end }}>Monday</option>
+                        <option value="1" {{ if eq .Routine.BackupDay "1" }}selected{{ end }}>Tuesday</option>
+                        <option value="2" {{ if eq .Routine.BackupDay "2" }}selected{{ end }}>Wednesday</option>
+                        <option value="3" {{ if eq .Routine.BackupDay "3" }}selected{{ end }}>Thursday</option>
+                        <option value="4" {{ if eq .Routine.BackupDay "4" }}selected{{ end }}>Friday</option>
+                        <option value="5" {{ if eq .Routine.BackupDay "5" }}selected{{ end }}>Saturday</option>
+                        <option value="6" {{ if eq .Routine.BackupDay "6" }}selected{{ end }}>Sunday</option>
                     </select>
                 </div>
 
                 <div class="form-group">
                     <label class="form-check">
                         <input type="checkbox" name="enabled" {{ if or (not .Routine.ID) .Routine.Enabled }}checked{{ end }} />
-                        <span>Rotina ativa</span>
+                        <span>Active routine</span>
                     </label>
                 </div>
 
                 <div class="form-actions">
-                    <a href="/settings/routines" class="btn btn-secondary">Cancelar</a>
+                    <a href="/settings/routines" class="btn btn-secondary">Cancel</a>
                     <button type="submit" class="btn btn-primary">
-                        <i class="bx bx-save"></i> Salvar
+                        <i class="bx bx-save"></i> Save
                     </button>
                 </div>
             </form>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mimic | Configuração Inicial</title>
+    <title>Mimic | Initial Setup</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
@@ -25,8 +25,8 @@
                             <i class="bx bx-cog"></i>
                         </div>
                         <div>
-                            <div class="login-feature-title">Configuração Assistida</div>
-                            <div class="login-feature-desc">Preparamos tudo para você começar em minutos.</div>
+                            <div class="login-feature-title">Assisted Setup</div>
+                            <div class="login-feature-desc">We set everything up for you to start in minutes.</div>
                         </div>
                     </div>
                     <div class="login-feature">
@@ -34,8 +34,8 @@
                             <i class="bx bx-data"></i>
                         </div>
                         <div>
-                            <div class="login-feature-title">Integridade de Dados</div>
-                            <div class="login-feature-desc">Verificamos tabelas e conexões automaticamente.</div>
+                            <div class="login-feature-title">Data Integrity</div>
+                            <div class="login-feature-desc">We check tables and connections automatically.</div>
                         </div>
                     </div>
                 </div>
@@ -53,18 +53,18 @@
                 <div class="setup-stepper" style="margin-bottom: 40px; justify-content: flex-start;">
                     <div class="setup-step active">
                         <div class="setup-step-num">1</div>
-                        <span>Banco de Dados</span>
+                        <span>Database</span>
                     </div>
                     <div class="setup-divider"></div>
                     <div class="setup-step">
                         <div class="setup-step-num">2</div>
-                        <span>Administrador</span>
+                        <span>Administrator</span>
                     </div>
                 </div>
 
                 <div class="login-greeting" style="margin-bottom: 24px;">
-                    <h1 class="login-title">Banco de Dados</h1>
-                    <p class="login-subtitle">Verificando a infraestrutura básica do sistema.</p>
+                    <h1 class="login-title">Database</h1>
+                    <p class="login-subtitle">Checking the basic system infrastructure.</p>
                 </div>
 
                 <div class="setup-status">
@@ -72,7 +72,7 @@
                         <i class="bx {{ if .DBOk }}bx-check{{ else }}bx-x{{ end }}"></i>
                     </div>
                     <div>
-                        <div class="setup-status-text">{{ if .DBOk }}Conexão estabelecida{{ else }}Falha na conexão{{ end }}</div>
+                        <div class="setup-status-text">{{ if .DBOk }}Connection established{{ else }}Connection failed{{ end }}</div>
                         <div class="setup-status-detail">PostgreSQL</div>
                     </div>
                 </div>
@@ -82,8 +82,8 @@
                         <i class="bx {{ if .TablesOk }}bx-check{{ else }}bx-x{{ end }}"></i>
                     </div>
                     <div>
-                        <div class="setup-status-text">{{ if .TablesOk }}Tabelas criadas{{ else }}Tabelas pendentes{{ end }}</div>
-                        <div class="setup-status-detail">Estrutura do sistema</div>
+                        <div class="setup-status-text">{{ if .TablesOk }}Tables created{{ else }}Tables pending{{ end }}</div>
+                        <div class="setup-status-detail">System structure</div>
                     </div>
                 </div>
 
@@ -96,7 +96,7 @@
 
                 <form action="/setup" method="POST">
                     <button type="submit" class="login-btn">
-                        <span>Continuar</span>
+                        <span>Continue</span>
                         <i class="bx bx-right-arrow-alt"></i>
                     </button>
                 </form>

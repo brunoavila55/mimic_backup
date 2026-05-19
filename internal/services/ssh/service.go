@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	"net"
+	"strings"
+	"time"
+
 	"mimic/internal/models"
 	"mimic/internal/services/ssh/vendors"
 	"mimic/pkg/crypto"
-	"time"
 
 	"golang.org/x/crypto/ssh"
 	"gorm.io/gorm"
@@ -79,7 +81,7 @@ func (s *SSHService) Connect(node *models.Node) (*ssh.Client, error) {
 	addr := fmt.Sprintf("%s:%d", node.IP, node.Port)
 	client, err := ssh.Dial("tcp", addr, config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to dial: %v", err)
+		return nil, translateSSHError(fmt.Errorf("failed to dial: %v", err))
 	}
 
 	return client, nil
@@ -115,8 +117,37 @@ func (s *SSHService) PerformBackup(node *models.Node) (string, error) {
 
 	raw, err := s.RunCommand(client, driver.GetBackupCommand())
 	if err != nil {
-		return "", err
+		return "", translateSSHError(fmt.Errorf("failed to run command: %v", err))
 	}
 
 	return driver.NormalizeConfig(raw), nil
+}
+
+func translateSSHError(err error) error {
+	if err == nil {
+		return nil
+	}
+	errStr := err.Error()
+
+	if strings.Contains(errStr, "unable to authenticate") || strings.Contains(errStr, "handshake failed") {
+		return fmt.Errorf("Falha de autenticação: usuário ou senha inválidos para este equipamento.")
+	}
+	if strings.Contains(errStr, "connection refused") {
+		return fmt.Errorf("Conexão recusada: a porta SSH pode estar fechada no equipamento.")
+	}
+	if strings.Contains(errStr, "i/o timeout") || strings.Contains(errStr, "timed out") {
+		return fmt.Errorf("Tempo limite excedido: o equipamento não respondeu (pode estar offline).")
+	}
+	if strings.Contains(errStr, "no route to host") {
+		return fmt.Errorf("Rota não encontrada: o IP do equipamento está incorreto ou inacessível.")
+	}
+	if strings.Contains(errStr, "host key mismatch") {
+		return fmt.Errorf("Alerta de segurança: a chave SSH do equipamento mudou (possível substituição ou ataque).")
+	}
+	if strings.Contains(errStr, "network is unreachable") {
+		return fmt.Errorf("Rede inacessível: sem rota de rede para alcançar o equipamento.")
+	}
+
+	// Caso não reconheça, retorna o erro original (ou uma versão simplificada)
+	return err
 }

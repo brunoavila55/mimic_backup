@@ -30,6 +30,13 @@ func (h *DashboardHandler) GetDashboard(c *fiber.Ctx) error {
 	h.DB.Model(&models.NodeBackup{}).Where("status = ?", "success").Count(&stats.TotalBackups)
 	h.DB.Model(&models.NodeBackup{}).Where("status = ?", "error").Count(&stats.FailedBackups)
 
+	var failedNodes []models.Node
+	h.DB.Where("enabled = ? AND last_status = ?", true, "error").Order("updated_at desc").Find(&failedNodes)
+
+	var nextBackups []models.Node
+	now := time.Now()
+	h.DB.Where("enabled = ? AND next_backup_at > ?", true, now).Order("next_backup_at asc").Limit(5).Find(&nextBackups)
+
 	var recentLogs []models.SystemLog
 	h.DB.Order("created_at desc").Limit(8).Find(&recentLogs)
 
@@ -45,6 +52,8 @@ func (h *DashboardHandler) GetDashboard(c *fiber.Ctx) error {
 		"Stats":         stats,
 		"RecentLogs":    recentLogs,
 		"RecentBackups": recentBackups,
+		"FailedNodes":   failedNodes,
+		"NextBackups":   nextBackups,
 	}
 
 	if c.Get("HX-Request") == "true" && c.Get("HX-Target") == "dashboard-content" {

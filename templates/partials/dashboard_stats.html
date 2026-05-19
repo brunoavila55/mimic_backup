@@ -19,6 +19,35 @@
 
 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
 
+    <!-- Failed Nodes -->
+    <div class="card" style="border-left: 3px solid var(--danger);">
+        <div class="card-header">
+            <span class="card-title" style="color: var(--danger);">Nodes em Falha</span>
+        </div>
+        <div class="card-body">
+            {{ if .FailedNodes }}
+            <div class="activity-list">
+                {{ range .FailedNodes }}
+                <div class="activity-item">
+                    <div class="activity-dot" style="background: var(--danger);"></div>
+                    <div class="activity-content">
+                        <div class="flex items-center justify-between">
+                            <span class="activity-title"><a href="/nodes/{{ .ID }}" style="color: inherit; text-decoration: none;">{{ .Name }}</a></span>
+                            <span class="activity-time">{{ .IP }}</span>
+                        </div>
+                        <div class="activity-text" style="color: var(--danger); opacity: 0.8;">{{ if .LastError }}{{ .LastError }}{{ else }}Erro desconhecido{{ end }}</div>
+                    </div>
+                </div>
+                {{ end }}
+            </div>
+            {{ else }}
+            <div class="text-center text-muted" style="padding: 24px 0; font-size: 13px;">
+                Nenhum node em estado de falha! 🎉
+            </div>
+            {{ end }}
+        </div>
+    </div>
+
     <!-- Recent Backups -->
     <div class="card">
         <div class="card-header">
@@ -48,6 +77,35 @@
         </div>
     </div>
 
+    <!-- Next Backups -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Próximos Backups</span>
+        </div>
+        <div class="card-body">
+            {{ if .NextBackups }}
+            <div class="activity-list">
+                {{ range .NextBackups }}
+                <div class="activity-item">
+                    <div class="activity-dot" style="background: var(--accent);"></div>
+                    <div class="activity-content">
+                        <div class="flex items-center justify-between">
+                            <span class="activity-title"><a href="/nodes/{{ .ID }}" style="color: inherit; text-decoration: none;">{{ .Name }}</a></span>
+                            <span class="badge" style="background: rgba(108, 99, 166, 0.1); color: var(--accent);">{{ .NextBackupAt.Format "15:04" }}</span>
+                        </div>
+                        <div class="activity-text">Agendado para {{ .NextBackupAt.Format "02/01/2006" }}</div>
+                    </div>
+                </div>
+                {{ end }}
+            </div>
+            {{ else }}
+            <div class="text-center text-muted" style="padding: 24px 0; font-size: 13px;">
+                Nenhum backup agendado no momento.
+            </div>
+            {{ end }}
+        </div>
+    </div>
+
     <!-- Recent Logs -->
     <div class="card">
         <div class="card-header">
@@ -62,7 +120,7 @@
                     <div class="activity-dot" style="background: {{ if eq .Level "success" }}var(--success){{ else if eq .Level "error" }}var(--danger){{ else if eq .Level "warning" }}var(--warning){{ else }}var(--accent){{ end }};"></div>
                     <div class="activity-content">
                         <div class="flex items-center justify-between">
-                            <span class="activity-title">{{ .Category }}</span>
+                            <span class="activity-title" style="text-transform: capitalize;">{{ .Category }}</span>
                             <span class="activity-time">{{ .CreatedAt.Format "15:04" }}</span>
                         </div>
                         <div class="activity-text">{{ .Message }}</div>

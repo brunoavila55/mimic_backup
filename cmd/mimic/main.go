@@ -28,7 +28,7 @@ func main() {
    /  |/  (_)___ ___  (_)____
   / /|_/ / / __ ` + "`" + `__ \/ / ___/
  / /  / / / / / / / / / /__  
-/_/  /_/_/_/ /_/ /_/_/\___/  Backup Systems v0.1.x
+/_/  /_/_/_/ /_/ /_/_/\___/  Backup Systems v0.1.28
 ________________________________________________`)
 
 	// Database connection
@@ -102,7 +102,7 @@ ________________________________________________`)
 
 	app := fiber.New(fiber.Config{
 		Views:   engine,
-		AppName: "Mimic Backup Systems v0.1.x",
+		AppName: "Mimic Backup Systems v0.1.28",
 	})
 
 	// Static Files

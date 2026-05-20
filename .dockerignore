@@ -1,6 +1,6 @@
 .git
 .github
-.env
+.mimic_secret
 Dockerfile
 docker-compose.yml
 README.md

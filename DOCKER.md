@@ -19,9 +19,9 @@ cd mimic_backup
 ## 2. Optional Configurations (Environment Variables)
 The `docker-compose.yml` file comes with all credentials and addresses correctly pointed to the database container (named `db`).
 
-If you want to change the **database password** or the application's **SECRET_KEY**, edit the `docker-compose.yml` file using any editor (like `nano` or `vim`) and change the values in the `environment` section.
+If you want to change the **database password**, edit the `docker-compose.yml` file using any editor (like `nano` or `vim`) and change the values in the `environment` section.
 
-> **Security Recommendation:** The default `SECRET_KEY` must be changed in production environments. Just replace `chave_super_secreta_padrao_para_docker` with any 32-character random string.
+> **Note on SECRET_KEY:** The `SECRET_KEY` is automatically generated on the first run and persisted securely. If you prefer to manage it manually (e.g., in a distributed Docker environment), you can uncomment and define the `SECRET_KEY` in the `docker-compose.yml` environment block.
 
 ## 3. Spin Up the Containers
 While inside the `mimic_backup` folder, run the command:

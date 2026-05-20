@@ -10,7 +10,7 @@ services:
       # O host aponta para o nome do serviço 'db'
       - DATABASE_URL=host=db user=postgres password=postgres dbname=mimic_db port=5432 sslmode=disable
       - PORT=3000
-      - SECRET_KEY=chave_super_secreta_padrao_para_docker
+      # - SECRET_KEY=your_custom_32_byte_secret_key_here
     depends_on:
       db:
         condition: service_healthy

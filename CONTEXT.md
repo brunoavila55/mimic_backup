@@ -20,7 +20,7 @@ O **Mimic** é um sistema de automação para backup de equipamentos de rede (Mi
 ## 📂 Estrutura de Pastas
 
 ```
-cmd/mimic/main.go          # Ponto de entrada, rotas, middleware, scheduler (carrega .env)
+cmd/mimic/main.go          # Ponto de entrada, rotas, middleware, scheduler
 internal/
   handlers/
     auth.go                    # Login, logout (AuthHandler)
@@ -92,7 +92,7 @@ static/css/style.css           # Design system completo (~780 linhas)
 
 ### Operação Normal
 1. **Cadastro**: Usuário cria um `Node` com IP, vendor e credenciais (diretas ou via `Credential`).
-2. **Criptografia**: Senhas criptografadas com `SECRET_KEY` (lida do `.env` via `godotenv`) via AES-GCM antes de salvar no Postgres.
+2. **Criptografia**: Senhas criptografadas com `SECRET_KEY` (auto-gerada e persistida em `.mimic_secret` caso não exista no ambiente) via AES-GCM antes de salvar no Postgres.
 3. **Segurança**: Consultas ao banco de dados usam queries parametrizadas (`Where("id = ?", id)`) para prevenir SQL Injection (auditado via Snyk).
 4. **Agendamento**: O `Scheduler` verifica `NextBackupAt` a cada minuto.
 5. **Execução**: Goroutine abre SSH, identifica o driver em `ssh/vendors`, executa comando de coleta, normaliza via RegEx, salva `NodeBackup` se o hash SHA-256 mudou.
@@ -140,7 +140,7 @@ Cada tab usa `hx-get` para carregar parciais sem reload. Navegação direta via 
 
 ## ⚠️ Observações
 
-- Variável `SECRET_KEY` (mínimo 32 caracteres) no arquivo `.env` é obrigatória para criptografia de credenciais.
+- A chave `SECRET_KEY` é obrigatória para criptografia. Se não for definida via variável de ambiente, o sistema gerará uma de forma segura no primeiro boot e salvará em `.mimic_secret`.
 - `AutoMigrate` roda no startup — adicionar campos em models é seguro (nunca remove colunas).
 - Scripts legados (`translate.go`, `fix_ui.go`, etc) que causavam colisões de package `main` foram permanentemente removidos.
 - O `AccessAgent` é legado; novos desenvolvimentos devem usar `Credential`.

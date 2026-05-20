@@ -1,7 +1,8 @@
-<div class="page-enter" style="max-width: 700px; margin: 0 auto;"
+<div class="page-enter" style="max-width: 800px; margin: 0 auto;"
      x-data="{
         scheduleType: '{{ if .Node.ScheduleType }}{{ .Node.ScheduleType }}{{ else }}individual{{ end }}',
-        credentialId: '{{ if .Node.CredentialID }}{{ deref .Node.CredentialID }}{{ else }}{{ end }}'
+        credentialId: '{{ if .Node.CredentialID }}{{ deref .Node.CredentialID }}{{ else }}{{ end }}',
+        frequency: '{{ if .Node.Frequency }}{{ .Node.Frequency }}{{ else }}24{{ end }}'
      }">
     <div class="page-header">
         <div class="flex items-center gap-3">
@@ -10,10 +11,14 @@
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-body">
-            <form action="{{ if .Node.ID }}/nodes/save/{{ .Node.ID }}{{ else }}/nodes/save{{ end }}" method="POST">
-
+    <form action="{{ if .Node.ID }}/nodes/save/{{ .Node.ID }}{{ else }}/nodes/save{{ end }}" method="POST">
+        
+        <!-- General Information -->
+        <div class="card" style="margin-bottom: 24px;">
+            <div class="card-header">
+                <div class="card-title"><i class="bx bx-info-circle" style="margin-right: 6px;"></i>General Information</div>
+            </div>
+            <div class="card-body">
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Name</label>
@@ -30,7 +35,25 @@
                         </select>
                     </div>
                 </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Group</label>
+                        <input type="text" name="group" class="form-input" value="{{ .Node.Group }}" placeholder="General" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tags</label>
+                        <input type="text" name="tags" class="form-input" value="{{ .Node.Tags }}" placeholder="core, datacenter" />
+                    </div>
+                </div>
+            </div>
+        </div>
 
+        <!-- Connection & Authentication -->
+        <div class="card" style="margin-bottom: 24px;">
+            <div class="card-header">
+                <div class="card-title"><i class="bx bx-network-chart" style="margin-right: 6px;"></i>Connection & Authentication</div>
+            </div>
+            <div class="card-body">
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">IP Address</label>
@@ -43,7 +66,7 @@
                 </div>
 
                 {{ if .Credentials }}
-                <div class="form-group">
+                <div class="form-group" style="margin-top: 8px;">
                     <label class="form-label">SSH Credential</label>
                     <select name="credential_id" class="form-input" x-model="credentialId">
                         <option value="">- Use manual login/password -</option>
@@ -51,11 +74,11 @@
                         <option value="{{ .ID }}" {{ if $.Node.CredentialID }}{{ if eq .ID (deref $.Node.CredentialID) }}selected{{ end }}{{ end }}>{{ .Name }} ({{ .Username }}:{{ .Port }})</option>
                         {{ end }}
                     </select>
-                    <div class="form-hint" x-show="credentialId">Using saved credential. Credential username and password will be used.</div>
+                    <div class="form-hint" x-show="credentialId" style="color: var(--accent);">Using saved credential. Manual username and password will be ignored.</div>
                 </div>
                 {{ end }}
 
-                <div x-show="!credentialId">
+                <div x-show="!credentialId" style="margin-top: 16px;">
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">SSH Username</label>
@@ -63,22 +86,19 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">SSH Password</label>
-                            <input type="password" name="password" class="form-input" placeholder="{{ if .Node.ID }}Leave blank to keep{{ else }}Access password{{ end }}" />
+                            <input type="password" name="password" class="form-input" placeholder="{{ if .Node.ID }}Leave blank to keep current{{ else }}Access password{{ end }}" />
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Group</label>
-                        <input type="text" name="group" class="form-input" value="{{ .Node.Group }}" placeholder="General" />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Tags</label>
-                        <input type="text" name="tags" class="form-input" value="{{ .Node.Tags }}" placeholder="core, datacenter" />
-                    </div>
-                </div>
-
+        <!-- Backup Configuration -->
+        <div class="card" style="margin-bottom: 24px;">
+            <div class="card-header">
+                <div class="card-title"><i class="bx bx-time-five" style="margin-right: 6px;"></i>Backup Settings</div>
+            </div>
+            <div class="card-body">
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Schedule Type</label>
@@ -88,26 +108,26 @@
                         </select>
                     </div>
                     <div class="form-group" x-show="scheduleType === 'individual'">
-                        <label class="form-label">Frequency (hours)</label>
-                        <select name="frequency" class="form-input">
-                            <option value="1" {{ if eq .Node.Frequency "1" }}selected{{ end }}>1 hour</option>
-                            <option value="6" {{ if eq .Node.Frequency "6" }}selected{{ end }}>6 hours</option>
-                            <option value="12" {{ if eq .Node.Frequency "12" }}selected{{ end }}>12 hours</option>
-                            <option value="24" {{ if eq .Node.Frequency "24" }}selected{{ end }}>24 hours</option>
-                            <option value="168" {{ if eq .Node.Frequency "168" }}selected{{ end }}>7 days</option>
+                        <label class="form-label">Frequency</label>
+                        <select name="frequency" class="form-input" x-model="frequency">
+                            <option value="1" {{ if eq .Node.Frequency "1" }}selected{{ end }}>Hourly</option>
+                            <option value="6" {{ if eq .Node.Frequency "6" }}selected{{ end }}>Every 6 hours</option>
+                            <option value="12" {{ if eq .Node.Frequency "12" }}selected{{ end }}>Every 12 hours</option>
+                            <option value="24" {{ if eq .Node.Frequency "24" }}selected{{ end }}>Daily (Every day)</option>
+                            <option value="168" {{ if eq .Node.Frequency "168" }}selected{{ end }}>Weekly</option>
                         </select>
                     </div>
                 </div>
 
-                <div x-show="scheduleType === 'individual'">
+                <div x-show="scheduleType === 'individual' && (frequency === '24' || frequency === '168')" style="margin-top: 16px;">
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label">Backup Time</label>
+                            <label class="form-label">Preferred Backup Time</label>
                             <input type="time" name="backup_hour" class="form-input" value="{{ .Node.BackupHour }}" />
-                            <div class="form-hint">Preferred time for backup execution.</div>
+                            <div class="form-hint">Preferred time of day to start the backup.</div>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Day of the Week (if weekly)</label>
+                        <div class="form-group" x-show="frequency === '168'">
+                            <label class="form-label">Day of the Week</label>
                             <select name="backup_day" class="form-input">
                                 <option value="">- Any -</option>
                                 <option value="0" {{ if eq .Node.BackupDay "0" }}selected{{ end }}>Monday</option>
@@ -118,13 +138,14 @@
                                 <option value="5" {{ if eq .Node.BackupDay "5" }}selected{{ end }}>Saturday</option>
                                 <option value="6" {{ if eq .Node.BackupDay "6" }}selected{{ end }}>Sunday</option>
                             </select>
+                            <div class="form-hint">Day of the week to run the backup.</div>
                         </div>
                     </div>
                 </div>
 
                 {{ if .Routines }}
-                <div class="form-group" x-show="scheduleType === 'routine'">
-                    <label class="form-label">Routine</label>
+                <div class="form-group" x-show="scheduleType === 'routine'" style="margin-top: 16px;">
+                    <label class="form-label">Backup Routine</label>
                     <select name="routine_id" class="form-input">
                         <option value="">- None -</option>
                         {{ range .Routines }}
@@ -133,22 +154,22 @@
                     </select>
                 </div>
                 {{ end }}
-
-                <div class="form-group">
-                    <label class="form-check">
+                
+                <div class="form-group" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-light);">
+                    <label class="form-check" style="user-select: none;">
                         <input type="checkbox" name="enabled" {{ if or (not .Node.ID) .Node.Enabled }}checked{{ end }} />
-                        <span>Node enabled for automatic backup</span>
+                        <span style="font-weight: 500; color: var(--text);">Node enabled for automatic backup</span>
                     </label>
                 </div>
-
-                <div class="form-actions">
-                    <a href="/nodes" class="btn btn-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bx bx-save"></i>
-                        Save
-                    </button>
-                </div>
-            </form>
+            </div>
         </div>
-    </div>
+
+        <div class="form-actions" style="margin-top: 32px; border-top: none;">
+            <a href="/nodes" class="btn btn-secondary" style="padding: 10px 24px;">Cancel</a>
+            <button type="submit" class="btn btn-primary" style="padding: 10px 24px;">
+                <i class="bx bx-save"></i>
+                Save Node
+            </button>
+        </div>
+    </form>
 </div>

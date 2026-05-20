@@ -76,7 +76,7 @@ func (h *NodeHandler) ListNodes(c *fiber.Ctx) error {
 
 	search := c.Query("search")
 	if search != "" {
-		query = query.Where("name ILIKE ? OR ip ILIKE ? OR vendor ILIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+		query = query.Where("name ILIKE ? OR ip ILIKE ? OR vendor ILIKE ? OR \"group\" ILIKE ? OR tags ILIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 
 	query.Order("name asc").Find(&nodes)

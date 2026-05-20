@@ -7,6 +7,14 @@
         <td><span class="font-mono">{{ .IP }}</span></td>
         <td>{{ .Vendor }}</td>
         <td>
+            <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 2px;">{{ .Group }}</div>
+            {{ if .Tags }}
+            <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px;">
+                <span class="badge badge-info" style="font-size: 10px; padding: 1px 6px;">{{ .Tags }}</span>
+            </div>
+            {{ end }}
+        </td>
+        <td>
             {{ if eq .LastStatus "success" }}
                 <span class="badge badge-success">OK</span>
             {{ else if eq .LastStatus "error" }}
@@ -54,7 +62,7 @@
     {{ end }}
 {{ else }}
     <tr>
-        <td colspan="7" class="table-empty">
+        <td colspan="8" class="table-empty">
             <i class="bx bx-server" style="font-size: 28px; margin-bottom: 8px; display: block;"></i>
             No nodes registered.
             <a href="/nodes/new" style="color: var(--accent); font-weight: 600; margin-left: 4px;">Add one now</a>

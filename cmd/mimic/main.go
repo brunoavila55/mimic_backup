@@ -97,6 +97,8 @@ ________________________________________________`)
 		}
 		return *p
 	})
+	engine.AddFunc("split", strings.Split)
+	engine.AddFunc("trimSpace", strings.TrimSpace)
 
 	app := fiber.New(fiber.Config{
 		Views:   engine,

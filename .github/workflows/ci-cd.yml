@@ -1,0 +1,46 @@
+name: CI/CD Mimic Backup
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build & Test
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Baixar dependências
+        run: go mod download
+
+      - name: Build
+        run: go build ./cmd/mimic
+
+      - name: Rodar testes
+        run: go test ./...
+
+  deploy:
+    name: Deploy Produção
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Deploy
+        run: |
+          cd /opt/mimic_backup
+          git pull origin main
+          docker compose up --build -d

@@ -1,53 +1,53 @@
-# Instalação do Mimic Backup com Docker
+# Mimic Backup Installation with Docker
 
-A instalação via Docker é a forma mais rápida e recomendada para ambientes modernos, pois já empacota o banco de dados PostgreSQL e a aplicação pré-configurados em contêineres isolados.
+Installation via Docker is the fastest and recommended way for modern environments, as it packages the PostgreSQL database and the application pre-configured in isolated containers.
 
-## Pré-requisitos
-- [Docker](https://docs.docker.com/get-docker/) instalado no servidor.
-- [Docker Compose](https://docs.docker.com/compose/install/) instalado (ou `docker compose` em versões mais recentes do Docker).
+## Prerequisites
+- [Docker](https://docs.docker.com/get-docker/) installed on the server.
+- [Docker Compose](https://docs.docker.com/compose/install/) installed (or `docker compose` in newer Docker versions).
 
 ---
 
-## 1. Clonar o Repositório
-Baixe o código para o servidor onde deseja rodar:
+## 1. Clone the Repository
+Download the code to the server where you want to run it:
 
 ```bash
 git clone https://github.com/brunoavila55/mimic_backup.git
 cd mimic_backup
 ```
 
-## 2. Configurações Opcionais (Variáveis de Ambiente)
-O arquivo `docker-compose.yml` já vem com todas as credenciais e endereços apontados corretamente para o contêiner do banco de dados (chamado `db`). 
+## 2. Optional Configurations (Environment Variables)
+The `docker-compose.yml` file comes with all credentials and addresses correctly pointed to the database container (named `db`).
 
-Caso queira alterar a **senha do banco** ou a **SECRET_KEY** da aplicação, edite o arquivo `docker-compose.yml` usando qualquer editor (como `nano` ou `vim`) e altere os valores na seção `environment`.
+If you want to change the **database password** or the application's **SECRET_KEY**, edit the `docker-compose.yml` file using any editor (like `nano` or `vim`) and change the values in the `environment` section.
 
-> **Recomendação de Segurança:** A `SECRET_KEY` padrão deve ser alterada em ambientes de produção. Basta substituir `chave_super_secreta_padrao_para_docker` por qualquer frase aleatória de 32 caracteres.
+> **Security Recommendation:** The default `SECRET_KEY` must be changed in production environments. Just replace `chave_super_secreta_padrao_para_docker` with any 32-character random string.
 
-## 3. Subir os Contêineres
-Estando dentro da pasta `mimic_backup`, execute o comando:
+## 3. Spin Up the Containers
+While inside the `mimic_backup` folder, run the command:
 
 ```bash
 docker compose up --build -d
 ```
-*Observação: Se você estiver usando uma versão antiga do Docker, o comando pode ser `docker-compose up --build -d` (com hífen).*
+*Note: If you are using an older version of Docker, the command might be `docker-compose up --build -d` (with a hyphen).*
 
-O Docker fará o download da imagem do Postgres, compilará o código do Mimic localmente (graças ao nosso `Dockerfile` de múltiplos estágios) e iniciará ambos os contêineres. O `-d` garante que os contêineres rodem em segundo plano (detached mode).
+Docker will download the Postgres image, compile the Mimic code locally (thanks to our multi-stage `Dockerfile`), and start both containers. The `-d` ensures the containers run in the background (detached mode).
 
-## 4. Verificar os Logs
-Se você quiser ter certeza de que o sistema e o banco de dados iniciaram corretamente, olhe os logs:
+## 4. Check the Logs
+If you want to make sure the system and database started correctly, look at the logs:
 ```bash
 docker compose logs -f
 ```
-Para sair dos logs, pressione `Ctrl+C`.
+To exit the logs, press `Ctrl+C`.
 
-## 5. Acesso
-Tudo pronto! Acesse no seu navegador `http://localhost:3000` (ou troque o `localhost` pelo IP do seu servidor). Na primeira tela, você passará pelo **First Setup** para criar seu primeiro administrador.
+## 5. Access
+All set! Access `http://localhost:3000` in your browser (or replace `localhost` with your server's IP). On the first screen, you'll go through the **First Setup** to create your first administrator.
 
-## Atualização (Redeploy)
-Quando sair uma versão nova do Mimic e você quiser atualizar, basta fazer o processo na mesma pasta:
+## Updating (Redeploy)
+When a new version of Mimic is released and you want to update, just do the following process in the same folder:
 ```bash
 git pull
 docker compose down
 docker compose up --build -d
 ```
-Seu banco de dados não será perdido, pois os dados estão persistidos em um Volume do Docker configurado no `docker-compose.yml`.
+Your database will not be lost, as the data is persisted in a Docker Volume configured in `docker-compose.yml`.

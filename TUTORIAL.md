@@ -1,19 +1,19 @@
-# Instalação do Mimic Backup
+# Mimic Backup Installation
 
-Prepare o servidor Linux (recomendado Ubuntu 24.04 / Debian 12). Conecte-se na linha de comando e siga as instruções abaixo.
+Prepare the Linux server (Ubuntu 24.04 / Debian 12 recommended). Connect via command line and follow the instructions below.
 
-> **Atenção:** Estas instruções assumem que você é o usuário `root`. Se não for, coloque `sudo` antes dos comandos ou torne-se root temporariamente com `sudo -s` ou `sudo -i`.
+> **Note:** These instructions assume you are the `root` user. If you are not, prepend `sudo` to the shell commands or temporarily become root with `sudo -s` or `sudo -i`.
 
-## 1. Instalar Pacotes Necessários
+## 1. Install Required Packages
 
-Atualize os repositórios e instale as dependências básicas:
+Update your repositories and install the basic dependencies:
 ```bash
 apt update
 apt install curl git postgresql postgresql-contrib nginx-full
 ```
 
-## 2. Instalar Go (Golang)
-O Mimic é escrito em Go e requer a versão 1.22+.
+## 2. Install Go (Golang)
+Mimic is written in Go and requires version 1.22+.
 
 ```bash
 wget https://go.dev/dl/go1.22.2.linux-amd64.tar.gz
@@ -22,28 +22,28 @@ echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-## 3. Adicionar o Usuário do Sistema
-Crie um usuário dedicado para rodar a aplicação por motivos de segurança:
+## 3. Add System User
+Create a dedicated user to run the application for security reasons:
 ```bash
 useradd mimic -d /opt/mimic -M -r -s "$(which bash)"
 ```
 
-## 4. Download do Mimic
-Vá para a pasta `/opt` e clone o repositório oficial:
+## 4. Download Mimic
+Go to the `/opt` folder and clone the official repository:
 ```bash
 cd /opt
 git clone https://github.com/brunoavila55/mimic_backup.git mimic
 ```
 
-## 5. Definir Permissões
-Atribua a propriedade da pasta ao usuário que acabamos de criar:
+## 5. Set Permissions
+Assign folder ownership to the user we just created:
 ```bash
 chown -R mimic:mimic /opt/mimic
 chmod -R 775 /opt/mimic
 ```
 
-## 6. Compilar o Sistema
-Mude para o usuário `mimic` para fazer a compilação de forma segura:
+## 6. Build the System
+Switch to the `mimic` user to compile safely:
 ```bash
 su - mimic
 cd /opt/mimic
@@ -51,16 +51,16 @@ go mod download
 go build -o mimic_bin ./cmd/mimic/main.go
 exit
 ```
-*(O comando `exit` retornará a sua sessão para o usuário root)*
+*(The `exit` command will return your session to the root user)*
 
-## 7. Configurar o PostgreSQL
-Acesse o prompt do banco de dados:
+## 7. Configure PostgreSQL
+Access the database prompt:
 ```bash
 sudo -u postgres psql
 ```
-Dentro do console do banco (prompt `postgres=#`), execute os comandos abaixo. 
+Inside the database console (prompt `postgres=#`), run the commands below.
 
-> **Atenção:** Troque `password` por uma senha segura.
+> **Warning:** Change `password` to a secure password.
 ```sql
 CREATE DATABASE mimic_db;
 CREATE USER mimic WITH ENCRYPTED PASSWORD 'password';
@@ -68,26 +68,26 @@ GRANT ALL PRIVILEGES ON DATABASE mimic_db TO mimic;
 \q
 ```
 
-## 8. Configurar Variáveis de Ambiente
-O sistema precisa de um arquivo `.env` para rodar.
+## 8. Configure Environment Variables
+The system requires a `.env` file to run.
 ```bash
 su - mimic
 cd /opt/mimic
 nano .env
 ```
-Cole o conteúdo abaixo, prestando atenção para colocar a mesma senha do banco que você criou no passo anterior, e gerando uma chave aleatória para o `SECRET_KEY`:
+Paste the content below, paying attention to put the same database password you created in the previous step, and generating a random key for the `SECRET_KEY`:
 ```env
 DATABASE_URL=postgres://mimic:password@localhost:5432/mimic_db?sslmode=disable
-SECRET_KEY=cole_aqui_uma_chave_aleatoria_de_32_caracteres
+SECRET_KEY=paste_a_32_character_random_key_here
 PORT=3000
 ```
-Salve e feche o arquivo (`Ctrl+O`, `Enter`, `Ctrl+X`), e retorne ao root:
+Save and close the file (`Ctrl+O`, `Enter`, `Ctrl+X`), and return to root:
 ```bash
 exit
 ```
 
-## 9. Configurar o Serviço (Systemd)
-Para garantir que o Mimic inicie junto com o servidor e reinicie em caso de falhas, vamos criar um serviço no sistema operacional:
+## 9. Configure the Service (Systemd)
+To ensure Mimic starts with the server and restarts on failures, let's create a system service:
 ```bash
 cat <<EOF > /etc/systemd/system/mimic.service
 [Unit]
@@ -107,20 +107,20 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 ```
-Ative e inicie o serviço:
+Enable and start the service:
 ```bash
 systemctl daemon-reload
 systemctl enable mimic
 systemctl start mimic
 ```
 
-## 10. Configurar Web Server (NGINX)
-Vamos usar o NGINX como proxy reverso para receber as conexões web na porta 80 e enviar para a nossa aplicação.
+## 10. Configure Web Server (NGINX)
+We'll use NGINX as a reverse proxy to receive web connections on port 80 and forward them to our application.
 
 ```bash
 nano /etc/nginx/sites-available/mimic.conf
 ```
-Adicione o conteúdo abaixo. Se você tiver um domínio, troque `mimic.example.com`. Caso contrário, pode colocar o IP do servidor:
+Add the content below. If you have a domain, change `mimic.example.com`. Otherwise, you can put the server's IP:
 ```nginx
 server {
     listen 80;
@@ -135,15 +135,15 @@ server {
     }
 }
 ```
-Ative a configuração e reinicie o NGINX:
+Enable the configuration and restart NGINX:
 ```bash
 ln -s /etc/nginx/sites-available/mimic.conf /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
 systemctl restart nginx
 ```
 
-## Passos Finais
-Tudo pronto! Acesse no seu navegador `http://mimic.example.com` (ou o IP do servidor).
-Na primeira execução, o sistema irá direcioná-lo para a tela de **First Setup**, onde você poderá criar o seu usuário Administrador.
+## Final Steps
+All done! Access `http://mimic.example.com` (or your server's IP) in your browser.
+On the first run, the system will redirect you to the **First Setup** screen, where you can create your Administrator user.
 
-> **Nota de Segurança:** Este tutorial não abordou a instalação de certificados SSL (HTTPS). Para expor seu servidor na internet, recomendamos instalar o **Certbot/Let's Encrypt** para garantir a segurança da plataforma.
+> **Security Note:** This tutorial has not covered installing SSL certificates (HTTPS). To expose your server to the internet, we recommend installing **Certbot/Let's Encrypt** to secure the platform.

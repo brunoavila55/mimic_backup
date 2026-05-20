@@ -22,13 +22,13 @@ Modern network infrastructures require strict tracking of configuration changes 
 
 ## Installation and Configuration
 
-Mimic oferece dois caminhos oficiais de instalação para se adequar à sua infraestrutura. Escolha o método de sua preferência:
+Mimic offers two official installation paths to suit your infrastructure. Choose your preferred method:
 
-1. **Instalação Bare-Metal (Clássica):** Ideal para quem deseja ter controle total sobre o servidor, instalando dependências nativas (Postgres, Nginx) manualmente.
-   👉 **[Ver Guia de Instalação Manual (TUTORIAL.md)](TUTORIAL.md)**
+1. **Bare-Metal Installation (Classic):** Ideal for those who want full control over the server, manually installing native dependencies (Postgres, Nginx).
+   👉 **[View Manual Installation Guide (TUTORIAL.md)](TUTORIAL.md)**
 
-2. **Instalação via Docker (Recomendada):** A forma mais rápida e moderna. Sobe a aplicação e o banco de dados em contêineres isolados com um único comando.
-   👉 **[Ver Guia de Instalação Docker (DOCKER.md)](DOCKER.md)**
+2. **Docker Installation (Recommended):** The fastest and most modern way. Spins up the application and database in isolated containers with a single command.
+   👉 **[View Docker Installation Guide (DOCKER.md)](DOCKER.md)**
 
 ## First Setup
 

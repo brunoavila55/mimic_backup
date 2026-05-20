@@ -22,43 +22,9 @@ Modern network infrastructures require strict tracking of configuration changes 
 
 ## Installation and Configuration
 
-Clone the repository to your local environment:
+Mimic uses a standard Linux bare-metal installation approach. This includes preparing the server, installing the PostgreSQL database, compiling the application, and configuring NGINX as a reverse proxy.
 
-```bash
-git clone https://github.com/brunoavila55/mimic_backup.git
-cd mimic_backup
-```
-
-Configure the required environment variables by creating a `.env` file in the root directory:
-
-```bash
-DATABASE_URL=postgres://username:password@localhost:5432/mimic_db?sslmode=disable
-SECRET_KEY=a-random-32-character-secret-key
-```
-
-*Note: The `SECRET_KEY` must be at least 32 characters long and is strictly required to enable credential encryption.*
-
-### Manual Execution
-
-Compile the application binary and execute it:
-
-```bash
-go mod tidy
-go build -o mimic ./cmd/mimic/main.go
-./mimic
-```
-
-### Docker Execution (Recommended)
-
-Mimic fully supports containerized execution via Docker, which significantly simplifies the deployment process and automatically provisions the PostgreSQL database. This is particularly useful for modern deployment strategies like Green/Blue deployments.
-
-To start the application along with its database, ensure you have Docker and Docker Compose installed, then run the following command in the root directory:
-
-```bash
-docker-compose up --build -d
-```
-
-The system will be accessible at `http://localhost:3000`. The database connection string and required environment variables are already pre-configured within the `docker-compose.yml` file.
+For detailed step-by-step instructions, please follow the **[Installation Guide (TUTORIAL.md)](TUTORIAL.md)**.
 
 ## First Setup
 

@@ -1,0 +1,58 @@
+<h3 style="font-size: 16px; font-weight: 600; color: var(--text-color); margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+    SFTP Explorer <span style="color: var(--text-muted); font-size: 14px; font-weight: 400; margin-left: 8px;">{{ .CurrentPath }}</span>
+</h3>
+
+<div style="background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
+        <thead style="background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border-color);">
+            <tr>
+                <th style="padding: 12px 16px; font-weight: 500; color: var(--text-muted);">Name</th>
+                <th style="padding: 12px 16px; font-weight: 500; color: var(--text-muted); width: 100px;">Size</th>
+                <th style="padding: 12px 16px; font-weight: 500; color: var(--text-muted); width: 170px;">Modified</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ if .ParentPath }}
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td style="padding: 10px 16px;">
+                    <a href="#" hx-get="/settings/sftp/explore?path={{ .ParentPath }}" hx-target="#sftp-explorer" hx-swap="innerHTML" style="color: var(--primary-color); display: flex; align-items: center; gap: 8px; text-decoration: none;">
+                        <i class="bx bx-arrow-back" style="font-size: 18px;"></i> .. (Up a level)
+                    </a>
+                </td>
+                <td style="padding: 10px 16px; color: var(--text-muted);">-</td>
+                <td style="padding: 10px 16px; color: var(--text-muted);">-</td>
+            </tr>
+            {{ end }}
+
+            {{ $current := .CurrentPath }}
+            {{ range .Files }}
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.02)'" onmouseout="this.style.backgroundColor='transparent'">
+                <td style="padding: 10px 16px;">
+                    {{ if .IsDir }}
+                        <a href="#" hx-get="/settings/sftp/explore?path={{ if eq $current "/" }}/{{ .Name }}{{ else }}{{ $current }}/{{ .Name }}{{ end }}" hx-target="#sftp-explorer" hx-swap="innerHTML" style="color: var(--primary-color); display: flex; align-items: center; gap: 8px; text-decoration: none;">
+                            <i class="bx bxs-folder" style="font-size: 18px; color: #fbbf24;"></i> {{ .Name }}
+                        </a>
+                    {{ else }}
+                        <div style="display: flex; align-items: center; gap: 8px; color: var(--text-color);">
+                            <i class="bx bx-file" style="font-size: 18px; color: var(--text-muted);"></i> {{ .Name }}
+                        </div>
+                    {{ end }}
+                </td>
+                <td style="padding: 10px 16px; color: var(--text-muted);">
+                    {{ if .IsDir }}-{{ else }}{{ .Size }} B{{ end }}
+                </td>
+                <td style="padding: 10px 16px; color: var(--text-muted);">
+                    {{ .ModTime.Format "2006-01-02 15:04" }}
+                </td>
+            </tr>
+            {{ else }}
+            <tr>
+                <td colspan="3" style="padding: 24px; text-align: center; color: var(--text-muted);">
+                    <i class="bx bx-folder-open" style="font-size: 32px; display: block; margin-bottom: 8px;"></i>
+                    Directory is empty
+                </td>
+            </tr>
+            {{ end }}
+        </tbody>
+    </table>
+</div>

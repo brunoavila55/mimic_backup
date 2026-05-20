@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"mimic/internal/models"
+	"mimic/internal/services/sftp"
 	"mimic/internal/services/ssh"
 	"strconv"
 	"sync"
@@ -15,15 +16,17 @@ import (
 )
 
 type SchedulerService struct {
-	db  *gorm.DB
-	ssh *ssh.SSHService
+	db   *gorm.DB
+	ssh  *ssh.SSHService
+	sftp *sftp.SftpService
 	isRunning int32
 }
 
 func NewScheduler(db *gorm.DB) *SchedulerService {
 	return &SchedulerService{
-		db:  db,
-		ssh: &ssh.SSHService{DB: db},
+		db:   db,
+		ssh:  &ssh.SSHService{DB: db},
+		sftp: &sftp.SftpService{},
 	}
 }
 
@@ -32,6 +35,7 @@ func (s *SchedulerService) Start() {
 	go func() {
 		for range ticker.C {
 			s.CheckBackups()
+			s.CheckExports()
 		}
 	}()
 }
@@ -142,4 +146,45 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 	node.NextBackupAt = &next
 	
 	s.db.Save(node)
+}
+
+func (s *SchedulerService) CheckExports() {
+	var settings models.SftpSettings
+	if err := s.db.First(&settings).Error; err != nil {
+		return // No settings found
+	}
+
+	if !settings.Enabled {
+		return
+	}
+
+	now := time.Now()
+	// SyncTime is "HH:MM". We check if current time matches.
+	if settings.SyncTime != "" && now.Format("15:04") != settings.SyncTime {
+		return
+	}
+
+	var backups []models.NodeBackup
+	// Only fetch successful backups that haven't been exported yet
+	s.db.Preload("Node").Where("status = ? AND exported = ?", "success", false).Find(&backups)
+
+	if len(backups) == 0 {
+		return
+	}
+
+	log.Printf("[Scheduler] Found %d pending SFTP exports.", len(backups))
+
+	for _, backup := range backups {
+		if err := s.sftp.Export(&backup, &settings); err == nil {
+			backup.Exported = true
+			s.db.Save(&backup)
+			log.Printf("[Scheduler] Successfully exported backup ID %d to SFTP.", backup.ID)
+		} else {
+			log.Printf("[Scheduler] Failed to export backup ID %d: %v", backup.ID, err)
+		}
+	}
+
+	settings.LastExportAt = &now
+	settings.LastExportStatus = "success"
+	s.db.Save(&settings)
 }

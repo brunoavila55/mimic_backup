@@ -583,10 +583,42 @@ func (h *FormHandler) SaveSettings(c *fiber.Ctx) error {
 	}
 
 	settings.Path = c.FormValue("path")
+	settings.Enabled = c.FormValue("enabled") == "on"
+	settings.SyncTime = c.FormValue("sync_time")
 
 	h.DB.Save(&settings)
 	c.Set("HX-Trigger", `{"showNotification": {"message": "SFTP settings saved", "type": "success"}}`)
 	return c.Redirect("/settings/sftp")
+}
+
+func (h *FormHandler) TestSFTPConnection(c *fiber.Ctx) error {
+	var settings models.SftpSettings
+
+	// We populate from form, but fallback to DB for password if empty
+	h.DB.First(&settings)
+
+	settings.Host = c.FormValue("host")
+	port, _ := strconv.Atoi(c.FormValue("port"))
+	settings.Port = port
+	settings.Username = c.FormValue("username")
+	settings.Path = c.FormValue("path")
+
+	rawPass := c.FormValue("password")
+	if rawPass != "" {
+		encPass, err := crypto.Encrypt(rawPass)
+		if err == nil {
+			settings.Password = encPass
+		}
+	}
+
+	err := h.Sftp.TestConnection(&settings)
+	if err != nil {
+		c.Set("HX-Trigger", fmt.Sprintf(`{"showNotification": {"message": "Connection failed: %v", "type": "error"}}`, err))
+		return c.SendStatus(200)
+	}
+
+	c.Set("HX-Trigger", `{"showNotification": {"message": "Connection successful! Directory verified.", "type": "success"}}`)
+	return c.SendStatus(200)
 }
 
 // ── Profile ────────────────────────────────────────────

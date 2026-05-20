@@ -381,3 +381,47 @@ func (h *SettingsHandler) GetProfileTab(c *fiber.Ctx) error {
 		"ProfileUser": user,
 	})
 }
+
+func (h *SettingsHandler) GetSFTPExplore(c *fiber.Ctx) error {
+	var settings models.SftpSettings
+	h.DB.First(&settings)
+
+	remotePath := c.Query("path")
+	if remotePath == "" {
+		remotePath = settings.Path
+	}
+	if remotePath == "" {
+		remotePath = "/"
+	}
+
+	files, err := h.Sftp.ListDir(&settings, remotePath)
+	if err != nil {
+		return c.Status(500).SendString(fmt.Sprintf("<div class='alert alert-error' style='color: #ef4444; background: #fee2e2; padding: 12px; border-radius: 6px; margin-top: 16px;'>Failed to list directory: %v</div>", err))
+	}
+
+	parentPath := ""
+	if remotePath != "/" {
+		// Calculate parent path using string manipulation or path package.
+		// To avoid importing path just for this, we can do simple parsing or import path.
+		// Since we didn't add "path" to imports yet, let's just use string parsing or actually we will add the import.
+		// It's safer to use simple string manipulation:
+		lastSlash := -1
+		for i := len(remotePath) - 1; i >= 0; i-- {
+			if remotePath[i] == '/' {
+				lastSlash = i
+				break
+			}
+		}
+		if lastSlash > 0 {
+			parentPath = remotePath[:lastSlash]
+		} else {
+			parentPath = "/"
+		}
+	}
+
+	return c.Render("partials/sftp_explorer", fiber.Map{
+		"Files":       files,
+		"CurrentPath": remotePath,
+		"ParentPath":  parentPath,
+	})
+}

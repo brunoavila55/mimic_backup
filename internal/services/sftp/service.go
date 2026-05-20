@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"mimic/internal/models"
 	"mimic/pkg/crypto"
-	"path/filepath"
+	"os"
+	"path"
+	"time"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
@@ -12,7 +14,36 @@ import (
 
 type SftpService struct{}
 
-func (s *SftpService) Export(backup *models.NodeBackup, settings *models.SftpSettings) error {
+func (s *SftpService) ListDir(settings *models.SftpSettings, remotePath string) ([]os.FileInfo, error) {
+	config, err := s.getClientConfig(settings)
+	if err != nil {
+		return nil, err
+	}
+
+	addr := fmt.Sprintf("%s:%d", settings.Host, settings.Port)
+	conn, err := ssh.Dial("tcp", addr, config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to dial: %v", err)
+	}
+	defer conn.Close()
+
+	client, err := sftp.NewClient(conn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create sftp client: %v", err)
+	}
+	defer client.Close()
+
+	if remotePath == "" {
+		remotePath = settings.Path
+	}
+	if remotePath == "" {
+		remotePath = "/"
+	}
+
+	return client.ReadDir(remotePath)
+}
+
+func (s *SftpService) getClientConfig(settings *models.SftpSettings) (*ssh.ClientConfig, error) {
 	password, err := crypto.Decrypt(settings.Password)
 	if err != nil {
 		password = settings.Password
@@ -22,6 +53,44 @@ func (s *SftpService) Export(backup *models.NodeBackup, settings *models.SftpSet
 		User:            settings.Username,
 		Auth:            []ssh.AuthMethod{ssh.Password(password)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         15 * time.Second,
+	}
+	return config, nil
+}
+
+func (s *SftpService) TestConnection(settings *models.SftpSettings) error {
+	config, err := s.getClientConfig(settings)
+	if err != nil {
+		return err
+	}
+
+	addr := fmt.Sprintf("%s:%d", settings.Host, settings.Port)
+	conn, err := ssh.Dial("tcp", addr, config)
+	if err != nil {
+		return fmt.Errorf("failed to connect to SFTP server: %v", err)
+	}
+	defer conn.Close()
+
+	client, err := sftp.NewClient(conn)
+	if err != nil {
+		return fmt.Errorf("failed to create SFTP session: %v", err)
+	}
+	defer client.Close()
+
+	if settings.Path != "" {
+		err = client.MkdirAll(settings.Path)
+		if err != nil {
+			return fmt.Errorf("failed to verify or create remote directory '%s': %v", settings.Path, err)
+		}
+	}
+
+	return nil
+}
+
+func (s *SftpService) Export(backup *models.NodeBackup, settings *models.SftpSettings) error {
+	config, err := s.getClientConfig(settings)
+	if err != nil {
+		return err
 	}
 
 	addr := fmt.Sprintf("%s:%d", settings.Host, settings.Port)
@@ -46,7 +115,7 @@ func (s *SftpService) Export(backup *models.NodeBackup, settings *models.SftpSet
 	}
 
 	filename := fmt.Sprintf("%s_%v.txt", backup.Node.Name, backup.CreatedAt.Format("20060102_1504"))
-	remotePath := filepath.Join(settings.Path, filename)
+	remotePath := path.Join(settings.Path, filename) // Use path.Join to ensure /
 
 	f, err := client.Create(remotePath)
 	if err != nil {

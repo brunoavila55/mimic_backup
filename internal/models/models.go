@@ -84,6 +84,7 @@ type NodeBackup struct {
 	Hash      string
 	Status    string
 	Error     string
+	Exported  bool `gorm:"default:false"`
 	CreatedAt time.Time
 }
 
@@ -94,6 +95,8 @@ type SftpSettings struct {
 	Username         string
 	Password         string
 	Path             string
+	Enabled          bool   `gorm:"default:false"`
+	SyncTime         string `gorm:"default:'23:00'"`
 	LastExportAt     *time.Time
 	LastExportStatus string `gorm:"default:'never'"`
 	LastExportError  string

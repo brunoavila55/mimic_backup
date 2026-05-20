@@ -22,9 +22,13 @@ Modern network infrastructures require strict tracking of configuration changes 
 
 ## Installation and Configuration
 
-Mimic uses a standard Linux bare-metal installation approach. This includes preparing the server, installing the PostgreSQL database, compiling the application, and configuring NGINX as a reverse proxy.
+Mimic oferece dois caminhos oficiais de instalação para se adequar à sua infraestrutura. Escolha o método de sua preferência:
 
-For detailed step-by-step instructions, please follow the **[Installation Guide (TUTORIAL.md)](TUTORIAL.md)**.
+1. **Instalação Bare-Metal (Clássica):** Ideal para quem deseja ter controle total sobre o servidor, instalando dependências nativas (Postgres, Nginx) manualmente.
+   👉 **[Ver Guia de Instalação Manual (TUTORIAL.md)](TUTORIAL.md)**
+
+2. **Instalação via Docker (Recomendada):** A forma mais rápida e moderna. Sobe a aplicação e o banco de dados em contêineres isolados com um único comando.
+   👉 **[Ver Guia de Instalação Docker (DOCKER.md)](DOCKER.md)**
 
 ## First Setup
 

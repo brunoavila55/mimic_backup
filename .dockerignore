@@ -1,0 +1,9 @@
+.git
+.github
+.env
+Dockerfile
+docker-compose.yml
+README.md
+TUTORIAL.md
+DOCKER.md
+CONTEXT.md

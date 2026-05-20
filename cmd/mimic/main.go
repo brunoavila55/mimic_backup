@@ -149,6 +149,8 @@ ________________________________________________`)
 	app.Post("/nodes/:id/delete", formHandler.DeleteNode)
 	app.Delete("/nodes/:id", formHandler.DeleteNode)
 	app.Get("/backups/:id/content", nodeHandler.GetBackupContent)
+	app.Get("/backups/:id/diff", nodeHandler.GetBackupDiff)
+	app.Get("/backups/diff/compare", nodeHandler.CompareBackups)
 
 	// ── Settings Hub ──────────────────────────────────
 	app.Get("/settings", settingsHandler.GetSettings)
@@ -194,7 +196,7 @@ ________________________________________________`)
 		var node models.Node
 		if err := db.Preload("Credential").Preload("AccessAgent").Where("id = ?", id).First(&node).Error; err == nil {
 			go sch.RunBackup(&node)
-			c.Set("HX-Trigger", `{"showNotification": {"message": "Backup manual iniciado", "type": "success"}}`)
+			c.Set("HX-Trigger", `{"showNotification": {"message": "Manual backup started", "type": "success"}}`)
 		}
 		return c.SendStatus(200)
 	})

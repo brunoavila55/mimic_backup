@@ -1,0 +1,71 @@
+<div x-data="{ viewMode: 'split' }">
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between mb-4 pb-2" style="border-bottom: 1px solid var(--border-light);">
+        <div>
+            <h3 style="font-size: 14px; font-weight: 600; color: var(--text);">
+                <i class="bx bx-git-compare" style="color: var(--accent); vertical-align: middle; margin-right: 4px;"></i> 
+                Config Diff: {{ .Node.Name }}
+            </h3>
+            <p class="text-secondary" style="font-size: 11px; margin-top: 2px;">{{ .Node.Vendor }} &mdash; <span class="font-mono">{{ .Node.IP }}</span></p>
+        </div>
+        <button @click="modalOpen = false" class="modal-close" title="Close">
+            <i class="bx bx-x"></i>
+        </button>
+    </div>
+
+    <!-- Comparison Selector & Stats Bar -->
+    <div class="diff-header-panel rounded mb-3" style="border: 1px solid var(--border);">
+        <div class="diff-selectors" id="diff-selector-form">
+            <div class="diff-selector-group">
+                <span class="text-muted" style="font-size: 11px; font-weight: 600; text-transform: uppercase;">Base:</span>
+                <select class="diff-select" name="left_id"
+                        hx-get="/backups/diff/compare"
+                        hx-include="#diff-selector-form select"
+                        hx-target="#diff-body-area"
+                        hx-indicator="#global-loader">
+                    <option value="0">None (Empty)</option>
+                    {{ range .Backups }}
+                    <option value="{{ .ID }}" {{ if eq .ID $.LeftID }}selected{{ end }}>v{{ .Version }} ({{ .CreatedAt.Format "02/01 15:04" }})</option>
+                    {{ end }}
+                </select>
+            </div>
+            <div class="diff-selector-group">
+                <span class="text-muted" style="font-size: 11px; font-weight: 600; text-transform: uppercase;">Target:</span>
+                <select class="diff-select" name="right_id"
+                        hx-get="/backups/diff/compare"
+                        hx-include="#diff-selector-form select"
+                        hx-target="#diff-body-area"
+                        hx-indicator="#global-loader">
+                    {{ range .Backups }}
+                    <option value="{{ .ID }}" {{ if eq .ID $.RightID }}selected{{ end }}>v{{ .Version }} ({{ .CreatedAt.Format "02/01 15:04" }})</option>
+                    {{ end }}
+                </select>
+            </div>
+        </div>
+
+        <div class="diff-stats">
+            <span id="diff-addition-badge" class="badge badge-success" style="padding: 4px 10px; font-size: 11px;">+{{ .Additions }} additions</span>
+            <span id="diff-deletion-badge" class="badge badge-danger" style="padding: 4px 10px; font-size: 11px;">-{{ .Deletions }} deletions</span>
+        </div>
+    </div>
+
+    <!-- Layout Toggle Bar -->
+    <div class="diff-tab-container rounded mb-3" style="border: 1px solid var(--border);">
+        <span class="text-secondary" style="font-weight: 500;">View Mode</span>
+        <div class="diff-btn-group">
+            <button class="diff-tab-btn" :class="viewMode === 'split' ? 'active' : ''" @click="viewMode = 'split'">
+                <i class="bx bx-columns"></i> Side-by-Side
+            </button>
+            <button class="diff-tab-btn" :class="viewMode === 'unified' ? 'active' : ''" @click="viewMode = 'unified'">
+                <i class="bx bx-menu"></i> Unified (Inline)
+            </button>
+        </div>
+    </div>
+
+    <!-- Diff Rendering Area -->
+    <div class="diff-view-area rounded" style="border: 1px solid var(--border);">
+        <div id="diff-body-area">
+            {{ template "partials/diff_body" . }}
+        </div>
+    </div>
+</div>

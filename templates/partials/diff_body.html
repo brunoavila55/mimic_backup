@@ -1,0 +1,54 @@
+<!-- Dynamic OOB Updates for Stats -->
+<span id="diff-addition-badge" class="badge badge-success" hx-swap-oob="true" style="padding: 4px 10px; font-size: 11px;">+{{ .Additions }} additions</span>
+<span id="diff-deletion-badge" class="badge badge-danger" hx-swap-oob="true" style="padding: 4px 10px; font-size: 11px;">-{{ .Deletions }} deletions</span>
+
+<!-- Split (Side-by-Side) View -->
+<div x-show="viewMode === 'split'" class="diff-table-container">
+    <table class="diff-split-table diff-table">
+        <tbody>
+            {{ range .SplitRows }}
+            <tr class="diff-split-row">
+                <!-- Left Side (Base Version) -->
+                <td class="diff-split-cell">
+                    <div class="diff-split-row-inner {{ if eq .LeftClass "diff-delete" }}diff-row-delete{{ else if eq .LeftClass "diff-empty" }}diff-row-empty{{ else }}diff-row-equal{{ end }}">
+                        <div class="diff-col-num">{{ .LeftNum }}</div>
+                        <div class="diff-col-sign">{{ if eq .LeftClass "diff-delete" }}-{{ else }} {{ end }}</div>
+                        <div class="diff-col-text">{{ .LeftLine }}</div>
+                    </div>
+                </td>
+                <!-- Right Side (Target Version) -->
+                <td class="diff-split-cell">
+                    <div class="diff-split-row-inner {{ if eq .RightClass "diff-insert" }}diff-row-insert{{ else if eq .RightClass "diff-empty" }}diff-row-empty{{ else }}diff-row-equal{{ end }}">
+                        <div class="diff-col-num">{{ .RightNum }}</div>
+                        <div class="diff-col-sign">{{ if eq .RightClass "diff-insert" }}+{{ else }} {{ end }}</div>
+                        <div class="diff-col-text">{{ .RightLine }}</div>
+                    </div>
+                </td>
+            </tr>
+            {{ else }}
+            <tr>
+                <td colspan="2" class="text-center text-muted" style="padding: 48px 24px;">No changes to display between these versions.</td>
+            </tr>
+            {{ end }}
+        </tbody>
+    </table>
+</div>
+
+<!-- Unified (Inline) View -->
+<div x-show="viewMode === 'unified'" class="diff-table-container" x-cloak>
+    <table class="diff-table">
+        <tbody>
+            {{ range .UnifiedRows }}
+            <tr class="{{ if eq .Class "diff-delete" }}diff-row-delete{{ else if eq .Class "diff-insert" }}diff-row-insert{{ else }}diff-row-equal{{ end }}">
+                <td class="diff-col-num">{{ .Num }}</td>
+                <td class="diff-col-sign">{{ .Sign }}</td>
+                <td class="diff-col-text">{{ .Line }}</td>
+            </tr>
+            {{ else }}
+            <tr>
+                <td class="text-center text-muted" style="padding: 48px 24px;">No changes to display between these versions.</td>
+            </tr>
+            {{ end }}
+        </tbody>
+    </table>
+</div>

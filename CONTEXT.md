@@ -9,7 +9,7 @@ O **Mimic** é um sistema de automação para backup de equipamentos de rede (Mi
 ## 🏗️ Arquitetura
 
 - **Backend**: Go 1.25 + framework **Fiber v2**.
-- **Frontend**: **Go Templates** renderizados no servidor + **HTMX** para interatividade reativa + **Alpine.js** para estados de UI (modais, menus).
+- **Frontend**: **Go Templates** renderizados no servidor + **HTMX** para interatividade reativa + **Alpine.js** para estados de UI (modais, menus). Toda a interface e os textos estão em **Inglês** por padrão.
 - **Estilização**: CSS customizado com design system neutro/escuro (Inter + JetBrains Mono). Sem frameworks CSS externos.
 - **Versionamento**: O sistema conta dinamicamente o número de commits (`git rev-list`) no boot e injeta a versão (`v0.1.X`) em todos os templates via a função `AppVersion`.
 - **ORM**: **GORM** com driver PostgreSQL.
@@ -37,6 +37,7 @@ internal/
     scheduler/                 # Agendador interno (verifica NextBackupAt a cada 1 min)
     sftp/                      # Exportação de backups para servidor SFTP
 pkg/crypto/                    # AES-GCM encrypt/decrypt + bcrypt helpers
+pkg/diff/                      # Algoritmo de diff de texto puro em Go (Myers-like LCS)
 templates/                     # Go Templates (.html)
   base.html                    # Layout principal (sidebar + header + content)
   login.html                   # Página de login (standalone)
@@ -56,6 +57,8 @@ templates/                     # Go Templates (.html)
     node_table.html            # Tabela de nodes
     node_table_body.html       # Linhas da tabela
     backup_view.html           # Visualização de backup (modal)
+    diff_view.html             # Visualização de diff com HTMX e modal
+    diff_body.html             # Estrutura tabular contendo diferenças (added, removed, unchanged)
     settings_users.html        # Tab: usuários
     settings_credentials.html  # Tab: credenciais
     settings_routines.html     # Tab: rotinas
@@ -139,8 +142,9 @@ Cada tab usa `hx-get` para carregar parciais sem reload. Navegação direta via 
 
 - Variável `SECRET_KEY` (mínimo 32 caracteres) no arquivo `.env` é obrigatória para criptografia de credenciais.
 - `AutoMigrate` roda no startup — adicionar campos em models é seguro (nunca remove colunas).
+- Scripts legados (`translate.go`, `fix_ui.go`, etc) que causavam colisões de package `main` foram permanentemente removidos.
 - O `AccessAgent` é legado; novos desenvolvimentos devem usar `Credential`.
 - Instalação funciona com binário Go único.
 
 ---
-*Documento atualizado em 11 de maio de 2026.*
+*Documento atualizado em 20 de maio de 2026.*

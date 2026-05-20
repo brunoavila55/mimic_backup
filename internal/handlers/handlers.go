@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"mimic/internal/models"
 	"mimic/internal/services/sftp"
+	"mimic/pkg/diff"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -129,6 +130,99 @@ func (h *NodeHandler) GetBackupContent(c *fiber.Ctx) error {
 		"Backup": backup,
 	})
 }
+
+func (h *NodeHandler) GetBackupDiff(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var backup models.NodeBackup
+	if err := h.DB.Preload("Node").Where("id = ?", id).First(&backup).Error; err != nil {
+		return c.Status(404).SendString("Backup not found")
+	}
+
+	// Fetch all successful backups for this node to compare
+	var backups []models.NodeBackup
+	h.DB.Where("node_id = ? AND status = ?", backup.NodeID, "success").Order("version desc").Find(&backups)
+
+	// Find the preceding backup version of the same node
+	var prevBackup models.NodeBackup
+	var hasPrev bool
+	if backup.Version > 1 {
+		err := h.DB.Where("node_id = ? AND version = ? AND status = ?", backup.NodeID, backup.Version-1, "success").First(&prevBackup).Error
+		if err == nil {
+			hasPrev = true
+		}
+	}
+
+	// If no predecessor was found, try finding any backup with a lower version
+	if !hasPrev {
+		err := h.DB.Where("node_id = ? AND version < ? AND status = ?", backup.NodeID, backup.Version, "success").Order("version desc").First(&prevBackup).Error
+		if err == nil {
+			hasPrev = true
+		}
+	}
+
+	// Compute initial diff
+	var leftContent string
+	var leftVersion string = "None"
+	var leftID uint
+	if hasPrev {
+		leftContent = prevBackup.Config
+		leftVersion = fmt.Sprintf("v%d", prevBackup.Version)
+		leftID = prevBackup.ID
+	}
+
+	diffRes := diff.GenerateDiff(leftContent, backup.Config)
+
+	return c.Render("partials/diff_view", fiber.Map{
+		"Node":          backup.Node,
+		"CurrentBackup": backup,
+		"Backups":       backups,
+		"HasPrev":       hasPrev,
+		"LeftVersion":   leftVersion,
+		"LeftID":        leftID,
+		"RightID":       backup.ID,
+		"SplitRows":     diffRes.SplitRows,
+		"UnifiedRows":   diffRes.UnifiedRows,
+		"Additions":     diffRes.Additions,
+		"Deletions":     diffRes.Deletions,
+	})
+}
+
+func (h *NodeHandler) CompareBackups(c *fiber.Ctx) error {
+	leftID := c.Query("left_id")
+	rightID := c.Query("right_id")
+
+	var leftBackup models.NodeBackup
+	var rightBackup models.NodeBackup
+
+	var leftContent string
+	var leftVersion string = "None"
+	if leftID != "" && leftID != "0" {
+		if err := h.DB.Where("id = ?", leftID).First(&leftBackup).Error; err == nil {
+			leftContent = leftBackup.Config
+			leftVersion = fmt.Sprintf("v%d", leftBackup.Version)
+		}
+	}
+
+	if rightID == "" {
+		return c.Status(400).SendString("Right backup ID is required")
+	}
+
+	if err := h.DB.Where("id = ?", rightID).First(&rightBackup).Error; err != nil {
+		return c.Status(404).SendString("Right backup not found")
+	}
+
+	diffRes := diff.GenerateDiff(leftContent, rightBackup.Config)
+
+	return c.Render("partials/diff_body", fiber.Map{
+		"LeftVersion":  leftVersion,
+		"RightVersion": fmt.Sprintf("v%d", rightBackup.Version),
+		"SplitRows":    diffRes.SplitRows,
+		"UnifiedRows":  diffRes.UnifiedRows,
+		"Additions":    diffRes.Additions,
+		"Deletions":    diffRes.Deletions,
+	})
+}
+
 
 func (h *NodeHandler) ExportNodesCSV(c *fiber.Ctx) error {
 	var nodes []models.Node

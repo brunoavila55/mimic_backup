@@ -10,16 +10,16 @@
             {{ if eq .LastStatus "success" }}
                 <span class="badge badge-success">OK</span>
             {{ else if eq .LastStatus "error" }}
-                <span class="badge badge-danger">Erro</span>
+                <span class="badge badge-danger">Error</span>
             {{ else }}
-                <span class="badge badge-muted">Pendente</span>
+                <span class="badge badge-muted">Pending</span>
             {{ end }}
         </td>
         <td>
             {{ if .LastBackupAt }}
                 <span class="text-secondary">{{ .LastBackupAt.Format "02/01/2006 15:04" }}</span>
             {{ else }}
-                <span class="text-muted">—</span>
+                <span class="text-muted">-</span>
             {{ end }}
         </td>
         <td>
@@ -37,11 +37,11 @@
                 <a href="/nodes/{{ .ID }}/edit" class="action-btn" title="Edit">
                     <i class="bx bx-edit-alt"></i>
                 </a>
-                <button hx-post="/nodes/{{ .ID }}/trigger" hx-swap="none" class="action-btn" title="Backup Manual">
+                <button hx-post="/nodes/{{ .ID }}/trigger" hx-swap="none" class="action-btn" title="Manual Backup">
                     <i class="bx bx-play-circle"></i>
                 </button>
                 <button hx-delete="/nodes/{{ .ID }}"
-                        hx-confirm="Excluir este node?"
+                        hx-confirm="Delete this node?"
                         hx-target="closest tr"
                         hx-swap="delete"
                         class="action-btn danger"
@@ -57,7 +57,7 @@
         <td colspan="7" class="table-empty">
             <i class="bx bx-server" style="font-size: 28px; margin-bottom: 8px; display: block;"></i>
             No nodes registered.
-            <a href="/nodes/new" style="color: var(--accent); font-weight: 600; margin-left: 4px;">Adicionar agora</a>
+            <a href="/nodes/new" style="color: var(--accent); font-weight: 600; margin-left: 4px;">Add one now</a>
         </td>
     </tr>
 {{ end }}

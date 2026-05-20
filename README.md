@@ -1,61 +1,44 @@
-# Mimic — Backup Systems v0.1.X
+# Mimic Backup Systems
 
-Plataforma de alta performance para automação, versionamento e centralização de backups de equipamentos de rede (switches, roteadores, OLTs, firewalls). Conecta-se aos dispositivos via SSH, captura a configuração e mantém um histórico completo para auditoria e recuperação.
+Mimic is a high-performance platform designed for the automation, versioning, and centralization of configuration backups for network equipment such as switches, routers, OLTs, and firewalls. By establishing secure SSH connections to network devices, Mimic captures their current configurations and maintains a comprehensive history to ensure seamless auditing and disaster recovery.
 
-Desenvolvido em **Golang** com interface web moderna e reativa.
+## Overview
 
----
+Modern network infrastructures require strict tracking of configuration changes to maintain stability and security. Mimic addresses this need by providing an automated solution that periodically collects configuration states from devices across the network. It intelligently compares new configurations against previous versions, securely storing only meaningful changes. This minimizes storage overhead while providing a clear audit trail of network modifications over time.
 
-## Principais Funcionalidades
+## Key Features
 
-- **Setup Wizard**: Fluxo guiado de primeiro acesso — confirmação do banco de dados e criação do administrador.
-- **Dashboard**: Métricas essenciais (nodes, backups, falhas) com atividade recente em tempo real.
-- **Gestão de Nodes**: Cadastro, busca, backup manual e automático de equipamentos de rede.
-- **Credenciais SSH**: Credenciais reutilizáveis com criptografia AES-GCM 256-bit.
-- **Rotinas de Backup**: Agendamentos automáticos com frequência configurável.
-- **Exportação SFTP**: Sincronização dos backups com servidor SFTP remoto.
-- **Gestão de Usuários**: Controle de acesso com papéis (Administrador / Visualizador).
-- **Logs do Sistema**: Registro de toda atividade (backups, exportações, erros).
-- **Hub de Configurações**: Interface unificada com tabs para todas as configurações do sistema.
+- **Automated Backup Routines**: Schedule periodic backups for individual nodes or logical groups, ensuring configuration history is always up to date without manual intervention.
+- **Visual Difference Tracking**: Inspect configuration changes easily through an integrated side-by-side differential viewer, allowing administrators to pinpoint exact modifications between versions.
+- **Secure Credential Management**: Store and reuse SSH credentials securely. All sensitive information is encrypted at rest using industry-standard AES-GCM 256-bit encryption.
+- **Centralized Dashboard**: Monitor the health of your backup routines through a comprehensive dashboard that highlights recent activities, scheduled tasks, and execution failures.
+- **SFTP Synchronization**: Automatically mirror collected configuration backups to external SFTP servers for off-site disaster recovery compliance.
+- **Role-Based Access Control**: Manage system access through distinct user roles, ensuring that only authorized personnel can initiate backups or alter system settings.
+- **Comprehensive Audit Logs**: Maintain a centralized log of all system activities, including backup executions, credential modifications, and synchronization events.
 
----
+## Prerequisites
 
-## Arquitetura
+- PostgreSQL 15 or higher
 
-| Camada | Tecnologia |
-|--------|------------|
-| Backend | Go 1.25 + Fiber v2 |
-| Frontend | Go Templates + HTMX + Alpine.js |
-| Estilização | CSS customizado (design system neutro/escuro) |
-| ORM | GORM (PostgreSQL) |
-| Conexão de Rede | SSH nativo (`golang.org/x/crypto/ssh`) |
-| Criptografia | AES-GCM 256-bit (`pkg/crypto`) |
-| Concorrência | Goroutines + Worker Pool |
+## Installation and Configuration
 
----
-
-## Pré-requisitos
-
-- **Go 1.22+** (apenas para compilação)
-- **PostgreSQL 15+**
-
----
-
-## Instalação
+Clone the repository to your local environment:
 
 ```bash
 git clone https://github.com/brunoavila55/mimic_backup.git
 cd mimic_backup
 ```
 
-Configure as variáveis de ambiente criando um arquivo `.env` na raiz:
+Configure the required environment variables by creating a `.env` file in the root directory:
 
 ```bash
-DATABASE_URL=postgres://postgres:123456@localhost:5432/mimic_db?sslmode=disable
-SECRET_KEY=uma-chave-aleatoria-de-32-caracteres
+DATABASE_URL=postgres://username:password@localhost:5432/mimic_db?sslmode=disable
+SECRET_KEY=a-random-32-character-secret-key
 ```
 
-Compile e execute:
+*Note: The `SECRET_KEY` must be at least 32 characters long and is strictly required to enable credential encryption.*
+
+Compile the application binary and execute it:
 
 ```bash
 go mod tidy
@@ -63,49 +46,15 @@ go build -o mimic ./cmd/mimic/main.go
 ./mimic
 ```
 
----
+## First Setup
 
-## Primeiro Acesso
+Upon the first execution with an empty database, the system will automatically restrict access and redirect to the initial setup wizard. This guided process ensures that the database connection is healthy and allows the creation of the primary Administrator account. Once completed, the system will redirect to the standard authentication screen.
 
-Na primeira execução (sem usuários no banco), o sistema redireciona automaticamente para o **Setup Wizard**:
+## Extensibility
 
-1. **Banco de Dados** — Confirma que a conexão e as tabelas estão prontas.
-2. **Administrador** — Cria o primeiro usuário com papel de Administrador.
-3. **Login** — Redireciona para a tela de autenticação.
+Mimic is built with extensibility in mind. Support for new hardware vendors can be introduced seamlessly by implementing the standard driver interface. This allows the system to send vendor-specific commands to retrieve configurations and apply custom normalization rules to filter out volatile data (such as uptime or dynamic timestamps) before version comparison.
 
----
+## License
 
-## Estrutura de Rotas
-
-| Rota | Descrição |
-|------|-----------|
-| `/setup` | Setup wizard (primeiro acesso) |
-| `/login` | Autenticação |
-| `/` | Dashboard |
-| `/nodes` | Gerenciamento de nodes |
-| `/nodes/:id` | Detalhes e backups do node |
-| `/settings` | Hub de configurações |
-| `/settings/users` | Gestão de usuários |
-| `/settings/credentials` | Credenciais SSH |
-| `/settings/routines` | Rotinas de backup |
-| `/settings/sftp` | Configuração SFTP |
-| `/settings/export` | Exportação em massa |
-| `/settings/logs` | Logs do sistema |
-| `/settings/profile` | Perfil do usuário |
-
----
-
-## Extensão
-
-### Novos Fabricantes (Vendors)
-Crie um novo arquivo Go em `internal/services/ssh/vendors/` (ex: `mikrotik.go`) implementando a interface `Driver` (métodos `GetBackupCommand` e `NormalizeConfig`) e registre-o usando a função `Register` no bloco `init()`.
-
-### Novas Páginas
-Crie o template em `templates/`, o handler em `internal/handlers/` e registre a rota em `cmd/mimic/main.go`.
-
----
-
-## Licença
-
-Desenvolvido por **Mimic Backup Systems**.
-Para bugs e sugestões, utilize o sistema de Issues do GitHub.
+Developed by Mimic Backup Systems.
+For bug reports and feature requests, please utilize the standard issue tracking system.

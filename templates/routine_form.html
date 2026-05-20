@@ -39,7 +39,7 @@
                 <div class="form-group">
                     <label class="form-label">Day of the Week (if weekly)</label>
                     <select name="backup_day" class="form-input">
-                        <option value="">— Any —</option>
+                        <option value="">- Any -</option>
                         <option value="0" {{ if eq .Routine.BackupDay "0" }}selected{{ end }}>Monday</option>
                         <option value="1" {{ if eq .Routine.BackupDay "1" }}selected{{ end }}>Tuesday</option>
                         <option value="2" {{ if eq .Routine.BackupDay "2" }}selected{{ end }}>Wednesday</option>

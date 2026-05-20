@@ -1,6 +1,6 @@
 <div>
     <h2 class="settings-section-title">My Profile</h2>
-    <p class="settings-section-desc">Atualize suas informações pessoais e senha.</p>
+    <p class="settings-section-desc">Update your personal information and password.</p>
 
     <form action="/settings/profile/save" method="POST" style="max-width: 480px;">
         <div class="form-group">
@@ -10,13 +10,13 @@
 
         <div class="form-group">
             <label class="form-label">E-mail</label>
-            <input type="email" name="email" class="form-input" value="{{ .ProfileUser.Email }}" placeholder="seu@email.com" />
+            <input type="email" name="email" class="form-input" value="{{ .ProfileUser.Email }}" placeholder="your@email.com" />
         </div>
 
         <div class="form-group">
-            <label class="form-label">Nova Senha</label>
-            <input type="password" name="password" class="form-input" placeholder="Deixe em branco para manter a atual" autocomplete="new-password" />
-            <div class="form-hint">Mínimo de 6 caracteres.</div>
+            <label class="form-label">New Password</label>
+            <input type="password" name="password" class="form-input" placeholder="Leave blank to keep current" autocomplete="new-password" />
+            <div class="form-hint">Minimum 6 characters.</div>
         </div>
 
         <div class="form-group" style="padding: 12px; background: var(--bg-tertiary); border-radius: var(--radius); margin-top: 20px;">
@@ -33,7 +33,7 @@
 
         <div class="form-actions" style="border-top: none; margin-top: 20px;">
             <button type="submit" class="btn btn-primary">
-                <i class="bx bx-save"></i> Salvar Perfil
+                <i class="bx bx-save"></i> Save Profile
             </button>
         </div>
     </form>

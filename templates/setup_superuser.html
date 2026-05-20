@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mimic | Criar Administrator</title>
+    <title>Mimic | Create Administrator</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
@@ -17,7 +17,7 @@
         <!-- ===== Left Panel: Setup Branding ===== -->
         <div class="login-brand">
             <div class="login-brand-content">
-                <img src="/static/img/logo_texto.svg" alt="Logo Mimic" class="login-logo" />
+                <img src="/static/img/logo_texto.svg" alt="Mimic Logo" class="login-logo" />
                 
                 <div class="login-brand-features">
                     <div class="login-feature">
@@ -25,8 +25,8 @@
                             <i class="bx bx-user-voice"></i>
                         </div>
                         <div>
-                            <div class="login-feature-title">Acesso Total</div>
-                            <div class="login-feature-desc">Seu primeiro usuário terá permissões administrativas globais.</div>
+                            <div class="login-feature-title">Full Access</div>
+                            <div class="login-feature-desc">Your first user will have global administrative permissions.</div>
                         </div>
                     </div>
                     <div class="login-feature">
@@ -34,15 +34,15 @@
                             <i class="bx bx-lock-alt"></i>
                         </div>
                         <div>
-                            <div class="login-feature-title">Segurança Máxima</div>
-                            <div class="login-feature-desc">Utilizamos hashing de última geração para proteger sua senha.</div>
+                            <div class="login-feature-title">Maximum Security</div>
+                            <div class="login-feature-desc">We use state-of-the-art hashing to protect your password.</div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="login-brand-footer">
-                &copy; 2025 Mimic Backup Systems
+                &copy; 2026 Mimic Backup Systems
             </div>
         </div>
 
@@ -63,8 +63,8 @@
                 </div>
 
                 <div class="login-greeting" style="margin-bottom: 24px;">
-                    <h1 class="login-title">Administrator</h1>
-                    <p class="login-subtitle">Configure o acesso principal ao sistema.</p>
+                    <h1 class="login-title">Create Administrator</h1>
+                    <p class="login-subtitle">Configure the main system access account.</p>
                 </div>
 
                 {{ if .Error }}
@@ -78,41 +78,41 @@
                     <div class="login-field">
                         <label for="setup-user">
                             <i class="bx bx-user"></i>
-                            Usuário
+                            Username
                         </label>
                         <input id="setup-user" type="text" name="username" 
-                               placeholder="Ex: admin" required autocomplete="username" />
+                               placeholder="e.g. admin" required autocomplete="username" />
                     </div>
 
                     <div class="login-field">
                         <label for="setup-email">
                             <i class="bx bx-envelope"></i>
-                            E-mail (opcional)
+                            E-mail (optional)
                         </label>
                         <input id="setup-email" type="email" name="email" 
-                               placeholder="admin@empresa.com" autocomplete="email" />
+                               placeholder="admin@company.com" autocomplete="email" />
                     </div>
 
                     <div class="login-field">
                         <label for="setup-pass">
                             <i class="bx bx-lock-open-alt"></i>
-                            Senha
+                            Password
                         </label>
                         <input id="setup-pass" type="password" name="password" 
-                               placeholder="Mínimo 6 caracteres" required minlength="6" autocomplete="new-password" />
+                               placeholder="Minimum 6 characters" required minlength="6" autocomplete="new-password" />
                     </div>
 
                     <div class="login-field">
                         <label for="setup-confirm">
                             <i class="bx bx-lock-alt"></i>
-                            Confirmar Senha
+                            Confirm Password
                         </label>
                         <input id="setup-confirm" type="password" name="confirm_password" 
-                               placeholder="Repita a senha" required minlength="6" autocomplete="new-password" />
+                               placeholder="Repeat your password" required minlength="6" autocomplete="new-password" />
                     </div>
 
                     <button type="submit" class="login-btn">
-                        <span>Criar Administrator</span>
+                        <span>Create Administrator</span>
                         <i class="bx bx-user-plus"></i>
                     </button>
                 </form>

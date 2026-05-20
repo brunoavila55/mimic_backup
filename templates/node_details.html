@@ -30,7 +30,7 @@
         <div class="detail-item">
             <div class="detail-label">Last Backup</div>
             <div class="detail-value">
-                {{ if .Node.LastBackupAt }}{{ .Node.LastBackupAt.Format "02/01/2006 15:04" }}{{ else }}—{{ end }}
+                {{ if .Node.LastBackupAt }}{{ .Node.LastBackupAt.Format "02/01/2006 15:04" }}{{ else }}-{{ end }}
             </div>
         </div>
         <div class="detail-item">
@@ -80,19 +80,25 @@
                         </td>
                         <td>{{ .CreatedAt.Format "02/01/2006 15:04:05" }}</td>
                         <td>
-                            <div class="action-group">
-                                <button @click="modalOpen = true"
-                                        hx-get="/backups/{{ .ID }}/content"
-                                        hx-target="#modal-content-area"
-                                        class="action-btn" title="View configuration">
-                                    <i class="bx bx-code-block"></i>
-                                </button>
-                                <button hx-post="/backups/{{ .ID }}/export"
-                                        hx-swap="none"
-                                        class="action-btn" title="Export to SFTP">
-                                    <i class="bx bx-export"></i>
-                                </button>
-                            </div>
+                             <div class="action-group">
+                                 <button @click="modalOpen = true"
+                                         hx-get="/backups/{{ .ID }}/diff"
+                                         hx-target="#modal-content-area"
+                                         class="action-btn" title="Compare with previous version">
+                                     <i class="bx bx-git-compare"></i>
+                                 </button>
+                                 <button @click="modalOpen = true"
+                                         hx-get="/backups/{{ .ID }}/content"
+                                         hx-target="#modal-content-area"
+                                         class="action-btn" title="View configuration">
+                                     <i class="bx bx-code-block"></i>
+                                 </button>
+                                 <button hx-post="/backups/{{ .ID }}/export"
+                                         hx-swap="none"
+                                         class="action-btn" title="Export to SFTP">
+                                     <i class="bx bx-export"></i>
+                                 </button>
+                             </div>
                         </td>
                     </tr>
                     {{ end }}

@@ -46,7 +46,7 @@
                 <div class="form-group">
                     <label class="form-label">SSH Credential</label>
                     <select name="credential_id" class="form-input" x-model="credentialId">
-                        <option value="">— Use manual login/password —</option>
+                        <option value="">- Use manual login/password -</option>
                         {{ range .Credentials }}
                         <option value="{{ .ID }}" {{ if $.Node.CredentialID }}{{ if eq .ID (deref $.Node.CredentialID) }}selected{{ end }}{{ end }}>{{ .Name }} ({{ .Username }}:{{ .Port }})</option>
                         {{ end }}
@@ -109,7 +109,7 @@
                         <div class="form-group">
                             <label class="form-label">Day of the Week (if weekly)</label>
                             <select name="backup_day" class="form-input">
-                                <option value="">— Any —</option>
+                                <option value="">- Any -</option>
                                 <option value="0" {{ if eq .Node.BackupDay "0" }}selected{{ end }}>Monday</option>
                                 <option value="1" {{ if eq .Node.BackupDay "1" }}selected{{ end }}>Tuesday</option>
                                 <option value="2" {{ if eq .Node.BackupDay "2" }}selected{{ end }}>Wednesday</option>
@@ -126,7 +126,7 @@
                 <div class="form-group" x-show="scheduleType === 'routine'">
                     <label class="form-label">Routine</label>
                     <select name="routine_id" class="form-input">
-                        <option value="">— None —</option>
+                        <option value="">- None -</option>
                         {{ range .Routines }}
                         <option value="{{ .ID }}" {{ if $.Node.RoutineID }}{{ if eq .ID (deref $.Node.RoutineID) }}selected{{ end }}{{ end }}>{{ .Name }}</option>
                         {{ end }}

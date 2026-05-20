@@ -1,11 +1,11 @@
 <div>
     <div class="flex items-center justify-between mb-4">
         <div>
-            <h2 class="settings-section-title">Rotinas de Backup</h2>
-            <p class="settings-section-desc">Agendamentos automáticos de backup para grupos de nodes.</p>
+            <h2 class="settings-section-title">Backup Routines</h2>
+            <p class="settings-section-desc">Automatic backup schedules for groups of nodes.</p>
         </div>
         <a href="/settings/routines/new" class="btn btn-primary btn-sm">
-            <i class="bx bx-plus"></i> Nova Rotina
+            <i class="bx bx-plus"></i> New Routine
         </a>
     </div>
 
@@ -14,7 +14,7 @@
             <thead>
                 <tr>
                     <th>Name</th>
-                    <th>Descrição</th>
+                    <th>Description</th>
                     <th>Frequency</th>
                     <th>Time</th>
                     <th>Status</th>
@@ -28,11 +28,11 @@
                     <td style="font-weight: 600;">{{ .Name }}</td>
                     <td class="text-secondary truncate" style="max-width: 200px;">{{ .Description }}</td>
                     <td>
-                        {{ if eq .Frequency "1" }}1 hora
-                        {{ else if eq .Frequency "6" }}6 horas
-                        {{ else if eq .Frequency "12" }}12 horas
-                        {{ else if eq .Frequency "24" }}24 horas
-                        {{ else if eq .Frequency "168" }}7 dias
+                        {{ if eq .Frequency "1" }}1 hour
+                        {{ else if eq .Frequency "6" }}6 hours
+                        {{ else if eq .Frequency "12" }}12 hours
+                        {{ else if eq .Frequency "24" }}24 hours
+                        {{ else if eq .Frequency "168" }}7 days
                         {{ else }}{{ .Frequency }}h{{ end }}
                     </td>
                     <td>
@@ -40,25 +40,25 @@
                             <span class="font-mono">{{ .BackupHour }}</span>
                             {{ if .BackupDay }}
                                 <span class="text-secondary" style="margin-left: 4px;">
-                                    {{ if eq .BackupDay "0" }}Seg
-                                    {{ else if eq .BackupDay "1" }}Ter
-                                    {{ else if eq .BackupDay "2" }}Qua
-                                    {{ else if eq .BackupDay "3" }}Qui
-                                    {{ else if eq .BackupDay "4" }}Sex
-                                    {{ else if eq .BackupDay "5" }}Sáb
-                                    {{ else if eq .BackupDay "6" }}Dom
+                                    {{ if eq .BackupDay "0" }}Mon
+                                    {{ else if eq .BackupDay "1" }}Tue
+                                    {{ else if eq .BackupDay "2" }}Wed
+                                    {{ else if eq .BackupDay "3" }}Thu
+                                    {{ else if eq .BackupDay "4" }}Fri
+                                    {{ else if eq .BackupDay "5" }}Sat
+                                    {{ else if eq .BackupDay "6" }}Sun
                                     {{ end }}
                                 </span>
                             {{ end }}
                         {{ else }}
-                            <span class="text-muted">—</span>
+                            <span class="text-muted">-</span>
                         {{ end }}
                     </td>
                     <td>
                         {{ if .Enabled }}
-                            <span class="badge badge-success">Ativa</span>
+                            <span class="badge badge-success">Active</span>
                         {{ else }}
-                            <span class="badge badge-muted">Inativa</span>
+                            <span class="badge badge-muted">Inactive</span>
                         {{ end }}
                     </td>
                     <td>
@@ -67,7 +67,7 @@
                                 <i class="bx bx-edit-alt"></i>
                             </a>
                             <button hx-delete="/settings/routines/{{ .ID }}"
-                                    hx-confirm="Excluir esta rotina?"
+                                    hx-confirm="Delete this routine?"
                                     hx-target="closest tr"
                                     hx-swap="outerHTML"
                                     class="action-btn danger" title="Delete">

@@ -1,11 +1,11 @@
 <div>
     <div class="flex items-center justify-between mb-4">
         <div>
-            <h2 class="settings-section-title">Exportar Backups</h2>
-            <p class="settings-section-desc">Sincronize os últimos backups de todos os nodes ativos com o servidor SFTP.</p>
+            <h2 class="settings-section-title">Export Backups</h2>
+            <p class="settings-section-desc">Sync the latest backups from all active nodes to the SFTP server.</p>
         </div>
         <button hx-post="/settings/export/sync" hx-swap="none" class="btn btn-primary btn-sm">
-            <i class="bx bx-sync"></i> Sincronizar Todos
+            <i class="bx bx-sync"></i> Sync All
         </button>
     </div>
 
@@ -20,8 +20,8 @@
                     </div>
                     <div class="text-secondary" style="font-size: 12px;">
                         {{ if .Sftp.LastExportAt }}
-                            Última exportação: {{ .Sftp.LastExportAt.Format "02/01/2006 15:04" }}
-                            — <span class="{{ if eq .Sftp.LastExportStatus "success" }}text-success{{ else }}text-danger{{ end }}">{{ .Sftp.LastExportStatus }}</span>
+                            Last export: {{ .Sftp.LastExportAt.Format "02/01/2006 15:04" }}
+                            - <span class="{{ if eq .Sftp.LastExportStatus "success" }}text-success{{ else }}text-danger{{ end }}">{{ .Sftp.LastExportStatus }}</span>
                         {{ else }}
                             No exports performed
                         {{ end }}
@@ -33,7 +33,7 @@
     {{ else }}
     <div class="card mb-4" style="border: none; background: var(--bg-tertiary);">
         <div class="card-body text-center text-muted" style="padding: 20px;">
-            SFTP não configurado. <a href="/settings/sftp" class="text-accent" style="font-weight: 600;">Configurar agora</a>
+            SFTP not configured. <a href="/settings/sftp" class="text-accent" style="font-weight: 600;">Configure now</a>
         </div>
     </div>
     {{ end }}
@@ -48,11 +48,11 @@
                     <td style="font-weight: 600;">{{ .Name }}</td>
                     <td class="font-mono">{{ .IP }}</td>
                     <td class="text-secondary">
-                        {{ if .LastBackupAt }}{{ .LastBackupAt.Format "02/01/2006 15:04" }}{{ else }}—{{ end }}
+                        {{ if .LastBackupAt }}{{ .LastBackupAt.Format "02/01/2006 15:04" }}{{ else }}-{{ end }}
                     </td>
                     <td>
                         <span class="badge {{ if eq .LastStatus "success" }}badge-success{{ else if eq .LastStatus "error" }}badge-danger{{ else }}badge-muted{{ end }}">
-                            {{ if eq .LastStatus "success" }}OK{{ else if eq .LastStatus "error" }}Erro{{ else }}Pendente{{ end }}
+                            {{ if eq .LastStatus "success" }}OK{{ else if eq .LastStatus "error" }}Error{{ else }}Pending{{ end }}
                         </span>
                     </td>
                 </tr>

@@ -2,17 +2,17 @@
     <div class="page-header">
         <div>
             <h1 class="page-title">Settings</h1>
-            <p class="page-desc">Gerencie usuários, credenciais, rotinas e integrações do sistema.</p>
+            <p class="page-desc">Manage users, credentials, routines and system integrations.</p>
         </div>
     </div>
 
     <div class="settings-layout">
         <nav class="settings-nav">
-            <div class="settings-nav-section">Gerenciamento</div>
+            <div class="settings-nav-section">Management</div>
             <a href="/settings/users"
                hx-get="/settings/users" hx-target="#settings-content" hx-push-url="true"
                class="settings-tab {{ if eq .ActiveTab "users" }}active{{ end }}">
-                <i class="bx bx-group"></i> Usuários
+                <i class="bx bx-group"></i> Users
             </a>
 
 
@@ -25,7 +25,7 @@
             <a href="/settings/export"
                hx-get="/settings/export" hx-target="#settings-content" hx-push-url="true"
                class="settings-tab {{ if eq .ActiveTab "export" }}active{{ end }}">
-                <i class="bx bx-export"></i> Exportar
+                <i class="bx bx-export"></i> Export
             </a>
             <a href="/settings/logs"
                hx-get="/settings/logs" hx-target="#settings-content" hx-push-url="true"
@@ -33,11 +33,11 @@
                 <i class="bx bx-list-ul"></i> Logs
             </a>
 
-            <div class="settings-nav-section">Conta</div>
+            <div class="settings-nav-section">Account</div>
             <a href="/settings/profile"
                hx-get="/settings/profile" hx-target="#settings-content" hx-push-url="true"
                class="settings-tab {{ if eq .ActiveTab "profile" }}active{{ end }}">
-                <i class="bx bx-user"></i> Meu Perfil
+                <i class="bx bx-user"></i> My Profile
             </a>
         </nav>
 

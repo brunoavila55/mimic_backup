@@ -2,10 +2,10 @@
     <div class="flex items-center justify-between mb-4">
         <div>
             <h2 class="settings-section-title">Users</h2>
-            <p class="settings-section-desc">Gerencie os usuários e permissões de acesso ao sistema.</p>
+            <p class="settings-section-desc">Manage users and system access permissions.</p>
         </div>
         <a href="/settings/users/new" class="btn btn-primary btn-sm">
-            <i class="bx bx-plus"></i> Novo Usuário
+            <i class="bx bx-plus"></i> New User
         </a>
     </div>
 
@@ -15,8 +15,8 @@
                 <tr>
                     <th>User</th>
                     <th>E-mail</th>
-                    <th>Papel</th>
-                    <th>Criado em</th>
+                    <th>Role</th>
+                    <th>Created</th>
                     <th style="width: 80px;">Actions</th>
                 </tr>
             </thead>
@@ -25,7 +25,7 @@
                 {{ range .Users }}
                 <tr>
                     <td style="font-weight: 600;">{{ .Username }}</td>
-                    <td class="text-secondary">{{ if .Email }}{{ .Email }}{{ else }}—{{ end }}</td>
+                    <td class="text-secondary">{{ if .Email }}{{ .Email }}{{ else }}-{{ end }}</td>
                     <td>
                         {{ if eq .Role "Administrator" }}
                             <span class="badge badge-accent">Admin</span>
@@ -40,7 +40,7 @@
                                 <i class="bx bx-edit-alt"></i>
                             </a>
                             <button hx-delete="/settings/users/{{ .ID }}"
-                                    hx-confirm="Excluir este usuário?"
+                                    hx-confirm="Delete this user?"
                                     hx-target="closest tr"
                                     hx-swap="outerHTML"
                                     class="action-btn danger" title="Delete">

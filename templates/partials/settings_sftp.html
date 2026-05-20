@@ -1,6 +1,6 @@
 <div>
-    <h2 class="settings-section-title">Armazenamento SFTP</h2>
-    <p class="settings-section-desc">Configure o servidor SFTP para exportação automática de backups.</p>
+    <h2 class="settings-section-title">SFTP Storage</h2>
+    <p class="settings-section-desc">Configure the SFTP server for automatic backup export.</p>
 
     <form action="/settings/sftp/save" method="POST">
         <div class="form-row">
@@ -9,7 +9,7 @@
                 <input type="text" name="host" class="form-input font-mono" value="{{ .Sftp.Host }}" placeholder="sftp.empresa.com" />
             </div>
             <div class="form-group">
-                <label class="form-label">Porta</label>
+                <label class="form-label">Port</label>
                 <input type="number" name="port" class="form-input" value="{{ .Sftp.Port }}" placeholder="22" />
             </div>
         </div>
@@ -20,17 +20,17 @@
             </div>
             <div class="form-group">
                 <label class="form-label">Password</label>
-                <input type="password" name="password" class="form-input" placeholder="Deixe em branco para manter" />
+                <input type="password" name="password" class="form-input" placeholder="Leave blank to keep current" />
             </div>
         </div>
         <div class="form-group">
-            <label class="form-label">Caminho Remoto</label>
+            <label class="form-label">Remote Path</label>
             <input type="text" name="path" class="form-input font-mono" value="{{ .Sftp.Path }}" placeholder="/backups/network" />
-            <div class="form-hint">Diretórios ausentes serão criados automaticamente.</div>
+            <div class="form-hint">Missing directories will be created automatically.</div>
         </div>
         <div class="form-actions" style="border-top: none; margin-top: 16px;">
             <button type="submit" class="btn btn-primary">
-                <i class="bx bx-save"></i> Salvar Configurações
+                <i class="bx bx-save"></i> Save Settings
             </button>
         </div>
     </form>

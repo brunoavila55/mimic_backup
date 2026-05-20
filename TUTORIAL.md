@@ -68,25 +68,7 @@ GRANT ALL PRIVILEGES ON DATABASE mimic_db TO mimic;
 \q
 ```
 
-## 8. Configure Environment Variables
-The system requires a `.env` file to run.
-```bash
-su - mimic
-cd /opt/mimic
-nano .env
-```
-Paste the content below, paying attention to put the same database password you created in the previous step, and generating a random key for the `SECRET_KEY`:
-```env
-DATABASE_URL=postgres://mimic:password@localhost:5432/mimic_db?sslmode=disable
-SECRET_KEY=paste_a_32_character_random_key_here
-PORT=3000
-```
-Save and close the file (`Ctrl+O`, `Enter`, `Ctrl+X`), and return to root:
-```bash
-exit
-```
-
-## 9. Configure the Service (Systemd)
+## 8. Configure the Service (Systemd)
 To ensure Mimic starts with the server and restarts on failures, let's create a system service:
 ```bash
 cat <<EOF > /etc/systemd/system/mimic.service
@@ -98,7 +80,8 @@ After=network.target postgresql.service
 User=mimic
 Group=mimic
 WorkingDirectory=/opt/mimic
-EnvironmentFile=/opt/mimic/.env
+Environment="DATABASE_URL=postgres://mimic:password@localhost:5432/mimic_db?sslmode=disable"
+Environment="PORT=3000"
 ExecStart=/opt/mimic/mimic_bin
 Restart=always
 RestartSec=5
@@ -114,7 +97,7 @@ systemctl enable mimic
 systemctl start mimic
 ```
 
-## 10. Configure Web Server (NGINX)
+## 9. Configure Web Server (NGINX)
 We'll use NGINX as a reverse proxy to receive web connections on port 80 and forward them to our application.
 
 ```bash

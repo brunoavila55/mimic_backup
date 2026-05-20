@@ -1,8 +1,5 @@
-# Environment and Secrets
-.env
-.env.local
-*.env
-!.env.example
+# Config & Secrets
+.mimic_secret
 
 # Go Binaries
 /mimic

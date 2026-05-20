@@ -14,10 +14,33 @@ import (
 
 func getSecretKey() ([]byte, error) {
 	key := os.Getenv("SECRET_KEY")
-	if len(key) < 32 {
-		return nil, errors.New("SECRET_KEY environment variable must be at least 32 characters")
+	if key != "" {
+		if len(key) < 32 {
+			return nil, errors.New("SECRET_KEY environment variable must be at least 32 characters")
+		}
+		return []byte(key[:32]), nil
 	}
-	return []byte(key[:32]), nil
+
+	secretFile := ".mimic_secret"
+	data, err := os.ReadFile(secretFile)
+	if err == nil {
+		if len(data) >= 32 {
+			return data[:32], nil
+		}
+	}
+
+	// Generate new key
+	newKey := make([]byte, 24)
+	if _, err := io.ReadFull(rand.Reader, newKey); err != nil {
+		return nil, err
+	}
+
+	b64Key := base64.StdEncoding.EncodeToString(newKey)
+	if err := os.WriteFile(secretFile, []byte(b64Key), 0600); err != nil {
+		return nil, err
+	}
+
+	return []byte(b64Key), nil
 }
 
 // Encrypt string using AES-GCM

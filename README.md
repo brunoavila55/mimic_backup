@@ -38,6 +38,8 @@ SECRET_KEY=a-random-32-character-secret-key
 
 *Note: The `SECRET_KEY` must be at least 32 characters long and is strictly required to enable credential encryption.*
 
+### Manual Execution
+
 Compile the application binary and execute it:
 
 ```bash
@@ -45,6 +47,18 @@ go mod tidy
 go build -o mimic ./cmd/mimic/main.go
 ./mimic
 ```
+
+### Docker Execution (Recommended)
+
+Mimic fully supports containerized execution via Docker, which significantly simplifies the deployment process and automatically provisions the PostgreSQL database. This is particularly useful for modern deployment strategies like Green/Blue deployments.
+
+To start the application along with its database, ensure you have Docker and Docker Compose installed, then run the following command in the root directory:
+
+```bash
+docker-compose up --build -d
+```
+
+The system will be accessible at `http://localhost:3000`. The database connection string and required environment variables are already pre-configured within the `docker-compose.yml` file.
 
 ## First Setup
 

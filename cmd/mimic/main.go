@@ -20,6 +20,8 @@ import (
 	"gorm.io/gorm"
 )
 
+var AppVersion string
+
 func main() {
 	// Load environment variables from .env file
 	if err := godotenv.Load(); err != nil {
@@ -71,11 +73,14 @@ ________________________________________________`)
 	sch := scheduler.NewScheduler(db)
 	sch.Start()
 
-	// Get Version from Git
-	appVersion := "0.0.10" // fallback
-	if out, err := exec.Command("git", "rev-list", "--count", "HEAD").Output(); err == nil {
-		count := strings.TrimSpace(string(out))
-		appVersion = "0.1." + count
+	// Get Version from Git or Build Flags
+	appVersion := AppVersion
+	if appVersion == "" {
+		appVersion = "0.0.10" // fallback
+		if out, err := exec.Command("git", "rev-list", "--count", "HEAD").Output(); err == nil {
+			count := strings.TrimSpace(string(out))
+			appVersion = "0.1." + count
+		}
 	}
 
 	// Template Engine

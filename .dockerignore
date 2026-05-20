@@ -1,0 +1,10 @@
+# .git (Removido para o git rev-list funcionar no build)
+.gitignore
+mimic.exe
+*.exe
+tmp/
+.env
+README.md
+CONTEXT.md
+TUTORIAL.md
+estilo.md

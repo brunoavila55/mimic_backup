@@ -50,7 +50,7 @@
                                 </div>
                                 <div class="activity-text" style="color: var(--danger); opacity: 0.8;">{{ if .LastError }}{{ .LastError }}{{ else }}Erro desconhecido{{ end }}</div>
                             </div>
-                            <button class="btn btn-sm btn-ghost" hx-post="/nodes/{{ .ID }}/backup" hx-swap="none" onclick="this.innerHTML='<span class=\'spinner\'></span>';">Run Backup</button>
+                            <button class="btn btn-sm btn-ghost" hx-post="/nodes/{{ .ID }}/trigger" hx-swap="none" onclick="this.innerHTML='<span class=\'spinner\'></span>';">Run Backup</button>
                         </div>
                     </div>
                     {{ end }}
@@ -65,7 +65,7 @@
                                 </div>
                                 <div class="activity-text" style="color: var(--warning); opacity: 0.8;">Sem backup há mais de 48h</div>
                             </div>
-                            <button class="btn btn-sm btn-ghost" hx-post="/nodes/{{ .ID }}/backup" hx-swap="none" onclick="this.innerHTML='<span class=\'spinner\'></span>';">Run Backup</button>
+                            <button class="btn btn-sm btn-ghost" hx-post="/nodes/{{ .ID }}/trigger" hx-swap="none" onclick="this.innerHTML='<span class=\'spinner\'></span>';">Run Backup</button>
                         </div>
                     </div>
                     {{ end }}

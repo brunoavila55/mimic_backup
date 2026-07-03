@@ -28,7 +28,7 @@ func main() {
    /  |/  (_)___ ___  (_)____
   / /|_/ / / __ ` + "`" + `__ \/ / ___/
  / /  / / / / / / / / / /__  
-/_/  /_/_/_/ /_/ /_/_/\___/  Backup Systems v0.1.28
+/_/  /_/_/_/ /_/ /_/_/\___/  Backup Systems v0.2.0
 ________________________________________________`)
 
 	// Database connection
@@ -71,10 +71,10 @@ ________________________________________________`)
 	// Get Version from Git or Build Flags
 	appVersion := AppVersion
 	if appVersion == "" {
-		appVersion = "0.0.10" // fallback
+		appVersion = "0.2.0" // fallback
 		if out, err := exec.Command("git", "rev-list", "--count", "HEAD").Output(); err == nil {
 			count := strings.TrimSpace(string(out))
-			appVersion = "0.1." + count
+			appVersion = "0.2." + count
 		}
 	}
 

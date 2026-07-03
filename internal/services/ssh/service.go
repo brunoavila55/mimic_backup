@@ -34,10 +34,14 @@ func (s *SSHService) Connect(node *models.Node) (*ssh.Client, error) {
 		// Priority: Credential (modern) > AccessAgent (legacy) > direct node credentials
 		if node.CredentialID != nil && node.Credential != nil {
 			encPass = node.Credential.Password
-			username = node.Credential.Username
+			if node.Credential.Username != "" {
+				username = node.Credential.Username
+			}
 		} else if node.AccessAgentID != nil && node.AccessAgent != nil {
 			encPass = node.AccessAgent.Password
-			username = node.AccessAgent.Username
+			if node.AccessAgent.Username != "" {
+				username = node.AccessAgent.Username
+			}
 		}
 		
 		password, err := crypto.Decrypt(encPass)

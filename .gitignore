@@ -32,3 +32,6 @@ postgres_data/
 # Logs
 *.log
 Process Group PGID: 82015
+
+# Contextos detalhados locais
+DETAILED_CONTEXT.md

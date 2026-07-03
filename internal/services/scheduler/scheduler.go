@@ -7,6 +7,7 @@ import (
 	"mimic/internal/models"
 	"mimic/internal/services/sftp"
 	"mimic/internal/services/ssh"
+	"mimic/pkg/diff"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -102,13 +103,18 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 			version = lastBackup.Version
 			if lastBackup.Hash != configHash {
 				version++
+				
+				diffRes := diff.GenerateDiff(lastBackup.Config, config)
+				
 				backup := models.NodeBackup{
-					NodeID:  node.ID,
-					Config:  config,
-					Hash:    configHash,
-					Status:  status,
-					Error:   errorMessage,
-					Version: version,
+					NodeID:        node.ID,
+					Config:        config,
+					Hash:          configHash,
+					Status:        status,
+					Error:         errorMessage,
+					Version:       version,
+					DiffAdditions: diffRes.Additions,
+					DiffDeletions: diffRes.Deletions,
 				}
 				s.db.Create(&backup)
 			}

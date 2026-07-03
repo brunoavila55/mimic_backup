@@ -15,8 +15,18 @@ import (
 
 // ── Dashboard ──────────────────────────────────────────
 
+// silentThresholdHours define o tempo (em horas) sem backup bem-sucedido
+// após o qual um node é considerado "silencioso" na dashboard.
+// TODO: candidato a virar configurável em /settings no futuro.
+const silentThresholdHours = 48
+
 type DashboardHandler struct {
 	DB *gorm.DB
+}
+
+type VendorFailure struct {
+	Vendor string
+	Count  int64
 }
 
 func (h *DashboardHandler) GetDashboard(c *fiber.Ctx) error {
@@ -34,6 +44,16 @@ func (h *DashboardHandler) GetDashboard(c *fiber.Ctx) error {
 	var failedNodes []models.Node
 	h.DB.Where("enabled = ? AND last_status = ?", true, "error").Order("updated_at desc").Find(&failedNodes)
 
+	var silentNodes []models.Node
+	thresholdTime := time.Now().Add(-silentThresholdHours * time.Hour)
+	h.DB.Where("enabled = ? AND last_status != ? AND (last_backup_at IS NULL OR last_backup_at < ?)", true, "error", thresholdTime).Order("last_backup_at asc").Find(&silentNodes)
+
+	var vendorFailures []VendorFailure
+	h.DB.Model(&models.Node{}).Select("vendor, count(*) as count").Where("enabled = ? AND last_status = ?", true, "error").Group("vendor").Order("count desc").Scan(&vendorFailures)
+
+	var sftpUnsyncedCount int64
+	h.DB.Model(&models.NodeBackup{}).Where("status = ? AND exported = ?", "success", false).Select("count(distinct node_id)").Scan(&sftpUnsyncedCount)
+
 	var nextBackups []models.Node
 	now := time.Now()
 	h.DB.Where("enabled = ? AND next_backup_at > ?", true, now).Order("next_backup_at asc").Limit(5).Find(&nextBackups)
@@ -45,16 +65,19 @@ func (h *DashboardHandler) GetDashboard(c *fiber.Ctx) error {
 	h.DB.Preload("Node").Order("created_at desc").Limit(5).Find(&recentBackups)
 
 	data := fiber.Map{
-		"Title":         "Dashboard",
-		"Username":      c.Locals("username"),
-		"Avatar":        c.Locals("avatar"),
-		"Role":          c.Locals("role"),
-		"CurrentRoute":  "dashboard",
-		"Stats":         stats,
-		"RecentLogs":    recentLogs,
-		"RecentBackups": recentBackups,
-		"FailedNodes":   failedNodes,
-		"NextBackups":   nextBackups,
+		"Title":             "Dashboard",
+		"Username":          c.Locals("username"),
+		"Avatar":            c.Locals("avatar"),
+		"Role":              c.Locals("role"),
+		"CurrentRoute":      "dashboard",
+		"Stats":             stats,
+		"RecentLogs":        recentLogs,
+		"RecentBackups":     recentBackups,
+		"FailedNodes":       failedNodes,
+		"SilentNodes":       silentNodes,
+		"VendorFailures":    vendorFailures,
+		"SftpUnsyncedCount": sftpUnsyncedCount,
+		"NextBackups":       nextBackups,
 	}
 
 	if c.Get("HX-Request") == "true" && c.Get("HX-Target") == "dashboard-content" {

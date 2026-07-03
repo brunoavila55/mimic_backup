@@ -64,9 +64,9 @@ type Node struct {
 	Frequency            string `gorm:"default:'24'"`
 	BackupHour           string
 	BackupDay            string
-	LastStatus           string `gorm:"default:'never'"`
+	LastStatus           string `gorm:"default:'never';index"`
 	LastError            string
-	LastBackupAt         *time.Time
+	LastBackupAt         *time.Time `gorm:"index"`
 	NextBackupAt         *time.Time `gorm:"index"`
 	IsOnline             bool       `gorm:"default:false"`
 	VerifyHostKey        bool       `gorm:"default:true"`
@@ -82,10 +82,12 @@ type NodeBackup struct {
 	Version   int
 	Config    string
 	Hash      string
-	Status    string
-	Error     string
-	Exported  bool `gorm:"default:false"`
-	CreatedAt time.Time
+	Status        string
+	Error         string
+	Exported      bool `gorm:"default:false;index"`
+	DiffAdditions int  `gorm:"default:0"`
+	DiffDeletions int  `gorm:"default:0"`
+	CreatedAt     time.Time
 }
 
 type SftpSettings struct {

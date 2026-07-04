@@ -288,6 +288,11 @@ func (h *FormHandler) ImportNodesCSV(c *fiber.Ctx) error {
 			port = 22
 		}
 
+		scheduleType := getCol("schedule_type")
+		if scheduleType == "" {
+			scheduleType = "individual"
+		}
+
 		frequency := getCol("frequency")
 		if frequency == "" {
 			frequency = "24"
@@ -305,15 +310,17 @@ func (h *FormHandler) ImportNodesCSV(c *fiber.Ctx) error {
 		}
 
 		node := models.Node{
-			Name:      nodeName,
-			Vendor:    nodeVendor,
-			IP:        nodeIP,
-			Port:      port,
-			Username:  getCol("username"),
-			Group:     group,
-			Tags:      getCol("tags"),
-			Frequency: frequency,
-			Enabled:   enabled,
+			Name:         nodeName,
+			Vendor:       nodeVendor,
+			IP:           nodeIP,
+			Port:         port,
+			Username:     getCol("username"),
+			Group:        group,
+			ScheduleType: scheduleType,
+			Frequency:    frequency,
+			BackupHour:   getCol("backup_hour"),
+			BackupDay:    getCol("backup_day"),
+			Enabled:      enabled,
 		}
 
 		// Encrypt password if provided
@@ -322,6 +329,38 @@ func (h *FormHandler) ImportNodesCSV(c *fiber.Ctx) error {
 			encPass, err := crypto.Encrypt(rawPass)
 			if err == nil {
 				node.Password = encPass
+			}
+		}
+
+		// Resolve Foreign Keys by Name
+		credName := getCol("credential_name")
+		if credName != "" {
+			var cred models.Credential
+			if err := h.DB.Where("name = ?", credName).First(&cred).Error; err == nil {
+				node.CredentialID = &cred.ID
+			} else {
+				errors = append(errors, fmt.Sprintf("Line %d (%s): Credential '%s' not found, imported without credential.", lineNum, nodeName, credName))
+			}
+		}
+
+		routineName := getCol("routine_name")
+		if routineName != "" {
+			var routine models.BackupRoutine
+			if err := h.DB.Where("name = ?", routineName).First(&routine).Error; err == nil {
+				node.RoutineID = &routine.ID
+			} else {
+				errors = append(errors, fmt.Sprintf("Line %d (%s): Routine '%s' not found, falling back to individual schedule.", lineNum, nodeName, routineName))
+				node.ScheduleType = "individual"
+			}
+		}
+
+		agentName := getCol("agent_name")
+		if agentName != "" {
+			var agent models.AccessAgent
+			if err := h.DB.Where("name = ?", agentName).First(&agent).Error; err == nil {
+				node.AccessAgentID = &agent.ID
+			} else {
+				errors = append(errors, fmt.Sprintf("Line %d (%s): Access Agent '%s' not found.", lineNum, nodeName, agentName))
 			}
 		}
 

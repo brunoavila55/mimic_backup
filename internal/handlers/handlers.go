@@ -249,7 +249,7 @@ func (h *NodeHandler) CompareBackups(c *fiber.Ctx) error {
 
 func (h *NodeHandler) ExportNodesCSV(c *fiber.Ctx) error {
 	var nodes []models.Node
-	h.DB.Order("name asc").Find(&nodes)
+	h.DB.Preload("Credential").Preload("Routine").Preload("AccessAgent").Order("name asc").Find(&nodes)
 
 	filename := fmt.Sprintf("mimic_nodes_%s.csv", time.Now().Format("2006-01-02"))
 	c.Set("Content-Type", "text/csv; charset=utf-8")
@@ -263,13 +263,29 @@ func (h *NodeHandler) ExportNodesCSV(c *fiber.Ctx) error {
 	// Header
 	writer.Write([]string{
 		"name", "vendor", "ip", "port", "username", "password",
-		"group", "tags", "frequency", "enabled",
+		"group", "schedule_type", "frequency", "backup_hour", "backup_day",
+		"credential_name", "routine_name", "agent_name", "enabled",
 	})
 
 	for _, node := range nodes {
 		enabled := "true"
 		if !node.Enabled {
 			enabled = "false"
+		}
+
+		credName := ""
+		if node.Credential != nil {
+			credName = node.Credential.Name
+		}
+		
+		routineName := ""
+		if node.Routine != nil {
+			routineName = node.Routine.Name
+		}
+
+		agentName := ""
+		if node.AccessAgent != nil {
+			agentName = node.AccessAgent.Name
 		}
 
 		writer.Write([]string{
@@ -280,8 +296,13 @@ func (h *NodeHandler) ExportNodesCSV(c *fiber.Ctx) error {
 			node.Username,
 			"", // password omitted for security
 			node.Group,
-			node.Tags,
+			node.ScheduleType,
 			node.Frequency,
+			node.BackupHour,
+			node.BackupDay,
+			credName,
+			routineName,
+			agentName,
 			enabled,
 		})
 	}

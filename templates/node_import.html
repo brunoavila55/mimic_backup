@@ -54,9 +54,9 @@
                 The CSV file must contain a header on the first row with the columns below. The columns <strong>name</strong>, <strong>ip</strong> and <strong>vendor</strong> are required.
             </p>
             <div style="background: var(--bg-tertiary); border-radius: var(--radius); padding: 12px 16px; font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); overflow-x: auto; line-height: 1.8;">
-                <div style="color: var(--accent); font-weight: 600;">name,vendor,ip,port,username,password,group,tags,frequency,enabled</div>
-                <div>Switch-Core-01,cisco,192.168.1.1,22,admin,senha123,Datacenter,core,24,true</div>
-                <div>Router-Edge-01,mikrotik,10.0.0.1,22,admin,,POP-SP,edge,12,true</div>
+                <div style="color: var(--accent); font-weight: 600; white-space: nowrap;">name,vendor,ip,port,username,password,group,schedule_type,frequency,backup_hour,backup_day,credential_name,routine_name,agent_name,enabled</div>
+                <div style="white-space: nowrap;">Switch-Core-01,cisco,192.168.1.1,22,admin,senha123,Datacenter,individual,24,02:00,,,,,true</div>
+                <div style="white-space: nowrap;">Router-Edge-01,mikrotik,10.0.0.1,22,,,,,routine,,,,,Daily Edge Backup,,true</div>
             </div>
 
             <div style="margin-top: 16px;">
@@ -65,7 +65,7 @@
                         <tr style="background: var(--bg-tertiary);">
                             <th style="padding: 8px 12px; text-align: left; color: var(--text-muted); font-weight: 600;">Column</th>
                             <th style="padding: 8px 12px; text-align: left; color: var(--text-muted); font-weight: 600;">Required</th>
-                            <th style="padding: 8px 12px; text-align: left; color: var(--text-muted); font-weight: 600;">Default</th>
+                            <th style="padding: 8px 12px; text-align: left; color: var(--text-muted); font-weight: 600;">Default / Notes</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -73,12 +73,23 @@
                         <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">vendor</td><td style="padding: 6px 12px;"><span class="badge badge-danger">Yes</span></td><td style="padding: 6px 12px; color: var(--text-muted);">-</td></tr>
                         <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">ip</td><td style="padding: 6px 12px;"><span class="badge badge-danger">Yes</span></td><td style="padding: 6px 12px; color: var(--text-muted);">-</td></tr>
                         <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">port</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">22</td></tr>
-                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">username</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">empty</td></tr>
-                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">password</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">empty</td></tr>
                         <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">group</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">General</td></tr>
-                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">tags</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">empty</td></tr>
-                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">frequency</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">24 (hours)</td></tr>
                         <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">enabled</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">true</td></tr>
+                        
+                        <tr><td colspan="3" style="padding: 10px 12px 2px; font-weight: 600; color: var(--text); border-top: 1px solid var(--border-light);">Authentication</td></tr>
+                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">credential_name</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">Link by credential name</td></tr>
+                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">username</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">Ignored if credential_name is set</td></tr>
+                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">password</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">Plain text (will be encrypted)</td></tr>
+
+                        <tr><td colspan="3" style="padding: 10px 12px 2px; font-weight: 600; color: var(--text); border-top: 1px solid var(--border-light);">Scheduling</td></tr>
+                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">schedule_type</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">individual or routine</td></tr>
+                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">routine_name</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">Required if type is routine</td></tr>
+                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">frequency</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">1, 6, 12, 24, 168 (hours)</td></tr>
+                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">backup_hour</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">HH:MM (e.g. 02:00)</td></tr>
+                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">backup_day</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">0-6 (0 is Monday)</td></tr>
+                        
+                        <tr><td colspan="3" style="padding: 10px 12px 2px; font-weight: 600; color: var(--text); border-top: 1px solid var(--border-light);">Advanced</td></tr>
+                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">agent_name</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">Link by access agent name</td></tr>
                     </tbody>
                 </table>
             </div>

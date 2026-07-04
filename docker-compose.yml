@@ -5,7 +5,7 @@ services:
     build: .
     container_name: mimic_app
     ports:
-      - "3000:3000"
+      - "${EXTERNAL_PORT:-3000}:3000"
     environment:
       # O host aponta para o nome do serviço 'db'
       - DATABASE_URL=host=db user=postgres password=postgres dbname=mimic_db port=5432 sslmode=disable

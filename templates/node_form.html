@@ -22,36 +22,27 @@
                 <div class="form-row">
                     <div class="form-group" style="flex: 2;">
                         <label class="form-label">Name</label>
-                        <div style="position: relative;">
-                            <i class="bx bx-tag-alt" style="position: absolute; left: 12px; top: 10px; color: var(--text-muted); font-size: 18px;"></i>
-                            <input type="text" name="name" class="form-input" style="padding-left: 36px;" value="{{ .Node.Name }}" placeholder="Switch-Core-01" required />
-                        </div>
+                        <input type="text" name="name" class="form-input" value="{{ .Node.Name }}" placeholder="Switch-Core-01" required />
                     </div>
                     <div class="form-group" style="flex: 1;">
                         <label class="form-label">Vendor</label>
-                        <div style="position: relative;">
-                            <i class="bx bx-chip" style="position: absolute; left: 12px; top: 10px; color: var(--text-muted); font-size: 18px; pointer-events: none;"></i>
-                            <select name="vendor" class="form-input" style="padding-left: 36px;">
-                                <option value="cisco" {{ if eq .Node.Vendor "cisco" }}selected{{ end }}>Cisco</option>
-                                <option value="mikrotik" {{ if eq .Node.Vendor "mikrotik" }}selected{{ end }}>MikroTik</option>
-                                <option value="huawei" {{ if eq .Node.Vendor "huawei" }}selected{{ end }}>Huawei</option>
-                                <option value="juniper" {{ if eq .Node.Vendor "juniper" }}selected{{ end }}>Juniper</option>
-                            </select>
-                        </div>
+                        <select name="vendor" class="form-input">
+                            <option value="cisco" {{ if eq .Node.Vendor "cisco" }}selected{{ end }}>Cisco</option>
+                            <option value="mikrotik" {{ if eq .Node.Vendor "mikrotik" }}selected{{ end }}>MikroTik</option>
+                            <option value="huawei" {{ if eq .Node.Vendor "huawei" }}selected{{ end }}>Huawei</option>
+                            <option value="juniper" {{ if eq .Node.Vendor "juniper" }}selected{{ end }}>Juniper</option>
+                        </select>
                     </div>
                 </div>
                 <div class="form-row" style="margin-top: 16px;">
                     <div class="form-group">
                         <label class="form-label">Group</label>
-                        <div style="position: relative;">
-                            <i class="bx bx-folder" style="position: absolute; left: 12px; top: 10px; color: var(--text-muted); font-size: 18px;"></i>
-                            <input type="text" name="group" list="group-list" class="form-input" style="padding-left: 36px;" value="{{ .Node.Group }}" placeholder="e.g. Core Network, Branch Office..." autocomplete="off" />
-                            <datalist id="group-list">
-                                {{ range .Groups }}
-                                <option value="{{ . }}"></option>
-                                {{ end }}
-                            </datalist>
-                        </div>
+                        <input type="text" name="group" list="group-list" class="form-input" value="{{ .Node.Group }}" placeholder="e.g. Core Network, Branch Office..." autocomplete="off" />
+                        <datalist id="group-list">
+                            {{ range .Groups }}
+                            <option value="{{ . }}"></option>
+                            {{ end }}
+                        </datalist>
                         <div class="form-hint">Type a new group name or select an existing one.</div>
                     </div>
                 </div>
@@ -72,10 +63,7 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">IP Address or Hostname</label>
-                            <div style="position: relative;">
-                                <i class="bx bx-server" style="position: absolute; left: 12px; top: 10px; color: var(--text-muted); font-size: 18px;"></i>
-                                <input type="text" name="ip" class="form-input font-mono" style="padding-left: 36px;" value="{{ .Node.IP }}" placeholder="192.168.1.1" required />
-                            </div>
+                            <input type="text" name="ip" class="form-input font-mono" value="{{ .Node.IP }}" placeholder="192.168.1.1" required />
                         </div>
                         <div class="form-group" style="max-width: 120px;">
                             <label class="form-label">SSH Port</label>
@@ -92,8 +80,8 @@
                     
                     {{ if .Credentials }}
                     <div class="form-group" style="margin-bottom: 16px;">
-                        <select name="credential_id" class="form-input" x-model="credentialId" style="background-color: var(--bg-dark); border-color: var(--border-light);">
-                            <option value="">⚙️ Use manual login and password for this node</option>
+                        <select name="credential_id" class="form-input" x-model="credentialId">
+                            <option value="">- Use manual login and password for this node -</option>
                             <optgroup label="Saved Credentials">
                                 {{ range .Credentials }}
                                 <option value="{{ .ID }}" {{ if $.Node.CredentialID }}{{ if eq .ID (deref $.Node.CredentialID) }}selected{{ end }}{{ end }}>{{ .Name }} ({{ .Username }})</option>
@@ -107,17 +95,11 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">SSH Username</label>
-                                <div style="position: relative;">
-                                    <i class="bx bx-user" style="position: absolute; left: 12px; top: 10px; color: var(--text-muted); font-size: 18px;"></i>
-                                    <input type="text" name="username" class="form-input" style="padding-left: 36px; background-color: var(--bg-dark);" value="{{ .Node.Username }}" placeholder="admin" />
-                                </div>
+                                <input type="text" name="username" class="form-input" value="{{ .Node.Username }}" placeholder="admin" />
                             </div>
                             <div class="form-group">
                                 <label class="form-label">SSH Password</label>
-                                <div style="position: relative;">
-                                    <i class="bx bx-key" style="position: absolute; left: 12px; top: 10px; color: var(--text-muted); font-size: 18px;"></i>
-                                    <input type="password" name="password" class="form-input" style="padding-left: 36px; background-color: var(--bg-dark);" placeholder="{{ if .Node.ID }}Leave blank to keep current{{ else }}Access password{{ end }}" />
-                                </div>
+                                <input type="password" name="password" class="form-input" placeholder="{{ if .Node.ID }}Leave blank to keep current{{ else }}Access password{{ end }}" />
                             </div>
                         </div>
                     </div>

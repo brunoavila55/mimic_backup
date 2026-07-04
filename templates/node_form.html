@@ -2,7 +2,27 @@
      x-data="{
         scheduleType: '{{ if .Node.ScheduleType }}{{ .Node.ScheduleType }}{{ else }}individual{{ end }}',
         credentialId: '{{ if .Node.CredentialID }}{{ deref .Node.CredentialID }}{{ else }}{{ end }}',
-        frequency: '{{ if .Node.Frequency }}{{ .Node.Frequency }}{{ else }}24{{ end }}'
+        frequency: '{{ if .Node.Frequency }}{{ .Node.Frequency }}{{ else }}24{{ end }}',
+        backupHour: '{{ if .Node.BackupHour }}{{ .Node.BackupHour }}{{ else }}{{ end }}',
+        getPreviewText() {
+            if (!this.backupHour) return 'Select a time to see the schedule.';
+            let parts = this.backupHour.split(':');
+            if (parts.length < 2) return 'Preferred time of day to start the backup.';
+            let hour = parseInt(parts[0]);
+            let freq = parseInt(this.frequency);
+            if (freq === 24) return 'Runs once a day at ' + this.backupHour + '.';
+            if (freq === 168) return 'Runs once a week at ' + this.backupHour + '.';
+            if (freq === 1) return 'Runs every hour.';
+            
+            let times = [];
+            for (let i = 0; i < 24; i += freq) {
+                let next = (hour + i) % 24;
+                let hStr = next < 10 ? '0' + next : next;
+                times.push(hStr + ':00');
+            }
+            times.sort();
+            return 'Runs at: ' + times.join(', ') + '.';
+        }
      }">
     <div class="page-header">
         <div class="flex items-center gap-3">
@@ -130,7 +150,7 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Preferred Backup Time</label>
-                            <select name="backup_hour" class="form-input">
+                            <select name="backup_hour" class="form-input" x-model="backupHour">
                                 <option value="" {{ if not .Node.BackupHour }}selected{{ end }}>- Select Time -</option>
                                 <option value="00:00" {{ if eq .Node.BackupHour "00:00" }}selected{{ end }}>00:00 (Midnight)</option>
                                 <option value="01:00" {{ if eq .Node.BackupHour "01:00" }}selected{{ end }}>01:00</option>
@@ -157,7 +177,7 @@
                                 <option value="22:00" {{ if eq .Node.BackupHour "22:00" }}selected{{ end }}>22:00</option>
                                 <option value="23:00" {{ if eq .Node.BackupHour "23:00" }}selected{{ end }}>23:00</option>
                             </select>
-                            <div class="form-hint">Preferred time of day to start the backup.</div>
+                            <div class="form-hint" x-text="getPreviewText()" style="color: var(--accent); font-weight: 500;"></div>
                         </div>
                         <div class="form-group" x-show="frequency === '168'">
                             <label class="form-label">Day of the Week</label>

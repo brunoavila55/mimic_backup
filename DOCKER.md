@@ -19,9 +19,14 @@ cd mimic_backup
 ## 2. Optional Configurations (Environment Variables)
 The `docker-compose.yml` file comes with all credentials and addresses correctly pointed to the database container (named `db`).
 
-If you want to change the **database password**, edit the `docker-compose.yml` file using any editor (like `nano` or `vim`) and change the values in the `environment` section.
+If you want to change the **timezone**, **database password**, or **secret key**, we recommend creating an `.env` file based on our example:
 
-> **Note on SECRET_KEY:** The `SECRET_KEY` is automatically generated on the first run and persisted securely. If you prefer to manage it manually (e.g., in a distributed Docker environment), you can uncomment and define the `SECRET_KEY` in the `docker-compose.yml` environment block.
+```bash
+cp .env.example .env
+```
+Open the `.env` file in your preferred editor (like `nano` or `vim`) and update the `TZ` variable to match your local timezone (e.g., `America/New_York`), and optionally define your `SECRET_KEY`.
+
+> **Note on SECRET_KEY:** The `SECRET_KEY` is automatically generated on the first run and persisted securely. If you prefer to manage it manually (e.g., in a distributed Docker environment), define the `SECRET_KEY` in the `.env` file.
 
 ## 3. Spin Up the Containers
 While inside the `mimic_backup` folder, run the command:

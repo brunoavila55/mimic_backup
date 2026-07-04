@@ -14,6 +14,10 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o mimic_bin ./cmd/mimic/main.go
 # Estágio Final (Imagem menor)
 FROM alpine:latest
 
+# Instalar dependências de fuso horário
+RUN apk add --no-cache tzdata
+ENV TZ=America/Sao_Paulo
+
 WORKDIR /app
 
 # Copiar o binário compilado do estágio anterior

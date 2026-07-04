@@ -70,3 +70,19 @@ func RequireAuth(store *session.Store) fiber.Handler {
 		return c.Next()
 	}
 }
+
+// RequireAdmin ensures the authenticated user has the Administrator role.
+// It assumes RequireAuth has already run and populated c.Locals("role").
+func RequireAdmin() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		role := c.Locals("role")
+		if role != "Administrator" {
+			if c.Get("HX-Request") == "true" {
+				c.Set("HX-Trigger", `{"showNotification": {"message": "Access Denied: Administrator role required.", "type": "error"}}`)
+				return c.SendStatus(fiber.StatusForbidden)
+			}
+			return c.Status(fiber.StatusForbidden).SendString("Forbidden: Administrator role required")
+		}
+		return c.Next()
+	}
+}

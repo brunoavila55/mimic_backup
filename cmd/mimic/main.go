@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/session"
@@ -62,7 +63,11 @@ ________________________________________________`)
 	}
 
 	// Session Store
-	store := session.New()
+	store := session.New(session.Config{
+		Expiration:     24 * time.Hour,
+		CookieHTTPOnly: true,
+		CookieSameSite: "Strict",
+	})
 
 	// Scheduler
 	sch := scheduler.NewScheduler(db)
@@ -71,7 +76,7 @@ ________________________________________________`)
 	// Get Version from Git or Build Flags
 	appVersion := AppVersion
 	if appVersion == "" {
-		appVersion = "0.4.0" // fallback
+		appVersion = "0.4.1" // fallback
 		if out, err := exec.Command("git", "rev-list", "--count", "HEAD").Output(); err == nil {
 			count := strings.TrimSpace(string(out))
 			appVersion = "0.4." + count
@@ -139,63 +144,63 @@ ________________________________________________`)
 
 	// ── Nodes ─────────────────────────────────────────
 	app.Get("/nodes", nodeHandler.ListNodes)
-	app.Get("/nodes/new", formHandler.NewNode)
-	app.Get("/nodes/import", formHandler.ImportNodesForm)
-	app.Post("/nodes/import", formHandler.ImportNodesCSV)
-	app.Get("/nodes/export", nodeHandler.ExportNodesCSV)
+	app.Get("/nodes/new", middleware.RequireAdmin(), formHandler.NewNode)
+	app.Get("/nodes/import", middleware.RequireAdmin(), formHandler.ImportNodesForm)
+	app.Post("/nodes/import", middleware.RequireAdmin(), formHandler.ImportNodesCSV)
+	app.Get("/nodes/export", middleware.RequireAdmin(), nodeHandler.ExportNodesCSV)
 	app.Get("/nodes/:id", nodeHandler.NodeDetails)
-	app.Get("/nodes/:id/edit", formHandler.EditNode)
-	app.Get("/nodes/:id/delete", formHandler.DeleteNodeConfirm)
-	app.Post("/nodes/save", formHandler.SaveNode)
-	app.Post("/nodes/save/:id", formHandler.SaveNode)
-	app.Post("/nodes/:id/delete", formHandler.DeleteNode)
-	app.Delete("/nodes/:id", formHandler.DeleteNode)
+	app.Get("/nodes/:id/edit", middleware.RequireAdmin(), formHandler.EditNode)
+	app.Get("/nodes/:id/delete", middleware.RequireAdmin(), formHandler.DeleteNodeConfirm)
+	app.Post("/nodes/save", middleware.RequireAdmin(), formHandler.SaveNode)
+	app.Post("/nodes/save/:id", middleware.RequireAdmin(), formHandler.SaveNode)
+	app.Post("/nodes/:id/delete", middleware.RequireAdmin(), formHandler.DeleteNode)
+	app.Delete("/nodes/:id", middleware.RequireAdmin(), formHandler.DeleteNode)
 	app.Get("/backups/:id/content", nodeHandler.GetBackupContent)
 	app.Get("/backups/:id/diff", nodeHandler.GetBackupDiff)
-	app.Get("/backups/diff/compare", nodeHandler.CompareBackups)
+	app.Get("/backups/diff/compare", middleware.RequireAdmin(), nodeHandler.CompareBackups)
 
 	// ── Settings Hub ──────────────────────────────────
-	app.Get("/settings", settingsHandler.GetSettings)
-	app.Get("/settings/users", settingsHandler.GetUsersTab)
-	app.Get("/settings/credentials", settingsHandler.GetCredentialsTab)
-	app.Get("/settings/routines", settingsHandler.GetRoutinesTab)
-	app.Get("/settings/sftp", settingsHandler.GetSFTPTab)
-	app.Get("/settings/sftp/explore", settingsHandler.GetSFTPExplore)
-	app.Get("/settings/export", settingsHandler.GetExportTab)
-	app.Get("/settings/logs", settingsHandler.GetLogsTab)
+	app.Get("/settings", middleware.RequireAdmin(), settingsHandler.GetSettings)
+	app.Get("/settings/users", middleware.RequireAdmin(), settingsHandler.GetUsersTab)
+	app.Get("/settings/credentials", middleware.RequireAdmin(), settingsHandler.GetCredentialsTab)
+	app.Get("/settings/routines", middleware.RequireAdmin(), settingsHandler.GetRoutinesTab)
+	app.Get("/settings/sftp", middleware.RequireAdmin(), settingsHandler.GetSFTPTab)
+	app.Get("/settings/sftp/explore", middleware.RequireAdmin(), settingsHandler.GetSFTPExplore)
+	app.Get("/settings/export", middleware.RequireAdmin(), settingsHandler.GetExportTab)
+	app.Get("/settings/logs", middleware.RequireAdmin(), settingsHandler.GetLogsTab)
 	app.Get("/settings/profile", settingsHandler.GetProfileTab)
 
 	// ── Settings Forms ────────────────────────────────
-	app.Get("/settings/users/new", formHandler.NewUser)
-	app.Get("/settings/users/:id/edit", formHandler.EditUser)
-	app.Get("/settings/credentials/new", formHandler.NewCredential)
-	app.Get("/settings/credentials/:id/edit", formHandler.EditCredential)
-	app.Get("/settings/routines/new", formHandler.NewRoutine)
-	app.Get("/settings/routines/:id/edit", formHandler.EditRoutine)
+	app.Get("/settings/users/new", middleware.RequireAdmin(), formHandler.NewUser)
+	app.Get("/settings/users/:id/edit", middleware.RequireAdmin(), formHandler.EditUser)
+	app.Get("/settings/credentials/new", middleware.RequireAdmin(), formHandler.NewCredential)
+	app.Get("/settings/credentials/:id/edit", middleware.RequireAdmin(), formHandler.EditCredential)
+	app.Get("/settings/routines/new", middleware.RequireAdmin(), formHandler.NewRoutine)
+	app.Get("/settings/routines/:id/edit", middleware.RequireAdmin(), formHandler.EditRoutine)
 
 	// ── Settings Actions ──────────────────────────────
-	app.Post("/settings/users/save", formHandler.SaveUser)
-	app.Post("/settings/users/save/:id", formHandler.SaveUser)
-	app.Delete("/settings/users/:id", formHandler.DeleteUser)
-	app.Post("/settings/credentials/save", formHandler.SaveCredential)
-	app.Post("/settings/credentials/save/:id", formHandler.SaveCredential)
-	app.Delete("/settings/credentials/:id", formHandler.DeleteCredential)
-	app.Post("/settings/routines/save", formHandler.SaveRoutine)
-	app.Post("/settings/routines/save/:id", formHandler.SaveRoutine)
-	app.Delete("/settings/routines/:id", formHandler.DeleteRoutine)
-	app.Post("/settings/sftp/save", formHandler.SaveSettings)
-	app.Post("/settings/sftp/test", formHandler.TestSFTPConnection)
+	app.Post("/settings/users/save", middleware.RequireAdmin(), formHandler.SaveUser)
+	app.Post("/settings/users/save/:id", middleware.RequireAdmin(), formHandler.SaveUser)
+	app.Delete("/settings/users/:id", middleware.RequireAdmin(), formHandler.DeleteUser)
+	app.Post("/settings/credentials/save", middleware.RequireAdmin(), formHandler.SaveCredential)
+	app.Post("/settings/credentials/save/:id", middleware.RequireAdmin(), formHandler.SaveCredential)
+	app.Delete("/settings/credentials/:id", middleware.RequireAdmin(), formHandler.DeleteCredential)
+	app.Post("/settings/routines/save", middleware.RequireAdmin(), formHandler.SaveRoutine)
+	app.Post("/settings/routines/save/:id", middleware.RequireAdmin(), formHandler.SaveRoutine)
+	app.Delete("/settings/routines/:id", middleware.RequireAdmin(), formHandler.DeleteRoutine)
+	app.Post("/settings/sftp/save", middleware.RequireAdmin(), formHandler.SaveSettings)
+	app.Post("/settings/sftp/test", middleware.RequireAdmin(), formHandler.TestSFTPConnection)
 	app.Post("/settings/profile/save", formHandler.SaveProfile)
-	app.Post("/settings/export/sync", formHandler.PostSync)
-	app.Post("/backups/:backup_id/export", formHandler.ExportBackup)
+	app.Post("/settings/export/sync", middleware.RequireAdmin(), formHandler.PostSync)
+	app.Post("/backups/:backup_id/export", middleware.RequireAdmin(), formHandler.ExportBackup)
 
 	// ── HTMX Actions ──────────────────────────────────
-	app.Post("/trigger-backups", func(c *fiber.Ctx) error {
+	app.Post("/trigger-backups", middleware.RequireAdmin(), func(c *fiber.Ctx) error {
 		sch.CheckBackups()
 		return c.SendStatus(200)
 	})
 
-	app.Post("/nodes/:id/trigger", func(c *fiber.Ctx) error {
+	app.Post("/nodes/:id/trigger", middleware.RequireAdmin(), func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		var node models.Node
 		if err := db.Preload("Credential").Preload("AccessAgent").Where("id = ?", id).First(&node).Error; err == nil {

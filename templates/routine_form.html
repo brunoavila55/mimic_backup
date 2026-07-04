@@ -32,7 +32,33 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Time</label>
-                        <input type="time" name="backup_hour" class="form-input" value="{{ .Routine.BackupHour }}" />
+                        <select name="backup_hour" class="form-input">
+                            <option value="" {{ if not .Routine.BackupHour }}selected{{ end }}>- Select Time -</option>
+                            <option value="00:00" {{ if eq .Routine.BackupHour "00:00" }}selected{{ end }}>00:00 (Midnight)</option>
+                            <option value="01:00" {{ if eq .Routine.BackupHour "01:00" }}selected{{ end }}>01:00</option>
+                            <option value="02:00" {{ if eq .Routine.BackupHour "02:00" }}selected{{ end }}>02:00</option>
+                            <option value="03:00" {{ if eq .Routine.BackupHour "03:00" }}selected{{ end }}>03:00</option>
+                            <option value="04:00" {{ if eq .Routine.BackupHour "04:00" }}selected{{ end }}>04:00</option>
+                            <option value="05:00" {{ if eq .Routine.BackupHour "05:00" }}selected{{ end }}>05:00</option>
+                            <option value="06:00" {{ if eq .Routine.BackupHour "06:00" }}selected{{ end }}>06:00</option>
+                            <option value="07:00" {{ if eq .Routine.BackupHour "07:00" }}selected{{ end }}>07:00</option>
+                            <option value="08:00" {{ if eq .Routine.BackupHour "08:00" }}selected{{ end }}>08:00</option>
+                            <option value="09:00" {{ if eq .Routine.BackupHour "09:00" }}selected{{ end }}>09:00</option>
+                            <option value="10:00" {{ if eq .Routine.BackupHour "10:00" }}selected{{ end }}>10:00</option>
+                            <option value="11:00" {{ if eq .Routine.BackupHour "11:00" }}selected{{ end }}>11:00</option>
+                            <option value="12:00" {{ if eq .Routine.BackupHour "12:00" }}selected{{ end }}>12:00 (Noon)</option>
+                            <option value="13:00" {{ if eq .Routine.BackupHour "13:00" }}selected{{ end }}>13:00</option>
+                            <option value="14:00" {{ if eq .Routine.BackupHour "14:00" }}selected{{ end }}>14:00</option>
+                            <option value="15:00" {{ if eq .Routine.BackupHour "15:00" }}selected{{ end }}>15:00</option>
+                            <option value="16:00" {{ if eq .Routine.BackupHour "16:00" }}selected{{ end }}>16:00</option>
+                            <option value="17:00" {{ if eq .Routine.BackupHour "17:00" }}selected{{ end }}>17:00</option>
+                            <option value="18:00" {{ if eq .Routine.BackupHour "18:00" }}selected{{ end }}>18:00</option>
+                            <option value="19:00" {{ if eq .Routine.BackupHour "19:00" }}selected{{ end }}>19:00</option>
+                            <option value="20:00" {{ if eq .Routine.BackupHour "20:00" }}selected{{ end }}>20:00</option>
+                            <option value="21:00" {{ if eq .Routine.BackupHour "21:00" }}selected{{ end }}>21:00</option>
+                            <option value="22:00" {{ if eq .Routine.BackupHour "22:00" }}selected{{ end }}>22:00</option>
+                            <option value="23:00" {{ if eq .Routine.BackupHour "23:00" }}selected{{ end }}>23:00</option>
+                        </select>
                     </div>
                 </div>
 

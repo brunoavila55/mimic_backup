@@ -35,6 +35,9 @@ func (h *FormHandler) NewNode(c *fiber.Ctx) error {
 	var agents []models.AccessAgent
 	h.DB.Find(&agents)
 
+	var groups []string
+	h.DB.Model(&models.Node{}).Select("NULLIF(\"group\", '')").Where("\"group\" IS NOT NULL AND \"group\" != ''").Distinct("group").Pluck("group", &groups)
+
 	return c.Render("node_form", fiber.Map{
 		"Title":        "New Node",
 		"Username":     c.Locals("username"),
@@ -44,6 +47,7 @@ func (h *FormHandler) NewNode(c *fiber.Ctx) error {
 		"Routines":     routines,
 		"Credentials":  credentials,
 		"Agents":       agents,
+		"Groups":       groups,
 	}, "base")
 }
 
@@ -63,6 +67,9 @@ func (h *FormHandler) EditNode(c *fiber.Ctx) error {
 	var agents []models.AccessAgent
 	h.DB.Find(&agents)
 
+	var groups []string
+	h.DB.Model(&models.Node{}).Select("NULLIF(\"group\", '')").Where("\"group\" IS NOT NULL AND \"group\" != ''").Distinct("group").Pluck("group", &groups)
+
 	return c.Render("node_form", fiber.Map{
 		"Title":        "Edit " + node.Name,
 		"Username":     c.Locals("username"),
@@ -73,6 +80,7 @@ func (h *FormHandler) EditNode(c *fiber.Ctx) error {
 		"Routines":     routines,
 		"Credentials":  credentials,
 		"Agents":       agents,
+		"Groups":       groups,
 	}, "base")
 }
 

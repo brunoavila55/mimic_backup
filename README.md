@@ -38,6 +38,13 @@ Upon the first execution with an empty database, the system will automatically r
 
 Mimic is built with extensibility in mind. Support for new hardware vendors can be introduced seamlessly by implementing the standard driver interface. This allows the system to send vendor-specific commands to retrieve configurations and apply custom normalization rules to filter out volatile data (such as uptime or dynamic timestamps) before version comparison.
 
+## Recent Updates (v0.4.x)
+
+- **Premium UI Refinements:** The node registration and routine interfaces have been redesigned with a modern, clean aesthetic.
+- **Smart Grouping:** The node groups field now features an intelligent autocomplete datalist that suggests previously used groups.
+- **Timezone Support for Self-Hosted Deployments:** Added native support for configuring the application timezone via the `.env` file, ensuring scheduled tasks execute accurately according to the server's local time.
+- **Improved Backup Scheduling:** Replaced free-text time inputs with intuitive dropdown selections to streamline routine creation.
+
 ## License
 
 Developed by Mimic Backup Systems.

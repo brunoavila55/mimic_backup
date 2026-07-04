@@ -20,28 +20,39 @@
             </div>
             <div class="card-body">
                 <div class="form-row">
-                    <div class="form-group">
+                    <div class="form-group" style="flex: 2;">
                         <label class="form-label">Name</label>
-                        <input type="text" name="name" class="form-input" value="{{ .Node.Name }}" placeholder="Switch-Core-01" required />
+                        <div style="position: relative;">
+                            <i class="bx bx-tag-alt" style="position: absolute; left: 12px; top: 10px; color: var(--text-muted); font-size: 18px;"></i>
+                            <input type="text" name="name" class="form-input" style="padding-left: 36px;" value="{{ .Node.Name }}" placeholder="Switch-Core-01" required />
+                        </div>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" style="flex: 1;">
                         <label class="form-label">Vendor</label>
-                        <select name="vendor" class="form-input">
-                            <option value="cisco" {{ if eq .Node.Vendor "cisco" }}selected{{ end }}>Cisco</option>
-                            <option value="mikrotik" {{ if eq .Node.Vendor "mikrotik" }}selected{{ end }}>MikroTik</option>
-                            <option value="huawei" {{ if eq .Node.Vendor "huawei" }}selected{{ end }}>Huawei</option>
-                            <option value="juniper" {{ if eq .Node.Vendor "juniper" }}selected{{ end }}>Juniper</option>
-                        </select>
+                        <div style="position: relative;">
+                            <i class="bx bx-chip" style="position: absolute; left: 12px; top: 10px; color: var(--text-muted); font-size: 18px; pointer-events: none;"></i>
+                            <select name="vendor" class="form-input" style="padding-left: 36px;">
+                                <option value="cisco" {{ if eq .Node.Vendor "cisco" }}selected{{ end }}>Cisco</option>
+                                <option value="mikrotik" {{ if eq .Node.Vendor "mikrotik" }}selected{{ end }}>MikroTik</option>
+                                <option value="huawei" {{ if eq .Node.Vendor "huawei" }}selected{{ end }}>Huawei</option>
+                                <option value="juniper" {{ if eq .Node.Vendor "juniper" }}selected{{ end }}>Juniper</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
-                <div class="form-row">
+                <div class="form-row" style="margin-top: 16px;">
                     <div class="form-group">
                         <label class="form-label">Group</label>
-                        <input type="text" name="group" class="form-input" value="{{ .Node.Group }}" placeholder="General" />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Tags</label>
-                        <input type="text" name="tags" class="form-input" value="{{ .Node.Tags }}" placeholder="core, datacenter" />
+                        <div style="position: relative;">
+                            <i class="bx bx-folder" style="position: absolute; left: 12px; top: 10px; color: var(--text-muted); font-size: 18px;"></i>
+                            <input type="text" name="group" list="group-list" class="form-input" style="padding-left: 36px;" value="{{ .Node.Group }}" placeholder="e.g. Core Network, Branch Office..." autocomplete="off" />
+                            <datalist id="group-list">
+                                {{ range .Groups }}
+                                <option value="{{ . }}"></option>
+                                {{ end }}
+                            </datalist>
+                        </div>
+                        <div class="form-hint">Type a new group name or select an existing one.</div>
                     </div>
                 </div>
             </div>
@@ -53,42 +64,70 @@
                 <div class="card-title"><i class="bx bx-network-chart" style="margin-right: 6px;"></i>Connection & Authentication</div>
             </div>
             <div class="card-body">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">IP Address</label>
-                        <input type="text" name="ip" class="form-input font-mono" value="{{ .Node.IP }}" placeholder="192.168.1.1" required />
+                <!-- Network Settings -->
+                <div style="margin-bottom: 24px;">
+                    <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                        <i class="bx bx-wifi"></i> Network Identity
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">SSH Port</label>
-                        <input type="number" name="port" class="form-input" value="{{ if .Node.Port }}{{ .Node.Port }}{{ else }}22{{ end }}" />
-                    </div>
-                </div>
-
-                {{ if .Credentials }}
-                <div class="form-group" style="margin-top: 8px;">
-                    <label class="form-label">SSH Credential</label>
-                    <select name="credential_id" class="form-input" x-model="credentialId">
-                        <option value="">- Use manual login/password -</option>
-                        {{ range .Credentials }}
-                        <option value="{{ .ID }}" {{ if $.Node.CredentialID }}{{ if eq .ID (deref $.Node.CredentialID) }}selected{{ end }}{{ end }}>{{ .Name }} ({{ .Username }}:{{ .Port }})</option>
-                        {{ end }}
-                    </select>
-                    <div class="form-hint" x-show="credentialId" style="color: var(--accent);">Using saved credential. Manual username and password will be ignored.</div>
-                </div>
-                {{ end }}
-
-                <div x-show="!credentialId" style="margin-top: 16px;">
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label">SSH Username</label>
-                            <input type="text" name="username" class="form-input" value="{{ .Node.Username }}" placeholder="admin" />
+                            <label class="form-label">IP Address or Hostname</label>
+                            <div style="position: relative;">
+                                <i class="bx bx-server" style="position: absolute; left: 12px; top: 10px; color: var(--text-muted); font-size: 18px;"></i>
+                                <input type="text" name="ip" class="form-input font-mono" style="padding-left: 36px;" value="{{ .Node.IP }}" placeholder="192.168.1.1" required />
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">SSH Password</label>
-                            <input type="password" name="password" class="form-input" placeholder="{{ if .Node.ID }}Leave blank to keep current{{ else }}Access password{{ end }}" />
+                        <div class="form-group" style="max-width: 120px;">
+                            <label class="form-label">SSH Port</label>
+                            <input type="number" name="port" class="form-input" value="{{ if .Node.Port }}{{ .Node.Port }}{{ else }}22{{ end }}" />
                         </div>
                     </div>
                 </div>
+
+                <!-- Authentication Settings -->
+                <div style="background: rgba(108, 99, 166, 0.04); border: 1px solid var(--border-light); border-radius: 8px; padding: 20px;">
+                    <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                        <i class="bx bx-shield-quarter"></i> Authentication Method
+                    </div>
+                    
+                    {{ if .Credentials }}
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <select name="credential_id" class="form-input" x-model="credentialId" style="background-color: var(--bg-dark); border-color: var(--border-light);">
+                            <option value="">⚙️ Use manual login and password for this node</option>
+                            <optgroup label="Saved Credentials">
+                                {{ range .Credentials }}
+                                <option value="{{ .ID }}" {{ if $.Node.CredentialID }}{{ if eq .ID (deref $.Node.CredentialID) }}selected{{ end }}{{ end }}>{{ .Name }} ({{ .Username }})</option>
+                                {{ end }}
+                            </optgroup>
+                        </select>
+                    </div>
+                    {{ end }}
+
+                    <div x-show="!credentialId" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">SSH Username</label>
+                                <div style="position: relative;">
+                                    <i class="bx bx-user" style="position: absolute; left: 12px; top: 10px; color: var(--text-muted); font-size: 18px;"></i>
+                                    <input type="text" name="username" class="form-input" style="padding-left: 36px; background-color: var(--bg-dark);" value="{{ .Node.Username }}" placeholder="admin" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">SSH Password</label>
+                                <div style="position: relative;">
+                                    <i class="bx bx-key" style="position: absolute; left: 12px; top: 10px; color: var(--text-muted); font-size: 18px;"></i>
+                                    <input type="password" name="password" class="form-input" style="padding-left: 36px; background-color: var(--bg-dark);" placeholder="{{ if .Node.ID }}Leave blank to keep current{{ else }}Access password{{ end }}" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div x-show="credentialId" x-cloak>
+                        <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: rgba(39, 174, 96, 0.1); border: 1px solid rgba(39, 174, 96, 0.2); border-radius: 6px; color: var(--success); font-size: 13px;">
+                            <i class="bx bx-check-shield" style="font-size: 20px;"></i>
+                            <span>This node will authenticate using the selected secure credential.</span>
+                        </div>
+                    </div>
             </div>
         </div>
 
@@ -122,7 +161,33 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Preferred Backup Time</label>
-                            <input type="time" name="backup_hour" class="form-input" value="{{ .Node.BackupHour }}" />
+                            <select name="backup_hour" class="form-input">
+                                <option value="" {{ if not .Node.BackupHour }}selected{{ end }}>- Select Time -</option>
+                                <option value="00:00" {{ if eq .Node.BackupHour "00:00" }}selected{{ end }}>00:00 (Midnight)</option>
+                                <option value="01:00" {{ if eq .Node.BackupHour "01:00" }}selected{{ end }}>01:00</option>
+                                <option value="02:00" {{ if eq .Node.BackupHour "02:00" }}selected{{ end }}>02:00</option>
+                                <option value="03:00" {{ if eq .Node.BackupHour "03:00" }}selected{{ end }}>03:00</option>
+                                <option value="04:00" {{ if eq .Node.BackupHour "04:00" }}selected{{ end }}>04:00</option>
+                                <option value="05:00" {{ if eq .Node.BackupHour "05:00" }}selected{{ end }}>05:00</option>
+                                <option value="06:00" {{ if eq .Node.BackupHour "06:00" }}selected{{ end }}>06:00</option>
+                                <option value="07:00" {{ if eq .Node.BackupHour "07:00" }}selected{{ end }}>07:00</option>
+                                <option value="08:00" {{ if eq .Node.BackupHour "08:00" }}selected{{ end }}>08:00</option>
+                                <option value="09:00" {{ if eq .Node.BackupHour "09:00" }}selected{{ end }}>09:00</option>
+                                <option value="10:00" {{ if eq .Node.BackupHour "10:00" }}selected{{ end }}>10:00</option>
+                                <option value="11:00" {{ if eq .Node.BackupHour "11:00" }}selected{{ end }}>11:00</option>
+                                <option value="12:00" {{ if eq .Node.BackupHour "12:00" }}selected{{ end }}>12:00 (Noon)</option>
+                                <option value="13:00" {{ if eq .Node.BackupHour "13:00" }}selected{{ end }}>13:00</option>
+                                <option value="14:00" {{ if eq .Node.BackupHour "14:00" }}selected{{ end }}>14:00</option>
+                                <option value="15:00" {{ if eq .Node.BackupHour "15:00" }}selected{{ end }}>15:00</option>
+                                <option value="16:00" {{ if eq .Node.BackupHour "16:00" }}selected{{ end }}>16:00</option>
+                                <option value="17:00" {{ if eq .Node.BackupHour "17:00" }}selected{{ end }}>17:00</option>
+                                <option value="18:00" {{ if eq .Node.BackupHour "18:00" }}selected{{ end }}>18:00</option>
+                                <option value="19:00" {{ if eq .Node.BackupHour "19:00" }}selected{{ end }}>19:00</option>
+                                <option value="20:00" {{ if eq .Node.BackupHour "20:00" }}selected{{ end }}>20:00</option>
+                                <option value="21:00" {{ if eq .Node.BackupHour "21:00" }}selected{{ end }}>21:00</option>
+                                <option value="22:00" {{ if eq .Node.BackupHour "22:00" }}selected{{ end }}>22:00</option>
+                                <option value="23:00" {{ if eq .Node.BackupHour "23:00" }}selected{{ end }}>23:00</option>
+                            </select>
                             <div class="form-hint">Preferred time of day to start the backup.</div>
                         </div>
                         <div class="form-group" x-show="frequency === '168'">

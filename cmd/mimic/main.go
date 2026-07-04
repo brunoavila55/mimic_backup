@@ -71,10 +71,10 @@ ________________________________________________`)
 	// Get Version from Git or Build Flags
 	appVersion := AppVersion
 	if appVersion == "" {
-		appVersion = "0.3.0" // fallback
+		appVersion = "0.4.0" // fallback
 		if out, err := exec.Command("git", "rev-list", "--count", "HEAD").Output(); err == nil {
 			count := strings.TrimSpace(string(out))
-			appVersion = "0.3." + count
+			appVersion = "0.4." + count
 		}
 	}
 

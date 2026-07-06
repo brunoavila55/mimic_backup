@@ -27,8 +27,8 @@
                 <!-- Webhook Fields -->
                 <div class="form-row" x-show="provider === 'webhook'">
                     <div class="form-group" style="grid-column: 1 / -1;">
-                        <label class="form-label">Webhook URL</label>
-                        <input type="url" name="webhook_url" class="form-input font-mono" value="{{ .Alerts.WebhookURL }}" placeholder="https://..." />
+                        <label class="form-label">Webhook URL {{ if .Alerts.WebhookURL }}<span class="badge badge-success">Saved</span>{{ end }}</label>
+                        <input type="url" name="webhook_url" class="form-input font-mono" placeholder="{{ if .Alerts.WebhookURL }}Leave blank to keep current{{ else }}https://...{{ end }}" />
                         <div class="form-hint">Payload format: {"text": "Message content"}</div>
                     </div>
                 </div>
@@ -36,12 +36,12 @@
                 <!-- Telegram Fields -->
                 <div class="form-row" x-show="provider === 'telegram'" style="display: none;">
                     <div class="form-group">
-                        <label class="form-label">Bot Token</label>
-                        <input type="text" name="telegram_token" class="form-input font-mono" value="{{ .Alerts.TelegramToken }}" placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" />
+                        <label class="form-label">Bot Token {{ if .Alerts.TelegramToken }}<span class="badge badge-success">Saved</span>{{ end }}</label>
+                        <input type="text" name="telegram_token" class="form-input font-mono" placeholder="{{ if .Alerts.TelegramToken }}Leave blank to keep current{{ else }}123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11{{ end }}" />
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Chat ID</label>
-                        <input type="text" name="telegram_chat_id" class="form-input font-mono" value="{{ .Alerts.TelegramChatID }}" placeholder="-1001234567890" />
+                        <label class="form-label">Chat ID {{ if .Alerts.TelegramChatID }}<span class="badge badge-success">Saved</span>{{ end }}</label>
+                        <input type="text" name="telegram_chat_id" class="form-input font-mono" placeholder="{{ if .Alerts.TelegramChatID }}Leave blank to keep current{{ else }}-1001234567890{{ end }}" />
                     </div>
                 </div>
 

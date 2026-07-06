@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"mimic/internal/models"
+	"mimic/pkg/crypto"
 )
 
 type WebhookPayload struct {
@@ -23,9 +24,21 @@ func Dispatch(settings models.AlertSettings, message string) {
 	go func() { // Async dispatch to avoid blocking the scheduler
 		var err error
 		if settings.Provider == "webhook" && settings.WebhookURL != "" {
-			err = sendWebhook(settings.WebhookURL, message)
+			url, decErr := crypto.Decrypt(settings.WebhookURL)
+			if decErr != nil {
+				log.Printf("[Alert] Failed to decrypt Webhook URL: %v", decErr)
+				return
+			}
+			err = sendWebhook(url, message)
 		} else if settings.Provider == "telegram" && settings.TelegramToken != "" && settings.TelegramChatID != "" {
-			err = sendTelegram(settings.TelegramToken, settings.TelegramChatID, message)
+			token, decErr1 := crypto.Decrypt(settings.TelegramToken)
+			chatID, decErr2 := crypto.Decrypt(settings.TelegramChatID)
+			
+			if decErr1 != nil || decErr2 != nil {
+				log.Printf("[Alert] Failed to decrypt Telegram credentials")
+				return
+			}
+			err = sendTelegram(token, chatID, message)
 		} else {
 			log.Printf("[Alert] Enabled but invalid provider config. Provider=%s", settings.Provider)
 			return

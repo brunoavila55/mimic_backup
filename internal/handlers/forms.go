@@ -768,9 +768,25 @@ func (h *FormHandler) SaveAlertSettings(c *fiber.Ctx) error {
 	
 	settings.Enabled = c.FormValue("enabled") == "on"
 	settings.Provider = c.FormValue("provider")
-	settings.WebhookURL = c.FormValue("webhook_url")
-	settings.TelegramToken = c.FormValue("telegram_token")
-	settings.TelegramChatID = c.FormValue("telegram_chat_id")
+	
+	whURL := c.FormValue("webhook_url")
+	if whURL != "" {
+		enc, _ := crypto.Encrypt(whURL)
+		settings.WebhookURL = enc
+	}
+
+	tToken := c.FormValue("telegram_token")
+	if tToken != "" {
+		enc, _ := crypto.Encrypt(tToken)
+		settings.TelegramToken = enc
+	}
+
+	tChatID := c.FormValue("telegram_chat_id")
+	if tChatID != "" {
+		enc, _ := crypto.Encrypt(tChatID)
+		settings.TelegramChatID = enc
+	}
+
 	settings.AlertOnDiff = c.FormValue("alert_on_diff") == "on"
 	settings.AlertOnFailure = c.FormValue("alert_on_failure") == "on"
 

@@ -1269,10 +1269,54 @@ tbody tr:hover { background: var(--bg-hover); }
 
 .page-enter { animation: fadeIn 0.2s ease-out; }
 
+/* === Mobile Layout Helpers === */
+.mobile-menu-btn {
+    display: none;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 24px;
+    cursor: pointer;
+    margin-right: 12px;
+    padding: 0;
+}
+.mobile-menu-btn:hover { color: var(--accent); }
+
+.sidebar-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 90;
+    backdrop-filter: blur(2px);
+}
+
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+}
+
 /* === Responsive === */
 @media (max-width: 768px) {
     .layout { grid-template-columns: 1fr; }
-    .sidebar { display: none; }
+    .mobile-menu-btn { display: inline-flex; align-items: center; justify-content: center; }
+    
+    .sidebar { 
+        position: fixed; 
+        top: 0; 
+        left: -280px; 
+        height: 100vh; 
+        z-index: 100; 
+        width: 260px; 
+        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex; 
+    }
+    
+    .layout.sidebar-open .sidebar {
+        left: 0;
+        box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+    }
+
     .content { padding: 16px; }
     .form-row { grid-template-columns: 1fr; }
     .stats-grid { grid-template-columns: 1fr 1fr; }
@@ -1280,6 +1324,13 @@ tbody tr:hover { background: var(--bg-hover); }
     .settings-nav { border-right: none; border-bottom: 1px solid var(--border); padding: 8px; display: flex; overflow-x: auto; gap: 4px; }
     .settings-nav-section { display: none; }
     .detail-grid { grid-template-columns: 1fr; }
+    
+    table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
 }
 
 @media (max-width: 480px) {

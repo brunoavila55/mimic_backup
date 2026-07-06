@@ -14,9 +14,9 @@
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>[x-cloak] { display: none !important; }</style>
 </head>
-<body x-data="{ modalOpen: false }" @keydown.escape="modalOpen = false">
+<body x-data="{ modalOpen: false, sidebarOpen: false }" @keydown.escape="modalOpen = false; sidebarOpen = false">
 
-    <div class="layout">
+    <div class="layout" :class="{ 'sidebar-open': sidebarOpen }">
 
         <!-- Sidebar -->
         <aside class="sidebar">
@@ -70,10 +70,16 @@
             </div>
         </aside>
 
+        <!-- Mobile Overlay -->
+        <div class="sidebar-overlay" x-show="sidebarOpen" @click="sidebarOpen = false" x-cloak></div>
+
         <!-- Main -->
         <main class="main">
             <header class="header">
                 <div class="header-left">
+                    <button type="button" class="mobile-menu-btn" @click="sidebarOpen = true">
+                        <i class="bx bx-menu"></i>
+                    </button>
                     <div class="breadcrumb">
                         <span class="breadcrumb-root">Mimic</span>
                         <span class="breadcrumb-sep">/</span>

@@ -29,7 +29,7 @@ func main() {
    /  |/  (_)___ ___  (_)____
   / /|_/ / / __ ` + "`" + `__ \/ / ___/
  / /  / / / / / / / / / /__  
-/_/  /_/_/_/ /_/ /_/_/\___/  Backup Systems v0.5.0
+/_/  /_/_/_/ /_/ /_/_/\___/  Backup Systems v0.5.1
 ________________________________________________`)
 
 	// Database connection
@@ -76,7 +76,7 @@ ________________________________________________`)
 	// Get Version from Git or Build Flags
 	appVersion := AppVersion
 	if appVersion == "" {
-		appVersion = "0.5.0" // fallback
+		appVersion = "0.5.1" // fallback
 		if out, err := exec.Command("git", "rev-list", "--count", "HEAD").Output(); err == nil {
 			count := strings.TrimSpace(string(out))
 			appVersion = "0.5." + count
@@ -107,7 +107,7 @@ ________________________________________________`)
 
 	app := fiber.New(fiber.Config{
 		Views:   engine,
-		AppName: "Mimic Backup Systems v0.5.0",
+		AppName: "Mimic Backup Systems v0.5.1",
 	})
 
 	// Static Files

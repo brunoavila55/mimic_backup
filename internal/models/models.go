@@ -131,6 +131,7 @@ type AlertRule struct {
 	TelegramChatID string `json:"telegram_chat_id"`
 	AlertOnDiff    bool   `json:"alert_on_diff"`
 	AlertOnFailure bool   `json:"alert_on_failure"`
+	AlertOnSecurity bool  `json:"alert_on_security"`
 }
 
 type SecurityRule struct {

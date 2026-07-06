@@ -828,6 +828,7 @@ func (h *FormHandler) SaveAlertRule(c *fiber.Ctx) error {
 
 	rule.AlertOnDiff = c.FormValue("alert_on_diff") == "on"
 	rule.AlertOnFailure = c.FormValue("alert_on_failure") == "on"
+	rule.AlertOnSecurity = c.FormValue("alert_on_security") == "on"
 
 	if err := h.DB.Save(&rule).Error; err != nil {
 		c.Set("HX-Trigger", fmt.Sprintf(`{"showNotification": {"message": "Failed to save rule: %v", "type": "error"}}`, err))

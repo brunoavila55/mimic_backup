@@ -74,6 +74,10 @@
                         <input type="checkbox" name="alert_on_failure" id="alert_fail" {{ if .Alert.AlertOnFailure }}checked{{ end }} />
                         <label for="alert_fail" style="font-size: 14px; margin: 0; cursor: pointer;">Alert on Backup Failures (e.g., Auth failed, Timeout)</label>
                     </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" name="alert_on_security" id="alert_sec" {{ if .Alert.AlertOnSecurity }}checked{{ end }} />
+                        <label for="alert_sec" style="font-size: 14px; margin: 0; cursor: pointer;">Alert on Security Violations (Compliance Drops)</label>
+                    </div>
                 </div>
 
                 <div style="margin-top: 16px; display: flex; gap: 12px; align-items: center;">

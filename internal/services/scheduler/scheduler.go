@@ -11,6 +11,7 @@ import (
 	"mimic/internal/services/ssh"
 	"mimic/pkg/diff"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -148,7 +149,30 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 		}
 
 		// Calculate Security & Compliance Score
-		audit.RunAudit(s.db, node, version, config)
+		newViolations := audit.RunAudit(s.db, node, version, config)
+		
+		// Alerta de Compliance (Security Violation)
+		if len(newViolations) > 0 {
+			isSnoozed := node.AlertSnoozeUntil != nil && time.Now().Before(*node.AlertSnoozeUntil)
+			if !isSnoozed {
+				var rules []models.AlertRule
+				s.db.Where("target_group = ? OR target_group = '*' OR target_group = 'Global'", node.Group).Find(&rules)
+				for _, rule := range rules {
+					if rule.Enabled && rule.AlertOnSecurity {
+						var viols []string
+						for _, v := range newViolations {
+							viols = append(viols, fmt.Sprintf("- %s (Penalty: %d)", v.Rule.Name, v.Rule.Penalty))
+						}
+						
+						msg := fmt.Sprintf("🛡️ *Security Violation Detected*\n\n*Node:* %s\n*IP:* %s\n*Current Score:* %d/100\n\n*New Violations:*\n%s", 
+							node.Name, node.IP, node.SecurityScore, strings.Join(viols, "\n"))
+						alert.Dispatch(s.db, rule, msg)
+					}
+				}
+			} else {
+				log.Printf("[Scheduler] Security alert suppressed for node %s due to snooze mode.", node.Name)
+			}
+		}
 
 		// Alerta de Recovery: Se o último status foi erro, significa que o serviço recuperou
 		if node.LastStatus == "error" {

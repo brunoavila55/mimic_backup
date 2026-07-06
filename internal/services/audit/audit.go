@@ -8,9 +8,19 @@ import (
 )
 
 // RunAudit evaluates the configuration against all applicable security rules and calculates a security score.
-func RunAudit(db *gorm.DB, node *models.Node, backupVersion int, configText string) {
+func RunAudit(db *gorm.DB, node *models.Node, backupVersion int, configText string) []models.SecurityViolation {
 	var rules []models.SecurityRule
-	db.Where("vendor = ? OR vendor = '*'", node.Vendor).Find(&rules)
+	if err := db.Where("vendor = ? OR vendor = '*'", node.Vendor).Find(&rules).Error; err != nil {
+		return nil
+	}
+
+	// Fetch old violations to compute diff
+	var oldViolations []models.SecurityViolation
+	db.Unscoped().Where("node_id = ?", node.ID).Find(&oldViolations)
+	oldViolationMap := make(map[uint]bool)
+	for _, v := range oldViolations {
+		oldViolationMap[v.RuleID] = true
+	}
 
 	// Clear previous violations for this node
 	// Unscoped because we don't want soft-deletes lingering around for violations (or at least, we hard delete them to keep it clean)
@@ -59,10 +69,27 @@ func RunAudit(db *gorm.DB, node *models.Node, backupVersion int, configText stri
 		score = 0
 	}
 
+	if len(violations) > 0 {
+		db.Create(&violations)
+	}
+
 	node.SecurityScore = score
 	db.Save(node)
 
+	// Determine newly introduced violations
+	var newViolations []models.SecurityViolation
 	for _, v := range violations {
-		db.Create(&v)
+		if !oldViolationMap[v.RuleID] {
+			// Populate the Rule object so it can be used in the alert message
+			for _, r := range rules {
+				if r.ID == v.RuleID {
+					v.Rule = r
+					break
+				}
+			}
+			newViolations = append(newViolations, v)
+		}
 	}
+
+	return newViolations
 }

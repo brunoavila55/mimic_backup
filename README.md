@@ -38,8 +38,11 @@ Upon the first execution with an empty database, the system will automatically r
 
 Mimic is built with extensibility in mind. Support for new hardware vendors can be introduced seamlessly by implementing the standard driver interface. This allows the system to send vendor-specific commands to retrieve configurations and apply custom normalization rules to filter out volatile data (such as uptime or dynamic timestamps) before version comparison.
 
-## Recent Updates (v0.6.0)
+## Recent Updates (v0.6.1)
 
+- **Performance (Regex Cache):** Implemented a thread-safe in-memory cache for compiled regex patterns in the Security Rules Engine to prevent CPU exhaustion during mass evaluations.
+- **Performance (Mass Audit Throttle):** Added a rate-limiting throttle to background audit re-evaluations to prevent PostgreSQL connection exhaustion.
+- **Golden Config Specificity:** Improved Golden Config matching logic to deterministically prioritize templates based on specificity weight (Target Group + Vendor).
 - **Golden Configs:** Added ability to define "Golden Config Templates" to compare network devices against an expected baseline, directly using the built-in diff engine.
 - **Security Compliance Alerts:** Security and compliance score drops now trigger organic Webhook and Telegram alerts directly from the scheduler.
 - **Security Rules Engine:** Added regular expression compliance auditing and "Security Score" penalty system.

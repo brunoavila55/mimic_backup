@@ -72,7 +72,12 @@ type Node struct {
 	VerifyHostKey        bool       `gorm:"default:true"`
 	SSHPublicFingerprint string
 	SSHPrivateKey        string
+	AlertSnoozeUntil     *time.Time `gorm:"index"`
 	Backups              []NodeBackup `gorm:"foreignKey:NodeID"`
+}
+
+func (n *Node) IsSnoozed() bool {
+	return n.AlertSnoozeUntil != nil && time.Now().Before(*n.AlertSnoozeUntil)
 }
 
 type NodeBackup struct {

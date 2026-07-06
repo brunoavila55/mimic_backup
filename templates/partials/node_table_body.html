@@ -2,7 +2,12 @@
     {{ range .Nodes }}
     <tr>
         <td>
-            <a href="/nodes/{{ .ID }}" style="font-weight: 600; color: var(--text);">{{ .Name }}</a>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <a href="/nodes/{{ .ID }}" style="font-weight: 600; color: var(--text);">{{ .Name }}</a>
+                {{ if .IsSnoozed }}
+                    <span title="Alerts muted until {{ .AlertSnoozeUntil.Format "Jan 02, 15:04" }}" style="font-size: 14px; cursor: help;">🔕</span>
+                {{ end }}
+            </div>
         </td>
         <td><span class="font-mono">{{ .IP }}</span></td>
         <td>{{ .Vendor }}</td>
@@ -39,6 +44,24 @@
         </td>
         <td>
             <div class="action-group">
+                <div x-data="{ open: false }" style="position: relative;">
+                    <button @click="open = !open" @click.outside="open = false" type="button" class="action-btn" title="Maintenance Mode">
+                        {{ if .IsSnoozed }}
+                        <i class="bx bxs-bell-off" style="color: var(--accent);"></i>
+                        {{ else }}
+                        <i class="bx bx-bell"></i>
+                        {{ end }}
+                    </button>
+                    <div x-show="open" style="display: none; position: absolute; right: 0; bottom: 100%; margin-bottom: 4px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 50; width: 140px;" x-transition>
+                        {{ if .IsSnoozed }}
+                        <button hx-post="/nodes/{{ .ID }}/snooze?hours=0" hx-swap="none" style="width: 100%; text-align: left; padding: 6px 12px; font-size: 13px; color: var(--text); border: none; background: transparent; cursor: pointer; border-radius: 4px;"><i class="bx bx-bell" style="margin-right: 4px;"></i> Unmute</button>
+                        {{ else }}
+                        <button hx-post="/nodes/{{ .ID }}/snooze?hours=1" hx-swap="none" style="width: 100%; text-align: left; padding: 6px 12px; font-size: 13px; color: var(--text); border: none; background: transparent; cursor: pointer; border-radius: 4px;"><i class="bx bx-time" style="margin-right: 4px;"></i> Mute 1 hour</button>
+                        <button hx-post="/nodes/{{ .ID }}/snooze?hours=4" hx-swap="none" style="width: 100%; text-align: left; padding: 6px 12px; font-size: 13px; color: var(--text); border: none; background: transparent; cursor: pointer; border-radius: 4px;"><i class="bx bx-time" style="margin-right: 4px;"></i> Mute 4 hours</button>
+                        <button hx-post="/nodes/{{ .ID }}/snooze?hours=24" hx-swap="none" style="width: 100%; text-align: left; padding: 6px 12px; font-size: 13px; color: var(--text); border: none; background: transparent; cursor: pointer; border-radius: 4px;"><i class="bx bx-moon" style="margin-right: 4px;"></i> Mute 24 hours</button>
+                        {{ end }}
+                    </div>
+                </div>
                 <a href="/nodes/{{ .ID }}" class="action-btn" title="Details">
                     <i class="bx bx-show"></i>
                 </a>

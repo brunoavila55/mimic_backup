@@ -902,3 +902,28 @@ func (h *FormHandler) TestAlertRule(c *fiber.Ctx) error {
 	c.Set("HX-Trigger", `{"showNotification": {"message": "Test successful! Check your app.", "type": "success"}}`)
 	return c.SendStatus(200)
 }
+
+func (h *FormHandler) SnoozeNode(c *fiber.Ctx) error {
+	id := c.Params("id")
+	hours, _ := strconv.Atoi(c.Query("hours", "0"))
+
+	var node models.Node
+	if err := h.DB.First(&node, id).Error; err != nil {
+		c.Set("HX-Trigger", `{"showNotification": {"message": "Node not found", "type": "error"}}`)
+		return c.SendStatus(404)
+	}
+
+	if hours > 0 {
+		snoozeTime := time.Now().Add(time.Duration(hours) * time.Hour)
+		node.AlertSnoozeUntil = &snoozeTime
+		c.Set("HX-Trigger", fmt.Sprintf(`{"showNotification": {"message": "Alerts muted for %d hours", "type": "success"}}`, hours))
+	} else {
+		node.AlertSnoozeUntil = nil
+		c.Set("HX-Trigger", `{"showNotification": {"message": "Alerts unmuted", "type": "success"}}`)
+	}
+
+	h.DB.Save(&node)
+
+	c.Set("HX-Redirect", "/nodes")
+	return c.SendStatus(200)
+}

@@ -6,6 +6,7 @@ import (
 	"io"
 	"mimic/internal/models"
 	"mimic/internal/services/alert"
+	"mimic/internal/services/audit"
 	"mimic/internal/services/sftp"
 	"mimic/pkg/crypto"
 	"regexp"
@@ -981,7 +982,24 @@ func (h *FormHandler) SaveSecurityRule(c *fiber.Ctx) error {
 		return c.SendStatus(500)
 	}
 
-	c.Set("HX-Trigger", `{"showNotification": {"message": "Security rule saved successfully", "type": "success"}}`)
+	// Re-evaluate affected nodes asynchronously
+	go func(vendor string) {
+		var nodes []models.Node
+		if vendor == "*" || vendor == "" {
+			h.DB.Find(&nodes)
+		} else {
+			h.DB.Where("vendor = ?", vendor).Find(&nodes)
+		}
+		
+		for _, node := range nodes {
+			var lastBackup models.NodeBackup
+			if err := h.DB.Where("node_id = ? AND status = 'success'", node.ID).Order("version desc").First(&lastBackup).Error; err == nil {
+				audit.RunAudit(h.DB, &node, lastBackup.Version, lastBackup.Config)
+			}
+		}
+	}(rule.Vendor)
+
+	c.Set("HX-Trigger", `{"showNotification": {"message": "Security rule saved. Nodes are being re-evaluated in the background.", "type": "success"}}`)
 	return c.Redirect("/settings/security")
 }
 
@@ -989,8 +1007,20 @@ func (h *FormHandler) DeleteSecurityRule(c *fiber.Ctx) error {
 	id := c.Params("id")
 	h.DB.Where("id = ?", id).Delete(&models.SecurityRule{})
 
+	// Re-evaluate all nodes asynchronously
+	go func() {
+		var nodes []models.Node
+		h.DB.Find(&nodes)
+		for _, node := range nodes {
+			var lastBackup models.NodeBackup
+			if err := h.DB.Where("node_id = ? AND status = 'success'", node.ID).Order("version desc").First(&lastBackup).Error; err == nil {
+				audit.RunAudit(h.DB, &node, lastBackup.Version, lastBackup.Config)
+			}
+		}
+	}()
+
 	if c.Get("HX-Request") == "true" {
-		c.Set("HX-Trigger", `{"showNotification": {"message": "Security rule deleted", "type": "success"}}`)
+		c.Set("HX-Trigger", `{"showNotification": {"message": "Security rule deleted. Nodes are being re-evaluated.", "type": "success"}}`)
 		return c.SendStatus(200)
 	}
 

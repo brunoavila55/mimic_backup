@@ -22,6 +22,11 @@
                class="settings-tab {{ if eq .ActiveTab "sftp" }}active{{ end }}">
                 <i class="bx bx-cloud-upload"></i> SFTP
             </a>
+            <a href="/settings/alerts"
+               hx-get="/settings/alerts" hx-target="#settings-content" hx-push-url="true"
+               class="settings-tab {{ if eq .ActiveTab "alerts" }}active{{ end }}">
+                <i class="bx bx-bell"></i> Alerts
+            </a>
             <a href="/settings/export"
                hx-get="/settings/export" hx-target="#settings-content" hx-push-url="true"
                class="settings-tab {{ if eq .ActiveTab "export" }}active{{ end }}">
@@ -46,6 +51,7 @@
             {{ else if eq .ActiveTab "credentials" }}{{ template "partials/settings_credentials" . }}
             {{ else if eq .ActiveTab "routines" }}{{ template "partials/settings_routines" . }}
             {{ else if eq .ActiveTab "sftp" }}{{ template "partials/settings_sftp" . }}
+            {{ else if eq .ActiveTab "alerts" }}{{ template "partials/settings_alerts" . }}
             {{ else if eq .ActiveTab "export" }}{{ template "partials/settings_export" . }}
             {{ else if eq .ActiveTab "logs" }}{{ template "partials/settings_logs" . }}
             {{ else if eq .ActiveTab "profile" }}{{ template "partials/settings_profile" . }}

@@ -761,3 +761,24 @@ func (h *FormHandler) PostSync(c *fiber.Ctx) error {
 	c.Set("HX-Trigger", fmt.Sprintf(`{"showNotification": {"message": "Sync complete: %d nodes exported", "type": "success"}}`, successCount))
 	return c.SendStatus(200)
 }
+
+func (h *FormHandler) SaveAlertSettings(c *fiber.Ctx) error {
+	var settings models.AlertSettings
+	h.DB.First(&settings) // Pega a existente
+	
+	settings.Enabled = c.FormValue("enabled") == "on"
+	settings.Provider = c.FormValue("provider")
+	settings.WebhookURL = c.FormValue("webhook_url")
+	settings.TelegramToken = c.FormValue("telegram_token")
+	settings.TelegramChatID = c.FormValue("telegram_chat_id")
+	settings.AlertOnDiff = c.FormValue("alert_on_diff") == "on"
+	settings.AlertOnFailure = c.FormValue("alert_on_failure") == "on"
+
+	if err := h.DB.Save(&settings).Error; err != nil {
+		c.Set("HX-Trigger", fmt.Sprintf(`{"showNotification": {"message": "Failed to save alerts: %v", "type": "error"}}`, err))
+		return c.SendStatus(500)
+	}
+
+	c.Set("HX-Trigger", `{"showNotification": {"message": "Alert settings saved successfully", "type": "success"}}`)
+	return c.SendStatus(200)
+}

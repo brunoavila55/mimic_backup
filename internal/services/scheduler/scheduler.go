@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"mimic/internal/models"
+	"mimic/internal/services/alert"
 	"mimic/internal/services/sftp"
 	"mimic/internal/services/ssh"
 	"mimic/pkg/diff"
@@ -117,6 +118,13 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 					DiffDeletions: diffRes.Deletions,
 				}
 				s.db.Create(&backup)
+
+				// Disparar alerta se o diff ocorreu
+				var alertSettings models.AlertSettings
+				if s.db.First(&alertSettings).Error == nil && alertSettings.Enabled && alertSettings.AlertOnDiff {
+					msg := fmt.Sprintf("⚠️ *Configuration Drift Detected*\n\n*Node:* %s\n*IP:* %s\n*Vendor:* %s\n\n*Changes:* +%d additions, -%d deletions\n*New Version:* v%d", node.Name, node.IP, node.Vendor, diffRes.Additions, diffRes.Deletions, version)
+					alert.Dispatch(alertSettings, msg)
+				}
 			}
 		} else {
 			backup := models.NodeBackup{
@@ -128,6 +136,13 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 				Version: 1,
 			}
 			s.db.Create(&backup)
+		}
+	} else {
+		// Se deu erro e o Alerta de Falha estiver ligado
+		var alertSettings models.AlertSettings
+		if s.db.First(&alertSettings).Error == nil && alertSettings.Enabled && alertSettings.AlertOnFailure {
+			msg := fmt.Sprintf("❌ *Backup Failed*\n\n*Node:* %s\n*IP:* %s\n*Error:* %s", node.Name, node.IP, errorMessage)
+			alert.Dispatch(alertSettings, msg)
 		}
 	}
 

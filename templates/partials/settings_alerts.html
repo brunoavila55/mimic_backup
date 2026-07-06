@@ -1,0 +1,71 @@
+{{ define "partials/settings_alerts" }}
+<div x-data="{ provider: '{{ if .Alerts.Provider }}{{ .Alerts.Provider }}{{ else }}webhook{{ end }}' }">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Configuration Drift Alerts</span>
+        </div>
+        <div class="card-body">
+            <form hx-post="/settings/alerts/save" hx-swap="none" class="flex flex-col" style="gap: 16px;">
+                
+                <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" name="enabled" id="alerts_enabled" {{ if .Alerts.Enabled }}checked{{ end }} />
+                    <label for="alerts_enabled" style="font-weight: 500; font-size: 14px; margin-bottom: 0; cursor: pointer;">Enable External Notifications</label>
+                </div>
+                
+                <hr style="border: none; border-top: 1px solid var(--border); margin: 8px 0;" />
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Alert Provider</label>
+                        <select name="provider" class="form-input" x-model="provider">
+                            <option value="webhook">Webhook (Generic POST)</option>
+                            <option value="telegram">Telegram Bot</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Webhook Fields -->
+                <div class="form-row" x-show="provider === 'webhook'">
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label class="form-label">Webhook URL</label>
+                        <input type="url" name="webhook_url" class="form-input font-mono" value="{{ .Alerts.WebhookURL }}" placeholder="https://..." />
+                        <div class="form-hint">Payload format: {"text": "Message content"}</div>
+                    </div>
+                </div>
+
+                <!-- Telegram Fields -->
+                <div class="form-row" x-show="provider === 'telegram'" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">Bot Token</label>
+                        <input type="text" name="telegram_token" class="form-input font-mono" value="{{ .Alerts.TelegramToken }}" placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Chat ID</label>
+                        <input type="text" name="telegram_chat_id" class="form-input font-mono" value="{{ .Alerts.TelegramChatID }}" placeholder="-1001234567890" />
+                    </div>
+                </div>
+
+                <hr style="border: none; border-top: 1px solid var(--border); margin: 8px 0;" />
+                
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <label class="form-label">When to send alerts?</label>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" name="alert_on_diff" id="alert_diff" {{ if .Alerts.AlertOnDiff }}checked{{ end }} />
+                        <label for="alert_diff" style="font-size: 14px; margin: 0; cursor: pointer;">Alert on Configuration Drift (when hash changes)</label>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" name="alert_on_failure" id="alert_fail" {{ if .Alerts.AlertOnFailure }}checked{{ end }} />
+                        <label for="alert_fail" style="font-size: 14px; margin: 0; cursor: pointer;">Alert on Backup Failures (e.g., Auth failed, Timeout)</label>
+                    </div>
+                </div>
+
+                <div style="margin-top: 16px;">
+                    <button type="submit" class="btn btn-primary" onclick="this.innerHTML='<span class=\'spinner\'></span>';">
+                        Save Alert Settings
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{{ end }}

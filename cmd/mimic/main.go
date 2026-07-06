@@ -53,6 +53,7 @@ ________________________________________________`)
 		&models.Credential{},
 		&models.SftpSettings{},
 		&models.SystemLog{},
+		&models.AlertSettings{},
 	)
 
 	// Ensure at least one SFTP settings record exists
@@ -60,6 +61,13 @@ ________________________________________________`)
 	db.Model(&models.SftpSettings{}).Count(&sftpCount)
 	if sftpCount == 0 {
 		db.Create(&models.SftpSettings{Port: 22})
+	}
+
+	// Ensure at least one AlertSettings record exists
+	var alertCount int64
+	db.Model(&models.AlertSettings{}).Count(&alertCount)
+	if alertCount == 0 {
+		db.Create(&models.AlertSettings{Provider: "webhook"})
 	}
 
 	// Session Store
@@ -167,6 +175,7 @@ ________________________________________________`)
 	app.Get("/settings/sftp", middleware.RequireAdmin(), settingsHandler.GetSFTPTab)
 	app.Get("/settings/sftp/explore", middleware.RequireAdmin(), settingsHandler.GetSFTPExplore)
 	app.Get("/settings/export", middleware.RequireAdmin(), settingsHandler.GetExportTab)
+	app.Get("/settings/alerts", middleware.RequireAdmin(), settingsHandler.GetAlertsTab)
 	app.Get("/settings/logs", middleware.RequireAdmin(), settingsHandler.GetLogsTab)
 	app.Get("/settings/profile", settingsHandler.GetProfileTab)
 
@@ -177,6 +186,7 @@ ________________________________________________`)
 	app.Get("/settings/credentials/:id/edit", middleware.RequireAdmin(), formHandler.EditCredential)
 	app.Get("/settings/routines/new", middleware.RequireAdmin(), formHandler.NewRoutine)
 	app.Get("/settings/routines/:id/edit", middleware.RequireAdmin(), formHandler.EditRoutine)
+	app.Post("/settings/alerts/save", middleware.RequireAdmin(), formHandler.SaveAlertSettings)
 
 	// ── Settings Actions ──────────────────────────────
 	app.Post("/settings/users/save", middleware.RequireAdmin(), formHandler.SaveUser)

@@ -108,6 +108,17 @@ type SystemLog struct {
 	gorm.Model
 	Level    string // info, warning, error, success
 	Category string // backup, export, auth, system
-	Message  string
+	Message  string `json:"message"`
 	Details  string
+}
+
+type AlertSettings struct {
+	ID             uint   `gorm:"primarykey" json:"id"`
+	Enabled        bool   `json:"enabled"`
+	Provider       string `json:"provider"` // "webhook" or "telegram"
+	WebhookURL     string `json:"webhook_url"`
+	TelegramToken  string `json:"telegram_token"`
+	TelegramChatID string `json:"telegram_chat_id"`
+	AlertOnDiff    bool   `json:"alert_on_diff"`
+	AlertOnFailure bool   `json:"alert_on_failure"`
 }

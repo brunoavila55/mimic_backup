@@ -407,6 +407,15 @@ func (h *SettingsHandler) GetExportTab(c *fiber.Ctx) error {
 	})
 }
 
+func (h *SettingsHandler) GetAlertsTab(c *fiber.Ctx) error {
+	var settings models.AlertSettings
+	h.DB.First(&settings)
+
+	return h.renderTab(c, "alerts", fiber.Map{
+		"Alerts": settings,
+	})
+}
+
 func (h *SettingsHandler) GetLogsTab(c *fiber.Ctx) error {
 	var logs []models.SystemLog
 	h.DB.Order("created_at desc").Limit(200).Find(&logs)

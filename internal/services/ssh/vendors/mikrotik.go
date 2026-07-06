@@ -12,6 +12,10 @@ func init() {
 	Register("mikrotik_routeros", &MikroTikDriver{})
 }
 
+func (d *MikroTikDriver) GetPrepCommands() []string {
+	return nil
+}
+
 func (d *MikroTikDriver) GetBackupCommand() string {
 	return "/export"
 }

@@ -11,6 +11,10 @@ func init() {
 	Register("huawei", &HuaweiDriver{})
 }
 
+func (d *HuaweiDriver) GetPrepCommands() []string {
+	return []string{"screen-length 0 temporary"}
+}
+
 func (d *HuaweiDriver) GetBackupCommand() string {
 	return "display current-configuration"
 }

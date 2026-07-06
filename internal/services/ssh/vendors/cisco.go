@@ -13,6 +13,10 @@ func init() {
 	Register("cisco_nxos", &CiscoDriver{})
 }
 
+func (d *CiscoDriver) GetPrepCommands() []string {
+	return []string{"terminal length 0"}
+}
+
 func (d *CiscoDriver) GetBackupCommand() string {
 	return "show running-config"
 }

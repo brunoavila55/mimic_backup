@@ -91,20 +91,82 @@ func (s *SSHService) Connect(node *models.Node) (*ssh.Client, error) {
 	return client, nil
 }
 
-func (s *SSHService) RunCommand(client *ssh.Client, command string) (string, error) {
+func (s *SSHService) RunInteractiveCommand(client *ssh.Client, prepCommands []string, mainCommand string) (string, error) {
 	session, err := client.NewSession()
 	if err != nil {
 		return "", fmt.Errorf("failed to create session: %v", err)
 	}
 	defer session.Close()
 
-	var b bytes.Buffer
-	session.Stdout = &b
-	if err := session.Run(command); err != nil {
-		return "", fmt.Errorf("failed to run command: %v", err)
+	// Request PTY to emulate a real terminal
+	modes := ssh.TerminalModes{
+		ssh.ECHO:          0,     // Disable echoing
+		ssh.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
+		ssh.TTY_OP_OSPEED: 14400, // output speed = 14.4kbaud
+	}
+	if err := session.RequestPty("vt100", 80, 24, modes); err != nil {
+		return "", fmt.Errorf("request for pseudo terminal failed: %s", err)
 	}
 
-	return b.String(), nil
+	stdin, err := session.StdinPipe()
+	if err != nil {
+		return "", err
+	}
+
+	stdout, err := session.StdoutPipe()
+	if err != nil {
+		return "", err
+	}
+
+	if err := session.Shell(); err != nil {
+		return "", fmt.Errorf("failed to start shell: %s", err)
+	}
+
+	// Send preparation commands
+	for _, cmd := range prepCommands {
+		fmt.Fprintf(stdin, "%s\n", cmd)
+		time.Sleep(500 * time.Millisecond) // short wait to process prep command
+	}
+
+	// Send main command
+	fmt.Fprintf(stdin, "%s\n", mainCommand)
+
+	// Read output interactively until it idles for 2 seconds
+	var output bytes.Buffer
+	buf := make([]byte, 4096)
+	done := make(chan struct{})
+
+	go func() {
+		for {
+			n, readErr := stdout.Read(buf)
+			if n > 0 {
+				output.Write(buf[:n])
+			}
+			if readErr != nil {
+				break
+			}
+		}
+		close(done)
+	}()
+
+	idleTimeout := 2 * time.Second
+	timer := time.NewTimer(idleTimeout)
+	lastLen := 0
+
+	for {
+		select {
+		case <-done:
+			return output.String(), nil
+		case <-timer.C:
+			currentLen := output.Len()
+			// If we have some output and it hasn't grown in the idle period, we are done
+			if currentLen > 0 && currentLen == lastLen {
+				return output.String(), nil
+			}
+			lastLen = currentLen
+			timer.Reset(idleTimeout)
+		}
+	}
 }
 
 func (s *SSHService) PerformBackup(node *models.Node) (string, error) {
@@ -119,7 +181,7 @@ func (s *SSHService) PerformBackup(node *models.Node) (string, error) {
 		return "", err
 	}
 
-	raw, err := s.RunCommand(client, driver.GetBackupCommand())
+	raw, err := s.RunInteractiveCommand(client, driver.GetPrepCommands(), driver.GetBackupCommand())
 	if err != nil {
 		return "", translateSSHError(fmt.Errorf("failed to run command: %v", err))
 	}

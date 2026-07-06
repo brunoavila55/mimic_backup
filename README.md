@@ -38,8 +38,9 @@ Upon the first execution with an empty database, the system will automatically r
 
 Mimic is built with extensibility in mind. Support for new hardware vendors can be introduced seamlessly by implementing the standard driver interface. This allows the system to send vendor-specific commands to retrieve configurations and apply custom normalization rules to filter out volatile data (such as uptime or dynamic timestamps) before version comparison.
 
-## Recent Updates (v0.4.1)
+## Recent Updates (v0.5.0)
 
+- **Interactive SSH Shell Refactor:** Upgraded the SSH service from the basic "exec" channel to use an Interactive Shell with a Pseudo-Terminal (PTY). This natively resolves `--More--` pagination timeouts for complex network vendors like Cisco, Huawei, and Juniper by sending preparation commands (`terminal length 0`, etc.) in the same session.
 - **Security Hardening:** Implemented Role-Based Access Control (RBAC) to ensure "Viewer" roles cannot execute destructive or state-modifying actions. Upgraded session cookie security (HTTPOnly & Strict SameSite). SFTP path traversal protection was also introduced.
 - **CSV Import/Export Rework:** Rebuilt the CSV functionality to support all new scheduling and relationship fields. Users can now seamlessly import configurations by writing the *names* of Credentials, Routines, and Agents directly in the CSV instead of needing internal IDs.
 - **Premium UI Refinements:** The node registration and routine interfaces have been redesigned with a modern, clean aesthetic.

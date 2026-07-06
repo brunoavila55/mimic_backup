@@ -12,8 +12,12 @@ func init() {
 	Register("juniper_junos", &JuniperDriver{})
 }
 
+func (d *JuniperDriver) GetPrepCommands() []string {
+	return nil
+}
+
 func (d *JuniperDriver) GetBackupCommand() string {
-	return "show configuration"
+	return "show configuration | no-more"
 }
 
 func (d *JuniperDriver) NormalizeConfig(raw string) string {

@@ -6,6 +6,7 @@ import (
 )
 
 type Driver interface {
+	GetPrepCommands() []string
 	GetBackupCommand() string
 	NormalizeConfig(raw string) string
 }

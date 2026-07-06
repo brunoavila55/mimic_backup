@@ -130,13 +130,21 @@ func (h *NodeHandler) NodeDetails(c *fiber.Ctx) error {
 		return c.Status(404).SendString("Node not found")
 	}
 
+	var hasGoldenConfig bool
+	var gc models.GoldenConfig
+	err := h.DB.Where("(vendor = ? OR vendor = '*') AND (target_group = ? OR target_group = '*')", node.Vendor, node.Group).First(&gc).Error
+	if err == nil {
+		hasGoldenConfig = true
+	}
+
 	data := fiber.Map{
-		"Title":        node.Name,
-		"Username":     c.Locals("username"),
-		"Avatar":       c.Locals("avatar"),
-		"Role":         c.Locals("role"),
-		"CurrentRoute": "nodes",
-		"Node":         node,
+		"Title":           node.Name,
+		"Username":        c.Locals("username"),
+		"Avatar":          c.Locals("avatar"),
+		"Role":            c.Locals("role"),
+		"CurrentRoute":    "nodes",
+		"Node":            node,
+		"HasGoldenConfig": hasGoldenConfig,
 	}
 
 	return c.Render("node_details", data, "base")
@@ -202,6 +210,39 @@ func (h *NodeHandler) GetBackupDiff(c *fiber.Ctx) error {
 		"HasPrev":       hasPrev,
 		"LeftVersion":   leftVersion,
 		"LeftID":        leftID,
+		"RightID":       backup.ID,
+		"SplitRows":     diffRes.SplitRows,
+		"UnifiedRows":   diffRes.UnifiedRows,
+		"Additions":     diffRes.Additions,
+		"Deletions":     diffRes.Deletions,
+	})
+}
+
+func (h *NodeHandler) GoldenDiffView(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var backup models.NodeBackup
+	
+	// Fetch the latest successful backup for this node
+	if err := h.DB.Preload("Node").Where("node_id = ? AND status = 'success'", id).Order("version desc").First(&backup).Error; err != nil {
+		return c.Status(404).SendString("No successful backups found for this node")
+	}
+
+	// Fetch matching Golden Config
+	var gc models.GoldenConfig
+	if err := h.DB.Where("(vendor = ? OR vendor = '*') AND (target_group = ? OR target_group = '*')", backup.Node.Vendor, backup.Node.Group).First(&gc).Error; err != nil {
+		return c.Status(404).SendString("No matching Golden Config found")
+	}
+
+	// Compute diff
+	diffRes := diff.GenerateDiff(gc.ConfigTemplate, backup.Config)
+
+	return c.Render("partials/diff_view", fiber.Map{
+		"Node":          backup.Node,
+		"CurrentBackup": backup,
+		"Backups":       []models.NodeBackup{backup}, // Only show the current backup in the dropdown context if needed
+		"HasPrev":       true,
+		"LeftVersion":   "Golden Baseline",
+		"LeftID":        0,
 		"RightID":       backup.ID,
 		"SplitRows":     diffRes.SplitRows,
 		"UnifiedRows":   diffRes.UnifiedRows,
@@ -333,6 +374,7 @@ func (h *SettingsHandler) renderTab(c *fiber.Ctx, tab string, data fiber.Map) er
 		"logs":        "System Logs",
 		"alerts":      "Alerting Rules",
 		"security":    "Security Auditing",
+		"golden":      "Golden Configs",
 		"profile":     "My Profile",
 	}
 
@@ -375,6 +417,15 @@ func (h *SettingsHandler) GetSecurityTab(c *fiber.Ctx) error {
 
 	return h.renderTab(c, "security", fiber.Map{
 		"Rules": rules,
+	})
+}
+
+func (h *SettingsHandler) GetGoldenTab(c *fiber.Ctx) error {
+	var configs []models.GoldenConfig
+	h.DB.Order("vendor asc, name asc").Find(&configs)
+
+	return h.renderTab(c, "golden", fiber.Map{
+		"Configs": configs,
 	})
 }
 

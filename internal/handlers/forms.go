@@ -1028,6 +1028,64 @@ func (h *FormHandler) DeleteSecurityRule(c *fiber.Ctx) error {
 	return c.Redirect("/settings/security")
 }
 
+// ── Golden Configs ────────────────────────────────
+
+func (h *FormHandler) GoldenForm(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var gc models.GoldenConfig
+
+	if id != "" {
+		if err := h.DB.First(&gc, id).Error; err != nil {
+			return c.Status(404).SendString("Golden Config not found")
+		}
+	}
+
+	return c.Render("golden_form", fiber.Map{
+		"Title":  "Golden Config",
+		"Config": gc,
+	}, "base")
+}
+
+func (h *FormHandler) SaveGoldenConfig(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var gc models.GoldenConfig
+
+	if id != "" {
+		h.DB.Where("id = ?", id).First(&gc)
+	}
+
+	gc.Name = c.FormValue("name")
+	gc.Vendor = c.FormValue("vendor")
+	if gc.Vendor == "" {
+		gc.Vendor = "*"
+	}
+	gc.TargetGroup = c.FormValue("target_group")
+	if gc.TargetGroup == "" {
+		gc.TargetGroup = "*"
+	}
+	gc.ConfigTemplate = c.FormValue("config_template")
+
+	if err := h.DB.Save(&gc).Error; err != nil {
+		c.Set("HX-Trigger", fmt.Sprintf(`{"showNotification": {"message": "Failed to save golden config: %v", "type": "error"}}`, err))
+		return c.SendStatus(500)
+	}
+
+	c.Set("HX-Trigger", `{"showNotification": {"message": "Golden config saved successfully", "type": "success"}}`)
+	return c.Redirect("/settings?tab=golden")
+}
+
+func (h *FormHandler) DeleteGoldenConfig(c *fiber.Ctx) error {
+	id := c.Params("id")
+	h.DB.Where("id = ?", id).Delete(&models.GoldenConfig{})
+
+	if c.Get("HX-Request") == "true" {
+		c.Set("HX-Trigger", `{"showNotification": {"message": "Golden config deleted", "type": "success"}}`)
+		return c.SendStatus(200)
+	}
+
+	return c.Redirect("/settings?tab=golden")
+}
+
 // ── Rule Exceptions ────────────────────────────────
 
 func (h *FormHandler) AddRuleException(c *fiber.Ctx) error {

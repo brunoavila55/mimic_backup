@@ -1,0 +1,61 @@
+{{ define "partials/settings_golden" }}
+<div class="card fade-in">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <span class="card-title"><i class='bx bx-check-shield' style="color: var(--accent);"></i> Golden Configs</span>
+            <p style="margin: 4px 0 0; font-size: 13px; color: var(--text-muted);">
+                Define baseline templates to compare your network devices against.
+            </p>
+        </div>
+        <a href="/settings/golden/new" class="btn btn-primary btn-sm">
+            <i class="bx bx-plus"></i> New Golden Config
+        </a>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Template Name</th>
+                        <th>Vendor Match</th>
+                        <th>Group Match</th>
+                        <th>Template Size</th>
+                        <th style="width: 80px; text-align: center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{ if .Configs }}
+                        {{ range .Configs }}
+                        <tr>
+                            <td>
+                                <div style="font-weight: 600;">{{ .Name }}</div>
+                            </td>
+                            <td><span class="badge badge-info">{{ .Vendor }}</span></td>
+                            <td><span class="badge badge-warning">{{ .TargetGroup }}</span></td>
+                            <td><span style="font-family: monospace; font-size: 12px; color: var(--text-muted);">{{ len .ConfigTemplate }} bytes</span></td>
+                            <td style="text-align: center;">
+                                <div class="action-group" style="justify-content: center;">
+                                    <a href="/settings/golden/{{ .ID }}/edit" class="action-btn" title="Edit Template"><i class='bx bx-edit-alt'></i></a>
+                                    <button hx-delete="/settings/golden/{{ .ID }}" 
+                                            hx-confirm="Are you sure you want to delete this Golden Config?" 
+                                            hx-target="closest tr" 
+                                            hx-swap="outerHTML swap:1s"
+                                            class="action-btn text-danger" title="Delete Template"><i class='bx bx-trash'></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                        {{ end }}
+                    {{ else }}
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 32px; color: var(--text-muted);">
+                                <i class='bx bx-check-shield' style="font-size: 32px; margin-bottom: 8px; opacity: 0.5;"></i>
+                                <p>No Golden Configs defined yet.</p>
+                            </td>
+                        </tr>
+                    {{ end }}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{{ end }}

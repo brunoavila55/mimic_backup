@@ -24,13 +24,12 @@ var AppVersion string
 
 func main() {
 
-	fmt.Println(`
-    __  ____              _      
-   /  |/  (_)___ ___  (_)____
-  / /|_/ / / __ ` + "`" + `__ \/ / ___/
- / /  / / / / / / / / / /__  
-/_/  /_/_/_/ /_/ /_/_/\___/  Backup Systems v0.5.1
-________________________________________________`)
+	fmt.Println(`    __  ____           _       `)
+	fmt.Println(`   /  |/  (_)___ ___  (_)____  `)
+	fmt.Println(`  / /|_/ / / __ ` + "`" + `__ \/ / ___/  `)
+	fmt.Println(` / /  / / / / / / / / / /__    `)
+	fmt.Println(`/_/  /_/_/_/ /_/ /_/_/\___/  Backup Systems v0.6.0`)
+	fmt.Println("===================================================")
 
 	// Database connection
 	dsn := os.Getenv("DATABASE_URL")
@@ -55,6 +54,7 @@ ________________________________________________`)
 		&models.SystemLog{},
 		&models.AlertRule{},
 		&models.SecurityRule{},
+		&models.GoldenConfig{},
 		&models.SecurityViolation{},
 		&models.NodeRuleException{},
 	)
@@ -80,10 +80,10 @@ ________________________________________________`)
 	// Get Version from Git or Build Flags
 	appVersion := AppVersion
 	if appVersion == "" {
-		appVersion = "0.5.1" // fallback
+		appVersion = "0.6.0" // fallback
 		if out, err := exec.Command("git", "rev-list", "--count", "HEAD").Output(); err == nil {
 			count := strings.TrimSpace(string(out))
-			appVersion = "0.5." + count
+			appVersion = "0.6." + count
 		}
 	}
 
@@ -111,7 +111,7 @@ ________________________________________________`)
 
 	app := fiber.New(fiber.Config{
 		Views:   engine,
-		AppName: "Mimic Backup Systems v0.5.1",
+		AppName: "Mimic Backup Systems v0.6.0",
 	})
 
 	// Static Files
@@ -162,6 +162,7 @@ ________________________________________________`)
 	app.Delete("/nodes/:id", middleware.RequireAdmin(), formHandler.DeleteNode)
 	app.Get("/backups/:id/content", nodeHandler.GetBackupContent)
 	app.Get("/backups/:id/diff", nodeHandler.GetBackupDiff)
+	app.Get("/nodes/:id/golden-diff", nodeHandler.GoldenDiffView)
 	app.Get("/backups/diff/compare", middleware.RequireAdmin(), nodeHandler.CompareBackups)
 
 	// ── Settings Hub ──────────────────────────────────
@@ -174,6 +175,8 @@ ________________________________________________`)
 	app.Get("/settings/export", middleware.RequireAdmin(), settingsHandler.GetExportTab)
 	app.Get("/settings/alerts", middleware.RequireAdmin(), settingsHandler.GetAlertsTab)
 	app.Get("/settings/logs", middleware.RequireAdmin(), settingsHandler.GetLogsTab)
+	app.Get("/settings/security", middleware.RequireAdmin(), settingsHandler.GetSecurityTab)
+	app.Get("/settings/golden", middleware.RequireAdmin(), settingsHandler.GetGoldenTab)
 	app.Get("/settings/profile", settingsHandler.GetProfileTab)
 
 	// ── Settings Forms ────────────────────────────────
@@ -198,6 +201,10 @@ ________________________________________________`)
 	app.Post("/settings/alerts/save", middleware.RequireAdmin(), formHandler.SaveAlertRule)
 	app.Post("/settings/alerts/save/:id", middleware.RequireAdmin(), formHandler.SaveAlertRule)
 	app.Post("/settings/alerts/test", middleware.RequireAdmin(), formHandler.TestAlertRule)
+	app.Get("/settings/golden/new", middleware.RequireAdmin(), formHandler.GoldenForm)
+	app.Get("/settings/golden/:id/edit", middleware.RequireAdmin(), formHandler.GoldenForm)
+	app.Post("/settings/golden/save", middleware.RequireAdmin(), formHandler.SaveGoldenConfig)
+	app.Post("/settings/golden/save/:id", middleware.RequireAdmin(), formHandler.SaveGoldenConfig)
 	app.Post("/settings/security/save", middleware.RequireAdmin(), formHandler.SaveSecurityRule)
 	app.Post("/settings/security/save/:id", middleware.RequireAdmin(), formHandler.SaveSecurityRule)
 	app.Post("/nodes/:id/exceptions/:rule_id", middleware.RequireAdmin(), formHandler.AddRuleException)
@@ -207,6 +214,7 @@ ________________________________________________`)
 	app.Delete("/settings/credentials/:id", middleware.RequireAdmin(), formHandler.DeleteCredential)
 	app.Delete("/settings/routines/:id", middleware.RequireAdmin(), formHandler.DeleteRoutine)
 	app.Delete("/settings/alerts/:id", middleware.RequireAdmin(), formHandler.DeleteAlertRule)
+	app.Delete("/settings/golden/:id", middleware.RequireAdmin(), formHandler.DeleteGoldenConfig)
 	app.Delete("/settings/security/:id", middleware.RequireAdmin(), formHandler.DeleteSecurityRule)
 	app.Delete("/nodes/:id/exceptions/:rule_id", middleware.RequireAdmin(), formHandler.RemoveRuleException)
 	app.Post("/settings/sftp/save", middleware.RequireAdmin(), formHandler.SaveSettings)
@@ -216,6 +224,21 @@ ________________________________________________`)
 	app.Post("/backups/:backup_id/export", middleware.RequireAdmin(), formHandler.ExportBackup)
 
 	// ── HTMX Actions ──────────────────────────────────
+	app.Post("/trigger-backups", middleware.RequireAdmin(), func(c *fiber.Ctx) error {
+		sch.CheckBackups()
+		return c.SendStatus(200)
+	})
+
+	app.Post("/nodes/:id/trigger", middleware.RequireAdmin(), func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		var node models.Node
+		if err := db.Preload("Credential").Preload("AccessAgent").Where("id = ?", id).First(&node).Error; err == nil {
+			go sch.RunBackup(&node)
+			c.Set("HX-Trigger", `{"showNotification": {"message": "Manual backup started", "type": "success"}}`)
+		}
+		return c.SendStatus(200)
+	})
+
 	app.Post("/trigger-backups", middleware.RequireAdmin(), func(c *fiber.Ctx) error {
 		sch.CheckBackups()
 		return c.SendStatus(200)

@@ -8,6 +8,11 @@
             </div>
         </div>
         <div class="flex gap-2">
+            {{ if .HasGoldenConfig }}
+            <a href="/nodes/{{ .Node.ID }}/golden-diff" class="btn btn-secondary" style="border-color: var(--warning); color: var(--warning);">
+                <i class="bx bx-check-shield"></i> Golden Config Diff
+            </a>
+            {{ end }}
             <button hx-post="/nodes/{{ .Node.ID }}/trigger" hx-swap="none" class="btn btn-secondary">
                 <i class="bx bx-play-circle"></i> Manual Backup
             </button>

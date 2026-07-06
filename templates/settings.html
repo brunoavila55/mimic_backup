@@ -22,10 +22,14 @@
                class="settings-tab {{ if eq .ActiveTab "sftp" }}active{{ end }}">
                 <i class="bx bx-cloud-upload"></i> SFTP
             </a>
-            <a href="/settings/alerts"
-               hx-get="/settings/alerts" hx-target="#settings-content" hx-push-url="true"
-               class="settings-tab {{ if eq .ActiveTab "alerts" }}active{{ end }}">
-                <i class="bx bx-bell"></i> Alerts
+            <a href="/settings?tab=alerts" class="settings-tab {{ if eq .ActiveTab "alerts" }}active{{ end }}" hx-get="/settings/alerts" hx-target="#settings-content" hx-push-url="/settings?tab=alerts" hx-swap="innerHTML">
+                <i class='bx bx-bell'></i> Alerting Rules
+            </a>
+            <a href="/settings?tab=security" class="settings-tab {{ if eq .ActiveTab "security" }}active{{ end }}" hx-get="/settings/security" hx-target="#settings-content" hx-push-url="/settings?tab=security" hx-swap="innerHTML">
+                <i class='bx bx-shield-quarter'></i> Security Rules
+            </a>
+            <a href="/settings?tab=golden" class="settings-tab {{ if eq .ActiveTab "golden" }}active{{ end }}" hx-get="/settings/golden" hx-target="#settings-content" hx-push-url="/settings?tab=golden" hx-swap="innerHTML">
+                <i class='bx bx-check-shield'></i> Golden Configs
             </a>
             <a href="/settings/export"
                hx-get="/settings/export" hx-target="#settings-content" hx-push-url="true"

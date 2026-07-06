@@ -145,6 +145,14 @@ type SecurityRule struct {
 	Severity     string `json:"severity" gorm:"default:'Warning'"` // Critical, Warning, Info
 }
 
+type GoldenConfig struct {
+	gorm.Model
+	Name           string `json:"name"`
+	Vendor         string `json:"vendor" gorm:"default:'*'"`
+	TargetGroup    string `json:"target_group" gorm:"default:'*'"`
+	ConfigTemplate string `json:"config_template"`
+}
+
 type SecurityViolation struct {
 	gorm.Model
 	NodeID        uint

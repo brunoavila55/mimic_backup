@@ -37,32 +37,40 @@ func RunAudit(db *gorm.DB, node *models.Node, backupVersion int, configText stri
 	score := 100
 
 	for _, rule := range rules {
-		if exceptionMap[rule.ID] {
-			continue // Skip whitelisted rules entirely for this node
-		}
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[Audit] Recovered from panic while evaluating rule %d on node %d: %v", rule.ID, node.ID, r)
+				}
+			}()
 
-		re, err := regexp.Compile(rule.RegexPattern)
-		if err != nil || rule.RegexPattern == "" {
-			continue
-		}
+			if exceptionMap[rule.ID] {
+				return // Skip whitelisted rules entirely for this node
+			}
 
-		matched := re.MatchString(configText)
-		triggerViolation := false
+			re, err := regexp.Compile(rule.RegexPattern)
+			if err != nil || rule.RegexPattern == "" {
+				return
+			}
 
-		if rule.MatchType == "not_contains" && !matched {
-			triggerViolation = true
-		} else if (rule.MatchType == "contains" || rule.MatchType == "") && matched {
-			triggerViolation = true
-		}
+			matched := re.MatchString(configText)
+			triggerViolation := false
 
-		if triggerViolation {
-			score -= rule.Penalty
-			violations = append(violations, models.SecurityViolation{
-				NodeID:        node.ID,
-				RuleID:        rule.ID,
-				BackupVersion: backupVersion,
-			})
-		}
+			if rule.MatchType == "not_contains" && !matched {
+				triggerViolation = true
+			} else if (rule.MatchType == "contains" || rule.MatchType == "") && matched {
+				triggerViolation = true
+			}
+
+			if triggerViolation {
+				score -= rule.Penalty
+				violations = append(violations, models.SecurityViolation{
+					NodeID:        node.ID,
+					RuleID:        rule.ID,
+					BackupVersion: backupVersion,
+				})
+			}
+		}()
 	}
 
 	if score < 0 {

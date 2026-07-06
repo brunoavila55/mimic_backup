@@ -8,6 +8,7 @@ import (
 	"mimic/internal/services/alert"
 	"mimic/internal/services/sftp"
 	"mimic/pkg/crypto"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -963,6 +964,12 @@ func (h *FormHandler) SaveSecurityRule(c *fiber.Ctx) error {
 		rule.Vendor = "*"
 	}
 	rule.RegexPattern = c.FormValue("regex_pattern")
+	
+	if _, err := regexp.Compile(rule.RegexPattern); err != nil {
+		c.Set("HX-Trigger", fmt.Sprintf(`{"showNotification": {"message": "Invalid regex pattern: %v", "type": "error"}}`, err))
+		return c.SendStatus(400)
+	}
+
 	rule.Severity = c.FormValue("severity")
 	
 	penalty, _ := strconv.Atoi(c.FormValue("penalty"))

@@ -76,6 +76,7 @@ type Node struct {
 	SecurityScore        int        `gorm:"default:100;index"`
 	Backups              []NodeBackup `gorm:"foreignKey:NodeID"`
 	Violations           []SecurityViolation `gorm:"foreignKey:NodeID"`
+	Exceptions           []NodeRuleException `gorm:"foreignKey:NodeID"`
 }
 
 func (n *Node) IsSnoozed() bool {
@@ -150,4 +151,13 @@ type SecurityViolation struct {
 	RuleID        uint
 	Rule          SecurityRule
 	BackupVersion int
+}
+
+type NodeRuleException struct {
+	gorm.Model
+	NodeID uint `gorm:"uniqueIndex:idx_node_rule"`
+	Node   Node
+	RuleID uint `gorm:"uniqueIndex:idx_node_rule"`
+	Rule   SecurityRule
+	Reason string
 }

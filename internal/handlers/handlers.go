@@ -126,7 +126,7 @@ func (h *NodeHandler) NodeDetails(c *fiber.Ctx) error {
 	var node models.Node
 	if err := h.DB.Preload("Backups", func(db *gorm.DB) *gorm.DB {
 		return db.Order("version desc")
-	}).Preload("Credential").Preload("Violations.Rule").Where("id = ?", id).First(&node).Error; err != nil {
+	}).Preload("Credential").Preload("Violations.Rule").Preload("Exceptions.Rule").Where("id = ?", id).First(&node).Error; err != nil {
 		return c.Status(404).SendString("Node not found")
 	}
 

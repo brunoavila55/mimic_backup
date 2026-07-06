@@ -1026,3 +1026,53 @@ func (h *FormHandler) DeleteSecurityRule(c *fiber.Ctx) error {
 
 	return c.Redirect("/settings/security")
 }
+
+// ── Rule Exceptions ────────────────────────────────
+
+func (h *FormHandler) AddRuleException(c *fiber.Ctx) error {
+	nodeID, _ := strconv.Atoi(c.Params("id"))
+	ruleID, _ := strconv.Atoi(c.Params("rule_id"))
+
+	h.DB.Create(&models.NodeRuleException{
+		NodeID: uint(nodeID),
+		RuleID: uint(ruleID),
+		Reason: "Whitelisted by user",
+	})
+
+	// Re-evaluate node asynchronously
+	go func() {
+		var node models.Node
+		if err := h.DB.First(&node, nodeID).Error; err == nil {
+			var lastBackup models.NodeBackup
+			if err := h.DB.Where("node_id = ? AND status = 'success'", node.ID).Order("version desc").First(&lastBackup).Error; err == nil {
+				audit.RunAudit(h.DB, &node, lastBackup.Version, lastBackup.Config)
+			}
+		}
+	}()
+
+	c.Set("HX-Trigger", `{"showNotification": {"message": "Rule ignored for this node.", "type": "info"}}`)
+	c.Set("HX-Redirect", fmt.Sprintf("/nodes/%d", nodeID))
+	return c.SendStatus(200)
+}
+
+func (h *FormHandler) RemoveRuleException(c *fiber.Ctx) error {
+	nodeID, _ := strconv.Atoi(c.Params("id"))
+	ruleID, _ := strconv.Atoi(c.Params("rule_id"))
+
+	h.DB.Unscoped().Where("node_id = ? AND rule_id = ?", nodeID, ruleID).Delete(&models.NodeRuleException{})
+
+	// Re-evaluate node asynchronously
+	go func() {
+		var node models.Node
+		if err := h.DB.First(&node, nodeID).Error; err == nil {
+			var lastBackup models.NodeBackup
+			if err := h.DB.Where("node_id = ? AND status = 'success'", node.ID).Order("version desc").First(&lastBackup).Error; err == nil {
+				audit.RunAudit(h.DB, &node, lastBackup.Version, lastBackup.Config)
+			}
+		}
+	}()
+
+	c.Set("HX-Trigger", `{"showNotification": {"message": "Exception revoked. Rule is active again.", "type": "success"}}`)
+	c.Set("HX-Redirect", fmt.Sprintf("/nodes/%d", nodeID))
+	return c.SendStatus(200)
+}

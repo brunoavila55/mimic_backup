@@ -56,6 +56,7 @@ ________________________________________________`)
 		&models.AlertRule{},
 		&models.SecurityRule{},
 		&models.SecurityViolation{},
+		&models.NodeRuleException{},
 	)
 
 	// Ensure at least one SFTP settings record exists
@@ -199,6 +200,7 @@ ________________________________________________`)
 	app.Post("/settings/alerts/test", middleware.RequireAdmin(), formHandler.TestAlertRule)
 	app.Post("/settings/security/save", middleware.RequireAdmin(), formHandler.SaveSecurityRule)
 	app.Post("/settings/security/save/:id", middleware.RequireAdmin(), formHandler.SaveSecurityRule)
+	app.Post("/nodes/:id/exceptions/:rule_id", middleware.RequireAdmin(), formHandler.AddRuleException)
 
 	// ── Delete Actions ────────────────────────────────
 	app.Delete("/settings/users/:id", middleware.RequireAdmin(), formHandler.DeleteUser)
@@ -206,6 +208,7 @@ ________________________________________________`)
 	app.Delete("/settings/routines/:id", middleware.RequireAdmin(), formHandler.DeleteRoutine)
 	app.Delete("/settings/alerts/:id", middleware.RequireAdmin(), formHandler.DeleteAlertRule)
 	app.Delete("/settings/security/:id", middleware.RequireAdmin(), formHandler.DeleteSecurityRule)
+	app.Delete("/nodes/:id/exceptions/:rule_id", middleware.RequireAdmin(), formHandler.RemoveRuleException)
 	app.Post("/settings/sftp/save", middleware.RequireAdmin(), formHandler.SaveSettings)
 	app.Post("/settings/sftp/test", middleware.RequireAdmin(), formHandler.TestSFTPConnection)
 	app.Post("/settings/profile/save", formHandler.SaveProfile)

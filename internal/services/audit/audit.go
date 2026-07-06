@@ -16,10 +16,21 @@ func RunAudit(db *gorm.DB, node *models.Node, backupVersion int, configText stri
 	// Unscoped because we don't want soft-deletes lingering around for violations (or at least, we hard delete them to keep it clean)
 	db.Unscoped().Where("node_id = ?", node.ID).Delete(&models.SecurityViolation{})
 
+	var exceptions []models.NodeRuleException
+	db.Where("node_id = ?", node.ID).Find(&exceptions)
+	exceptionMap := make(map[uint]bool)
+	for _, ex := range exceptions {
+		exceptionMap[ex.RuleID] = true
+	}
+
 	var violations []models.SecurityViolation
 	score := 100
 
 	for _, rule := range rules {
+		if exceptionMap[rule.ID] {
+			continue // Skip whitelisted rules entirely for this node
+		}
+
 		re, err := regexp.Compile(rule.RegexPattern)
 		if err != nil || rule.RegexPattern == "" {
 			continue

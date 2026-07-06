@@ -66,6 +66,7 @@
                                 <th>Rule</th>
                                 <th>Severity / Penalty</th>
                                 <th>First Detected Version</th>
+                                <th style="width: 100px; text-align: center;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -85,6 +86,13 @@
                                     {{ end }}
                                 </td>
                                 <td>v{{ .BackupVersion }}</td>
+                                <td style="text-align: center;">
+                                    <button hx-post="/nodes/{{ $.Node.ID }}/exceptions/{{ .RuleID }}" 
+                                            hx-swap="none"
+                                            class="action-btn" title="Whitelist / Ignore Rule" style="color: var(--text-muted);">
+                                        <i class='bx bx-hide'></i>
+                                    </button>
+                                </td>
                             </tr>
                             {{ end }}
                         </tbody>
@@ -94,6 +102,38 @@
                 <div style="text-align: center; color: var(--success); padding: 20px 0; font-weight: 500;">
                     <i class='bx bx-shield-check' style="font-size: 48px; display: block; margin-bottom: 8px;"></i>
                     No configuration vulnerabilities found in the latest backup.
+                </div>
+            {{ end }}
+
+            {{ if .Node.Exceptions }}
+                <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
+                    <h4 style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;"><i class='bx bx-hide'></i> Whitelisted Rules (Ignored)</h4>
+                    <div class="table-container">
+                        <table class="table" style="font-size: 13px;">
+                            <thead>
+                                <tr>
+                                    <th>Rule Name</th>
+                                    <th>Reason</th>
+                                    <th style="width: 100px; text-align: center;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{ range .Node.Exceptions }}
+                                <tr>
+                                    <td style="color: var(--text-muted);"><del>{{ .Rule.Name }}</del></td>
+                                    <td style="color: var(--text-muted);">{{ .Reason }}</td>
+                                    <td style="text-align: center;">
+                                        <button hx-delete="/nodes/{{ $.Node.ID }}/exceptions/{{ .RuleID }}" 
+                                                hx-swap="none"
+                                                class="action-btn" title="Revoke Exception" style="color: var(--accent);">
+                                            <i class='bx bx-revision'></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {{ end }}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             {{ end }}
         </div>

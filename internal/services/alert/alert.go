@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"gorm.io/gorm"
 	"mimic/internal/models"
 	"mimic/pkg/crypto"
 )
@@ -16,7 +17,7 @@ type WebhookPayload struct {
 	Text string `json:"text"`
 }
 
-func Dispatch(settings models.AlertSettings, message string) {
+func Dispatch(db *gorm.DB, settings models.AlertSettings, message string) {
 	if !settings.Enabled {
 		return
 	}
@@ -45,9 +46,17 @@ func Dispatch(settings models.AlertSettings, message string) {
 		}
 
 		if err != nil {
-			log.Printf("[Alert] Failed to dispatch alert via %s: %v", settings.Provider, err)
+			msg := fmt.Sprintf("Failed to dispatch alert via %s: %v", settings.Provider, err)
+			log.Printf("[Alert] %s", msg)
+			if db != nil {
+				db.Create(&models.SystemLog{Level: "error", Category: "system", Message: msg})
+			}
 		} else {
-			log.Printf("[Alert] Successfully dispatched alert via %s.", settings.Provider)
+			msg := fmt.Sprintf("Successfully dispatched alert via %s", settings.Provider)
+			log.Printf("[Alert] %s", msg)
+			if db != nil {
+				db.Create(&models.SystemLog{Level: "info", Category: "system", Message: msg})
+			}
 		}
 	}()
 }

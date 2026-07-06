@@ -123,7 +123,7 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 				var alertSettings models.AlertSettings
 				if s.db.First(&alertSettings).Error == nil && alertSettings.Enabled && alertSettings.AlertOnDiff {
 					msg := fmt.Sprintf("⚠️ *Configuration Drift Detected*\n\n*Node:* %s\n*IP:* %s\n*Vendor:* %s\n\n*Changes:* +%d additions, -%d deletions\n*New Version:* v%d", node.Name, node.IP, node.Vendor, diffRes.Additions, diffRes.Deletions, version)
-					alert.Dispatch(alertSettings, msg)
+					alert.Dispatch(s.db, alertSettings, msg)
 				}
 			}
 		} else {
@@ -143,7 +143,7 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 			var alertSettings models.AlertSettings
 			if s.db.First(&alertSettings).Error == nil && alertSettings.Enabled && alertSettings.AlertOnFailure {
 				msg := fmt.Sprintf("✅ *Backup Recovered*\n\n*Node:* %s\n*IP:* %s\n\nBackup is now succeeding again.", node.Name, node.IP)
-				alert.Dispatch(alertSettings, msg)
+				alert.Dispatch(s.db, alertSettings, msg)
 			}
 		}
 
@@ -153,7 +153,7 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 			var alertSettings models.AlertSettings
 			if s.db.First(&alertSettings).Error == nil && alertSettings.Enabled && alertSettings.AlertOnFailure {
 				msg := fmt.Sprintf("❌ *Backup Failed*\n\n*Node:* %s\n*IP:* %s\n*Error:* %s", node.Name, node.IP, errorMessage)
-				alert.Dispatch(alertSettings, msg)
+				alert.Dispatch(s.db, alertSettings, msg)
 			}
 		} else {
 			log.Printf("[Scheduler] Backup failed for %s, but skipping alert to prevent fatigue.", node.Name)

@@ -131,25 +131,9 @@ func (h *NodeHandler) NodeDetails(c *fiber.Ctx) error {
 	}
 
 	var hasGoldenConfig bool
-	var gc models.GoldenConfig
-	
 	var gcs []models.GoldenConfig
 	if err := h.DB.Where("(vendor = ? OR vendor = '*') AND (target_group = ? OR target_group = '*')", node.Vendor, node.Group).Find(&gcs).Error; err == nil && len(gcs) > 0 {
-		bestWeight := -1
-		for _, cfg := range gcs {
-			weight := 0
-			if cfg.TargetGroup != "*" {
-				weight += 2
-			}
-			if cfg.Vendor != "*" {
-				weight += 1
-			}
-			if weight > bestWeight {
-				bestWeight = weight
-				gc = cfg
-				hasGoldenConfig = true
-			}
-		}
+		hasGoldenConfig = true
 	}
 
 	data := fiber.Map{

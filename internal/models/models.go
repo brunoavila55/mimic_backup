@@ -112,9 +112,11 @@ type SystemLog struct {
 	Details  string
 }
 
-type AlertSettings struct {
-	ID             uint   `gorm:"primarykey" json:"id"`
-	Enabled        bool   `json:"enabled"`
+type AlertRule struct {
+	gorm.Model
+	Name           string `json:"name"`
+	TargetGroup    string `json:"target_group" gorm:"default:'Global'"` // 'Global' matches all
+	Enabled        bool   `json:"enabled" gorm:"default:true"`
 	Provider       string `json:"provider"` // "webhook" or "telegram"
 	WebhookURL     string `json:"webhook_url"`
 	TelegramToken  string `json:"telegram_token"`

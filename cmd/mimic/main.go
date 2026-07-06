@@ -53,7 +53,7 @@ ________________________________________________`)
 		&models.Credential{},
 		&models.SftpSettings{},
 		&models.SystemLog{},
-		&models.AlertSettings{},
+		&models.AlertRule{},
 	)
 
 	// Ensure at least one SFTP settings record exists
@@ -61,13 +61,6 @@ ________________________________________________`)
 	db.Model(&models.SftpSettings{}).Count(&sftpCount)
 	if sftpCount == 0 {
 		db.Create(&models.SftpSettings{Port: 22})
-	}
-
-	// Ensure at least one AlertSettings record exists
-	var alertCount int64
-	db.Model(&models.AlertSettings{}).Count(&alertCount)
-	if alertCount == 0 {
-		db.Create(&models.AlertSettings{Provider: "webhook"})
 	}
 
 	// Session Store
@@ -186,18 +179,24 @@ ________________________________________________`)
 	app.Get("/settings/credentials/:id/edit", middleware.RequireAdmin(), formHandler.EditCredential)
 	app.Get("/settings/routines/new", middleware.RequireAdmin(), formHandler.NewRoutine)
 	app.Get("/settings/routines/:id/edit", middleware.RequireAdmin(), formHandler.EditRoutine)
-	app.Post("/settings/alerts/save", middleware.RequireAdmin(), formHandler.SaveAlertSettings)
+	app.Get("/settings/alerts/new", middleware.RequireAdmin(), formHandler.NewAlertRule)
+	app.Get("/settings/alerts/:id/edit", middleware.RequireAdmin(), formHandler.EditAlertRule)
 
 	// ── Settings Actions ──────────────────────────────
 	app.Post("/settings/users/save", middleware.RequireAdmin(), formHandler.SaveUser)
 	app.Post("/settings/users/save/:id", middleware.RequireAdmin(), formHandler.SaveUser)
-	app.Delete("/settings/users/:id", middleware.RequireAdmin(), formHandler.DeleteUser)
 	app.Post("/settings/credentials/save", middleware.RequireAdmin(), formHandler.SaveCredential)
 	app.Post("/settings/credentials/save/:id", middleware.RequireAdmin(), formHandler.SaveCredential)
-	app.Delete("/settings/credentials/:id", middleware.RequireAdmin(), formHandler.DeleteCredential)
 	app.Post("/settings/routines/save", middleware.RequireAdmin(), formHandler.SaveRoutine)
 	app.Post("/settings/routines/save/:id", middleware.RequireAdmin(), formHandler.SaveRoutine)
+	app.Post("/settings/alerts/save", middleware.RequireAdmin(), formHandler.SaveAlertRule)
+	app.Post("/settings/alerts/save/:id", middleware.RequireAdmin(), formHandler.SaveAlertRule)
+
+	// ── Delete Actions ────────────────────────────────
+	app.Delete("/settings/users/:id", middleware.RequireAdmin(), formHandler.DeleteUser)
+	app.Delete("/settings/credentials/:id", middleware.RequireAdmin(), formHandler.DeleteCredential)
 	app.Delete("/settings/routines/:id", middleware.RequireAdmin(), formHandler.DeleteRoutine)
+	app.Delete("/settings/alerts/:id", middleware.RequireAdmin(), formHandler.DeleteAlertRule)
 	app.Post("/settings/sftp/save", middleware.RequireAdmin(), formHandler.SaveSettings)
 	app.Post("/settings/sftp/test", middleware.RequireAdmin(), formHandler.TestSFTPConnection)
 	app.Post("/settings/profile/save", formHandler.SaveProfile)

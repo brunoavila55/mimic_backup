@@ -408,11 +408,11 @@ func (h *SettingsHandler) GetExportTab(c *fiber.Ctx) error {
 }
 
 func (h *SettingsHandler) GetAlertsTab(c *fiber.Ctx) error {
-	var settings models.AlertSettings
-	h.DB.First(&settings)
+	var rules []models.AlertRule
+	h.DB.Find(&rules)
 
 	return h.renderTab(c, "alerts", fiber.Map{
-		"Alerts": settings,
+		"Alerts": rules,
 	})
 }
 

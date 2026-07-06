@@ -1,71 +1,73 @@
 {{ define "partials/settings_alerts" }}
-<div x-data="{ provider: '{{ if .Alerts.Provider }}{{ .Alerts.Provider }}{{ else }}webhook{{ end }}' }">
-    <div class="card">
-        <div class="card-header">
-            <span class="card-title">Configuration Drift Alerts</span>
+<div>
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="settings-section-title">Configuration Drift Alerts</h2>
+            <p class="settings-section-desc">Manage alert rules to notify you when nodes change.</p>
         </div>
-        <div class="card-body">
-            <form hx-post="/settings/alerts/save" hx-swap="none" class="flex flex-col" style="gap: 16px;">
-                
-                <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" name="enabled" id="alerts_enabled" {{ if .Alerts.Enabled }}checked{{ end }} />
-                    <label for="alerts_enabled" style="font-weight: 500; font-size: 14px; margin-bottom: 0; cursor: pointer;">Enable External Notifications</label>
-                </div>
-                
-                <hr style="border: none; border-top: 1px solid var(--border); margin: 8px 0;" />
+        <a href="/settings/alerts/new" class="btn btn-primary btn-sm">
+            <i class="bx bx-plus"></i> New Rule
+        </a>
+    </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Alert Provider</label>
-                        <select name="provider" class="form-input" x-model="provider">
-                            <option value="webhook">Webhook (Generic POST)</option>
-                            <option value="telegram">Telegram Bot</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Webhook Fields -->
-                <div class="form-row" x-show="provider === 'webhook'">
-                    <div class="form-group" style="grid-column: 1 / -1;">
-                        <label class="form-label">Webhook URL {{ if .Alerts.WebhookURL }}<span class="badge badge-success">Saved</span>{{ end }}</label>
-                        <input type="url" name="webhook_url" class="form-input font-mono" placeholder="{{ if .Alerts.WebhookURL }}Leave blank to keep current{{ else }}https://...{{ end }}" />
-                        <div class="form-hint">Payload format: {"text": "Message content"}</div>
-                    </div>
-                </div>
-
-                <!-- Telegram Fields -->
-                <div class="form-row" x-show="provider === 'telegram'" style="display: none;">
-                    <div class="form-group">
-                        <label class="form-label">Bot Token {{ if .Alerts.TelegramToken }}<span class="badge badge-success">Saved</span>{{ end }}</label>
-                        <input type="text" name="telegram_token" class="form-input font-mono" placeholder="{{ if .Alerts.TelegramToken }}Leave blank to keep current{{ else }}123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11{{ end }}" />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Chat ID {{ if .Alerts.TelegramChatID }}<span class="badge badge-success">Saved</span>{{ end }}</label>
-                        <input type="text" name="telegram_chat_id" class="form-input font-mono" placeholder="{{ if .Alerts.TelegramChatID }}Leave blank to keep current{{ else }}-1001234567890{{ end }}" />
-                    </div>
-                </div>
-
-                <hr style="border: none; border-top: 1px solid var(--border); margin: 8px 0;" />
-                
-                <div style="display: flex; flex-direction: column; gap: 12px;">
-                    <label class="form-label">When to send alerts?</label>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" name="alert_on_diff" id="alert_diff" {{ if .Alerts.AlertOnDiff }}checked{{ end }} />
-                        <label for="alert_diff" style="font-size: 14px; margin: 0; cursor: pointer;">Alert on Configuration Drift (when hash changes)</label>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" name="alert_on_failure" id="alert_fail" {{ if .Alerts.AlertOnFailure }}checked{{ end }} />
-                        <label for="alert_fail" style="font-size: 14px; margin: 0; cursor: pointer;">Alert on Backup Failures (e.g., Auth failed, Timeout)</label>
-                    </div>
-                </div>
-
-                <div style="margin-top: 16px;">
-                    <button type="submit" class="btn btn-primary" onclick="this.innerHTML='<span class=\'spinner\'></span>';">
-                        Save Alert Settings
-                    </button>
-                </div>
-            </form>
-        </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Rule Name</th>
+                    <th>Target Group</th>
+                    <th>Provider</th>
+                    <th>Status</th>
+                    <th style="width: 80px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ if .Alerts }}
+                {{ range .Alerts }}
+                <tr>
+                    <td style="font-weight: 600;">{{ .Name }}</td>
+                    <td>
+                        {{ if eq .TargetGroup "*" }}
+                            <span class="badge badge-accent">All (Global)</span>
+                        {{ else }}
+                            <span class="badge badge-muted">{{ .TargetGroup }}</span>
+                        {{ end }}
+                    </td>
+                    <td>
+                        {{ if eq .Provider "telegram" }}
+                            <i class="bx bxl-telegram" style="color: #2AABEE; margin-right: 4px;"></i> Telegram
+                        {{ else }}
+                            <i class="bx bx-world" style="color: #8B5CF6; margin-right: 4px;"></i> Webhook
+                        {{ end }}
+                    </td>
+                    <td>
+                        {{ if .Enabled }}
+                            <span class="badge badge-success">Enabled</span>
+                        {{ else }}
+                            <span class="badge badge-muted">Disabled</span>
+                        {{ end }}
+                    </td>
+                    <td>
+                        <div class="action-group">
+                            <a href="/settings/alerts/{{ .ID }}/edit" class="action-btn" title="Edit">
+                                <i class="bx bx-edit-alt"></i>
+                            </a>
+                            <button hx-delete="/settings/alerts/{{ .ID }}"
+                                    hx-confirm="Delete this alert rule?"
+                                    hx-target="closest tr"
+                                    hx-swap="outerHTML"
+                                    class="action-btn danger" title="Delete">
+                                <i class="bx bx-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {{ end }}
+                {{ else }}
+                <tr><td colspan="5" class="table-empty">No alert rules configured.</td></tr>
+                {{ end }}
+            </tbody>
+        </table>
     </div>
 </div>
 {{ end }}

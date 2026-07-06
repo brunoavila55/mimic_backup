@@ -17,23 +17,23 @@ type WebhookPayload struct {
 	Text string `json:"text"`
 }
 
-func Dispatch(db *gorm.DB, settings models.AlertSettings, message string) {
-	if !settings.Enabled {
+func Dispatch(db *gorm.DB, rule models.AlertRule, message string) {
+	if !rule.Enabled {
 		return
 	}
 
 	go func() { // Async dispatch to avoid blocking the scheduler
 		var err error
-		if settings.Provider == "webhook" && settings.WebhookURL != "" {
-			url, decErr := crypto.Decrypt(settings.WebhookURL)
+		if rule.Provider == "webhook" && rule.WebhookURL != "" {
+			url, decErr := crypto.Decrypt(rule.WebhookURL)
 			if decErr != nil {
 				log.Printf("[Alert] Failed to decrypt Webhook URL: %v", decErr)
 				return
 			}
 			err = sendWebhook(url, message)
-		} else if settings.Provider == "telegram" && settings.TelegramToken != "" && settings.TelegramChatID != "" {
-			token, decErr1 := crypto.Decrypt(settings.TelegramToken)
-			chatID, decErr2 := crypto.Decrypt(settings.TelegramChatID)
+		} else if rule.Provider == "telegram" && rule.TelegramToken != "" && rule.TelegramChatID != "" {
+			token, decErr1 := crypto.Decrypt(rule.TelegramToken)
+			chatID, decErr2 := crypto.Decrypt(rule.TelegramChatID)
 			
 			if decErr1 != nil || decErr2 != nil {
 				log.Printf("[Alert] Failed to decrypt Telegram credentials")
@@ -41,18 +41,18 @@ func Dispatch(db *gorm.DB, settings models.AlertSettings, message string) {
 			}
 			err = sendTelegram(token, chatID, message)
 		} else {
-			log.Printf("[Alert] Enabled but invalid provider config. Provider=%s", settings.Provider)
+			log.Printf("[Alert] Enabled but invalid provider config. Provider=%s", rule.Provider)
 			return
 		}
 
 		if err != nil {
-			msg := fmt.Sprintf("Failed to dispatch alert via %s: %v", settings.Provider, err)
+			msg := fmt.Sprintf("Failed to dispatch alert via %s: %v", rule.Provider, err)
 			log.Printf("[Alert] %s", msg)
 			if db != nil {
 				db.Create(&models.SystemLog{Level: "error", Category: "system", Message: msg})
 			}
 		} else {
-			msg := fmt.Sprintf("Successfully dispatched alert via %s", settings.Provider)
+			msg := fmt.Sprintf("Successfully dispatched alert via %s", rule.Provider)
 			log.Printf("[Alert] %s", msg)
 			if db != nil {
 				db.Create(&models.SystemLog{Level: "info", Category: "system", Message: msg})

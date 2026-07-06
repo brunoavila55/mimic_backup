@@ -1,0 +1,87 @@
+{{ define "alert_form" }}
+<div class="page-enter">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">{{ .Title }}</h1>
+            <p class="page-desc">Define an alert rule based on node groups.</p>
+        </div>
+        <a href="/settings?tab=alerts" class="btn btn-secondary btn-sm">
+            <i class="bx bx-arrow-back"></i> Back to Settings
+        </a>
+    </div>
+
+    <div class="card" style="max-width: 600px;">
+        <div class="card-body">
+            <form action="{{ if .Alert.ID }}/settings/alerts/save/{{ .Alert.ID }}{{ else }}/settings/alerts/save{{ end }}" method="POST" x-data="{ provider: '{{ if .Alert.Provider }}{{ .Alert.Provider }}{{ else }}webhook{{ end }}' }" class="flex flex-col" style="gap: 16px;">
+                
+                <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" name="enabled" id="alerts_enabled" {{ if .Alert.Enabled }}checked{{ end }} />
+                    <label for="alerts_enabled" style="font-weight: 500; font-size: 14px; margin-bottom: 0; cursor: pointer;">Enable Rule</label>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Rule Name</label>
+                        <input type="text" name="name" class="form-input" value="{{ .Alert.Name }}" placeholder="E.g. Core Network Alerts" required />
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Target Node Group</label>
+                        <input type="text" name="target_group" class="form-input" value="{{ if .Alert.TargetGroup }}{{ .Alert.TargetGroup }}{{ else }}*{{ end }}" placeholder="Type the group name or * for all nodes" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Alert Provider</label>
+                        <select name="provider" class="form-input" x-model="provider">
+                            <option value="webhook">Webhook (Generic POST)</option>
+                            <option value="telegram">Telegram Bot</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Webhook Fields -->
+                <div class="form-row" x-show="provider === 'webhook'">
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label class="form-label">Webhook URL {{ if .Alert.WebhookURL }}<span class="badge badge-success">Saved</span>{{ end }}</label>
+                        <input type="url" name="webhook_url" class="form-input font-mono" placeholder="{{ if .Alert.WebhookURL }}Leave blank to keep current{{ else }}https://...{{ end }}" />
+                        <div class="form-hint">Payload format: {"text": "Message content"}</div>
+                    </div>
+                </div>
+
+                <!-- Telegram Fields -->
+                <div class="form-row" x-show="provider === 'telegram'" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">Bot Token {{ if .Alert.TelegramToken }}<span class="badge badge-success">Saved</span>{{ end }}</label>
+                        <input type="text" name="telegram_token" class="form-input font-mono" placeholder="{{ if .Alert.TelegramToken }}Leave blank to keep current{{ else }}123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11{{ end }}" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Chat ID {{ if .Alert.TelegramChatID }}<span class="badge badge-success">Saved</span>{{ end }}</label>
+                        <input type="text" name="telegram_chat_id" class="form-input font-mono" placeholder="{{ if .Alert.TelegramChatID }}Leave blank to keep current{{ else }}-1001234567890{{ end }}" />
+                    </div>
+                </div>
+
+                <hr style="border: none; border-top: 1px solid var(--border); margin: 8px 0;" />
+                
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <label class="form-label">When to send alerts?</label>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" name="alert_on_diff" id="alert_diff" {{ if .Alert.AlertOnDiff }}checked{{ end }} />
+                        <label for="alert_diff" style="font-size: 14px; margin: 0; cursor: pointer;">Alert on Configuration Drift (when hash changes)</label>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" name="alert_on_failure" id="alert_fail" {{ if .Alert.AlertOnFailure }}checked{{ end }} />
+                        <label for="alert_fail" style="font-size: 14px; margin: 0; cursor: pointer;">Alert on Backup Failures (e.g., Auth failed, Timeout)</label>
+                    </div>
+                </div>
+
+                <div style="margin-top: 16px;">
+                    <button type="submit" class="btn btn-primary">
+                        Save Alert Rule
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{{ end }}

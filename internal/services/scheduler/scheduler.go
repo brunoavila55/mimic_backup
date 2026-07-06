@@ -120,10 +120,13 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 				s.db.Create(&backup)
 
 				// Disparar alerta se o diff ocorreu
-				var alertSettings models.AlertSettings
-				if s.db.First(&alertSettings).Error == nil && alertSettings.Enabled && alertSettings.AlertOnDiff {
-					msg := fmt.Sprintf("⚠️ *Configuration Drift Detected*\n\n*Node:* %s\n*IP:* %s\n*Vendor:* %s\n\n*Changes:* +%d additions, -%d deletions\n*New Version:* v%d", node.Name, node.IP, node.Vendor, diffRes.Additions, diffRes.Deletions, version)
-					alert.Dispatch(s.db, alertSettings, msg)
+				var rules []models.AlertRule
+				s.db.Where("target_group = ? OR target_group = '*' OR target_group = 'Global'", node.Group).Find(&rules)
+				for _, rule := range rules {
+					if rule.Enabled && rule.AlertOnDiff {
+						msg := fmt.Sprintf("⚠️ *Configuration Drift Detected*\n\n*Node:* %s\n*IP:* %s\n*Vendor:* %s\n\n*Changes:* +%d additions, -%d deletions\n*New Version:* v%d", node.Name, node.IP, node.Vendor, diffRes.Additions, diffRes.Deletions, version)
+						alert.Dispatch(s.db, rule, msg)
+					}
 				}
 			}
 		} else {
@@ -140,20 +143,26 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 
 		// Alerta de Recovery: Se o último status foi erro, significa que o serviço recuperou
 		if node.LastStatus == "error" {
-			var alertSettings models.AlertSettings
-			if s.db.First(&alertSettings).Error == nil && alertSettings.Enabled && alertSettings.AlertOnFailure {
-				msg := fmt.Sprintf("✅ *Backup Recovered*\n\n*Node:* %s\n*IP:* %s\n\nBackup is now succeeding again.", node.Name, node.IP)
-				alert.Dispatch(s.db, alertSettings, msg)
+			var rules []models.AlertRule
+			s.db.Where("target_group = ? OR target_group = '*' OR target_group = 'Global'", node.Group).Find(&rules)
+			for _, rule := range rules {
+				if rule.Enabled && rule.AlertOnFailure {
+					msg := fmt.Sprintf("✅ *Backup Recovered*\n\n*Node:* %s\n*IP:* %s\n\nBackup is now succeeding again.", node.Name, node.IP)
+					alert.Dispatch(s.db, rule, msg)
+				}
 			}
 		}
 
 	} else {
 		// Deduplicação (State Transition): Só alerta falha se o node não estava falhando antes
 		if node.LastStatus != "error" {
-			var alertSettings models.AlertSettings
-			if s.db.First(&alertSettings).Error == nil && alertSettings.Enabled && alertSettings.AlertOnFailure {
-				msg := fmt.Sprintf("❌ *Backup Failed*\n\n*Node:* %s\n*IP:* %s\n*Error:* %s", node.Name, node.IP, errorMessage)
-				alert.Dispatch(s.db, alertSettings, msg)
+			var rules []models.AlertRule
+			s.db.Where("target_group = ? OR target_group = '*' OR target_group = 'Global'", node.Group).Find(&rules)
+			for _, rule := range rules {
+				if rule.Enabled && rule.AlertOnFailure {
+					msg := fmt.Sprintf("❌ *Backup Failed*\n\n*Node:* %s\n*IP:* %s\n*Error:* %s", node.Name, node.IP, errorMessage)
+					alert.Dispatch(s.db, rule, msg)
+				}
 			}
 		} else {
 			log.Printf("[Scheduler] Backup failed for %s, but skipping alert to prevent fatigue.", node.Name)

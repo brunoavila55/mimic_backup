@@ -762,39 +762,87 @@ func (h *FormHandler) PostSync(c *fiber.Ctx) error {
 	return c.SendStatus(200)
 }
 
-func (h *FormHandler) SaveAlertSettings(c *fiber.Ctx) error {
-	var settings models.AlertSettings
-	h.DB.First(&settings) // Pega a existente
-	
-	settings.Enabled = c.FormValue("enabled") == "on"
-	settings.Provider = c.FormValue("provider")
-	
+// ── Alert Rule Forms ───────────────────────────────────
+
+func (h *FormHandler) NewAlertRule(c *fiber.Ctx) error {
+	return c.Render("alert_form", fiber.Map{
+		"Title":        "New Alert Rule",
+		"Username":     c.Locals("username"),
+		"Avatar":       c.Locals("avatar"),
+		"Role":         c.Locals("role"),
+		"CurrentRoute": "settings",
+		"Alert":        models.AlertRule{TargetGroup: "Global", Enabled: true, Provider: "webhook"},
+	}, "base")
+}
+
+func (h *FormHandler) EditAlertRule(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var rule models.AlertRule
+	if err := h.DB.Where("id = ?", id).First(&rule).Error; err != nil {
+		return c.Status(404).SendString("Alert Rule not found")
+	}
+
+	return c.Render("alert_form", fiber.Map{
+		"Title":        "Edit Alert Rule",
+		"Username":     c.Locals("username"),
+		"Avatar":       c.Locals("avatar"),
+		"Role":         c.Locals("role"),
+		"CurrentRoute": "settings",
+		"Alert":        rule,
+	}, "base")
+}
+
+func (h *FormHandler) SaveAlertRule(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var rule models.AlertRule
+
+	if id != "" {
+		h.DB.Where("id = ?", id).First(&rule)
+	}
+
+	rule.Name = c.FormValue("name")
+	rule.TargetGroup = c.FormValue("target_group")
+	rule.Enabled = c.FormValue("enabled") == "on"
+	rule.Provider = c.FormValue("provider")
+
 	whURL := c.FormValue("webhook_url")
 	if whURL != "" {
 		enc, _ := crypto.Encrypt(whURL)
-		settings.WebhookURL = enc
+		rule.WebhookURL = enc
 	}
 
 	tToken := c.FormValue("telegram_token")
 	if tToken != "" {
 		enc, _ := crypto.Encrypt(tToken)
-		settings.TelegramToken = enc
+		rule.TelegramToken = enc
 	}
 
 	tChatID := c.FormValue("telegram_chat_id")
 	if tChatID != "" {
 		enc, _ := crypto.Encrypt(tChatID)
-		settings.TelegramChatID = enc
+		rule.TelegramChatID = enc
 	}
 
-	settings.AlertOnDiff = c.FormValue("alert_on_diff") == "on"
-	settings.AlertOnFailure = c.FormValue("alert_on_failure") == "on"
+	rule.AlertOnDiff = c.FormValue("alert_on_diff") == "on"
+	rule.AlertOnFailure = c.FormValue("alert_on_failure") == "on"
 
-	if err := h.DB.Save(&settings).Error; err != nil {
-		c.Set("HX-Trigger", fmt.Sprintf(`{"showNotification": {"message": "Failed to save alerts: %v", "type": "error"}}`, err))
+	if err := h.DB.Save(&rule).Error; err != nil {
+		c.Set("HX-Trigger", fmt.Sprintf(`{"showNotification": {"message": "Failed to save rule: %v", "type": "error"}}`, err))
 		return c.SendStatus(500)
 	}
 
-	c.Set("HX-Trigger", `{"showNotification": {"message": "Alert settings saved successfully", "type": "success"}}`)
-	return c.SendStatus(200)
+	c.Set("HX-Trigger", `{"showNotification": {"message": "Alert rule saved successfully", "type": "success"}}`)
+	return c.Redirect("/settings/alerts")
+}
+
+func (h *FormHandler) DeleteAlertRule(c *fiber.Ctx) error {
+	id := c.Params("id")
+	h.DB.Where("id = ?", id).Delete(&models.AlertRule{})
+
+	if c.Get("HX-Request") == "true" {
+		c.Set("HX-Trigger", `{"showNotification": {"message": "Alert rule deleted", "type": "success"}}`)
+		return c.SendStatus(200)
+	}
+
+	return c.Redirect("/settings/alerts")
 }

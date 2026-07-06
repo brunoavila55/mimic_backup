@@ -997,6 +997,7 @@ func (h *FormHandler) SaveSecurityRule(c *fiber.Ctx) error {
 			if err := h.DB.Where("node_id = ? AND status = 'success'", node.ID).Order("version desc").First(&lastBackup).Error; err == nil {
 				audit.RunAudit(h.DB, &node, lastBackup.Version, lastBackup.Config)
 			}
+			time.Sleep(100 * time.Millisecond) // Throttle DB load
 		}
 	}(rule.Vendor)
 
@@ -1017,6 +1018,7 @@ func (h *FormHandler) DeleteSecurityRule(c *fiber.Ctx) error {
 			if err := h.DB.Where("node_id = ? AND status = 'success'", node.ID).Order("version desc").First(&lastBackup).Error; err == nil {
 				audit.RunAudit(h.DB, &node, lastBackup.Version, lastBackup.Config)
 			}
+			time.Sleep(100 * time.Millisecond) // Throttle DB load
 		}
 	}()
 

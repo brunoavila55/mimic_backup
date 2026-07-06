@@ -964,6 +964,7 @@ func (h *FormHandler) SaveSecurityRule(c *fiber.Ctx) error {
 		rule.Vendor = "*"
 	}
 	rule.RegexPattern = c.FormValue("regex_pattern")
+	rule.MatchType = c.FormValue("match_type")
 	
 	if _, err := regexp.Compile(rule.RegexPattern); err != nil {
 		c.Set("HX-Trigger", fmt.Sprintf(`{"showNotification": {"message": "Invalid regex pattern: %v", "type": "error"}}`, err))

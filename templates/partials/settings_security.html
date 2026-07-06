@@ -40,6 +40,13 @@
                                 {{ end }}
                             </td>
                             <td>
+                                <div style="margin-bottom: 4px;">
+                                    {{ if eq .MatchType "not_contains" }}
+                                        <span class="badge badge-warning" style="font-size: 10px; padding: 2px 4px;">MUST NOT BE MISSING (Negative Match)</span>
+                                    {{ else }}
+                                        <span class="badge badge-info" style="font-size: 10px; padding: 2px 4px;">MUST NOT BE PRESENT (Positive Match)</span>
+                                    {{ end }}
+                                </div>
                                 <code style="font-size: 11px; background: var(--bg-body); padding: 4px; border-radius: 4px; color: var(--accent);">{{ .RegexPattern }}</code>
                             </td>
                             <td style="text-align: center;">

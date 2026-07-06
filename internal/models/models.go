@@ -138,6 +138,7 @@ type SecurityRule struct {
 	Description  string `json:"description"`
 	Vendor       string `json:"vendor" gorm:"default:'*'"` // '*' for any vendor
 	RegexPattern string `json:"regex_pattern"`
+	MatchType    string `json:"match_type" gorm:"default:'contains'"`
 	Penalty      int    `json:"penalty" gorm:"default:10"`
 	Severity     string `json:"severity" gorm:"default:'Warning'"` // Critical, Warning, Info
 }

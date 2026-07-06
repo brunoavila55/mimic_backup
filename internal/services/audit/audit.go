@@ -25,7 +25,16 @@ func RunAudit(db *gorm.DB, node *models.Node, backupVersion int, configText stri
 			continue
 		}
 
-		if re.MatchString(configText) {
+		matched := re.MatchString(configText)
+		triggerViolation := false
+
+		if rule.MatchType == "not_contains" && !matched {
+			triggerViolation = true
+		} else if (rule.MatchType == "contains" || rule.MatchType == "") && matched {
+			triggerViolation = true
+		}
+
+		if triggerViolation {
 			score -= rule.Penalty
 			violations = append(violations, models.SecurityViolation{
 				NodeID:        node.ID,

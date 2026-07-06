@@ -1,150 +1,150 @@
-# Contexto do Projeto: Mimic Backup Systems v0.1.X
+# Project Context: Mimic Backup Systems v0.5.X
 
-Este documento serve como referência centralizada para desenvolvedores e agentes de IA entenderem o estado atual, a arquitetura e as decisões do projeto.
+This document serves as a centralized reference for developers and AI agents to understand the current state, architecture, and project decisions.
 
-## 📌 Visão Geral
+## 📌 Overview
 
-O **Mimic** é um sistema de automação para backup de equipamentos de rede (MikroTik, Cisco, Huawei, Juniper). Conecta-se via SSH, coleta a configuração, normaliza o texto e armazena versões no banco de dados com hash SHA-256 para deduplicação.
+**Mimic** is an automation system for backing up network equipment (MikroTik, Cisco, Huawei, Juniper). It connects via SSH, collects configurations, normalizes the text, and stores versions in the database with a SHA-256 hash for deduplication.
 
-## 🏗️ Arquitetura
+## 🏗️ Architecture
 
-- **Backend**: Go 1.25 + framework **Fiber v2**.
-- **Frontend**: **Go Templates** renderizados no servidor + **HTMX** para interatividade reativa + **Alpine.js** para estados de UI (modais, menus). Toda a interface e os textos estão em **Inglês** por padrão.
-- **Estilização**: CSS customizado com design system neutro/escuro (Inter + JetBrains Mono). Sem frameworks CSS externos.
-- **Versionamento**: O sistema conta dinamicamente o número de commits (`git rev-list`) no boot e injeta a versão (`v0.1.X`) em todos os templates via a função `AppVersion`.
-- **ORM**: **GORM** com driver PostgreSQL.
-- **Concorrência**: Goroutines com Worker Pool para backups paralelos.
-- **Criptografia**: AES-GCM 256-bit para senhas de rede e credenciais SSH (pacote `pkg/crypto`).
-- **Sessão**: Fiber session middleware com cookies + bcrypt para autenticação.
+- **Backend**: Go 1.25 + **Fiber v2** framework.
+- **Frontend**: **Go Templates** rendered on the server + **HTMX** for reactive interactivity + **Alpine.js** for UI states (modals, mobile menus). The entire interface and text are in **English**.
+- **Styling**: Custom CSS with a neutral/dark design system (Inter + JetBrains Mono). Mobile responsive. No external CSS frameworks.
+- **Versioning**: The system dynamically counts the number of commits (`git rev-list`) on boot and injects the version (`v0.5.X`) into all templates via the `AppVersion` function.
+- **ORM**: **GORM** with PostgreSQL driver.
+- **Concurrency**: Goroutines with a Worker Pool for parallel backups.
+- **Cryptography**: AES-GCM 256-bit for network passwords and SSH credentials (`pkg/crypto` package).
+- **Session**: Fiber session middleware with cookies + bcrypt for authentication.
 
-## 📂 Estrutura de Pastas
+## 📂 Folder Structure
 
 ```
-cmd/mimic/main.go          # Ponto de entrada, rotas, middleware, scheduler
+cmd/mimic/main.go          # Entry point, routes, middleware, scheduler
 internal/
   handlers/
     auth.go                    # Login, logout (AuthHandler)
-    handlers.go                # Dashboard, Nodes, Settings hub (DashboardHandler, NodeHandler, SettingsHandler)
-    forms.go                   # CRUD completo: nodes, users, credentials, routines, SFTP, profile, export (FormHandler)
-    setup.go                   # Setup wizard: confirmação DB + criação de superuser (SetupHandler)
+    handlers.go                # Dashboard, Nodes, Settings hub
+    forms.go                   # Full CRUD: nodes, users, credentials, routines, SFTP, profile, export
+    setup.go                   # Setup wizard: DB confirmation + superuser creation
   middleware/
-    auth.go                    # RequireSetup (primeiro acesso) + RequireAuth (sessão)
+    auth.go                    # RequireSetup (first access) + RequireAuth (session)
   models/
     models.go                  # User, Node, NodeBackup, BackupRoutine, AccessAgent, Credential, SftpSettings, SystemLog
   services/
-    ssh/                       # Motor SSH nativo
-      vendors/                 # Drivers por fabricante (mikrotik, cisco, etc.)
-    scheduler/                 # Agendador interno (verifica NextBackupAt a cada 1 min)
-    sftp/                      # Exportação de backups para servidor SFTP
+    ssh/                       # Native SSH Engine (Interactive Shell + PTY)
+      vendors/                 # Per-vendor drivers (mikrotik, cisco, etc.)
+    scheduler/                 # Internal scheduler (checks NextBackupAt every 1 min)
+    sftp/                      # Backup export to SFTP server
 pkg/crypto/                    # AES-GCM encrypt/decrypt + bcrypt helpers
-pkg/diff/                      # Algoritmo de diff de texto puro em Go (Myers-like LCS)
+pkg/diff/                      # Pure Go text diff algorithm (Myers-like LCS)
 templates/                     # Go Templates (.html)
-  base.html                    # Layout principal (sidebar + header + content)
-  login.html                   # Página de login (standalone)
-  setup_database.html          # Setup step 1 — confirmação DB
-  setup_superuser.html         # Setup step 2 — criação de admin
-  dashboard.html               # Dashboard com stats
-  node_list.html               # Lista de nodes com busca
-  node_details.html            # Detalhes + histórico de backups do node
-  node_form.html               # Criar/editar node
-  node_confirm_delete.html     # Confirmação de exclusão
-  settings.html                # Hub de configurações com tabs verticais
-  credential_form.html         # Criar/editar credencial SSH
-  user_form.html               # Criar/editar usuário
-  routine_form.html            # Criar/editar rotina
-  partials/                    # Fragmentos HTMX
-    dashboard_stats.html       # Stats + atividade recente
-    node_table.html            # Tabela de nodes
-    node_table_body.html       # Linhas da tabela
-    backup_view.html           # Visualização de backup (modal)
-    diff_view.html             # Visualização de diff com HTMX e modal
-    diff_body.html             # Estrutura tabular contendo diferenças (added, removed, unchanged)
-    settings_users.html        # Tab: usuários
-    settings_credentials.html  # Tab: credenciais
-    settings_routines.html     # Tab: rotinas
-    settings_sftp.html         # Tab: configuração SFTP
-    settings_export.html       # Tab: exportação
-    settings_logs.html         # Tab: logs do sistema
-    settings_profile.html      # Tab: perfil pessoal
-static/css/style.css           # Design system completo (~780 linhas)
+  base.html                    # Main layout (sidebar + header + content + mobile overlay)
+  login.html                   # Login page (standalone)
+  setup_database.html          # Setup step 1 — DB confirmation
+  setup_superuser.html         # Setup step 2 — Admin creation
+  dashboard.html               # Dashboard with stats
+  node_list.html               # Node list with search
+  node_details.html            # Node details + backup history
+  node_form.html               # Create/edit node
+  node_confirm_delete.html     # Deletion confirmation
+  settings.html                # Settings hub with vertical tabs
+  credential_form.html         # Create/edit SSH credential
+  user_form.html               # Create/edit user
+  routine_form.html            # Create/edit routine
+  partials/                    # HTMX fragments
+    dashboard_stats.html       # Stats + recent activity
+    node_table.html            # Node table
+    node_table_body.html       # Table rows
+    backup_view.html           # Backup viewer (modal)
+    diff_view.html             # Diff viewer with HTMX and modal
+    diff_body.html             # Tabular structure containing differences
+    settings_users.html        # Tab: users
+    settings_credentials.html  # Tab: credentials
+    settings_routines.html     # Tab: routines
+    settings_sftp.html         # Tab: SFTP config
+    settings_export.html       # Tab: export
+    settings_logs.html         # Tab: system logs
+    settings_profile.html      # Tab: personal profile
+static/css/style.css           # Full design system (mobile responsive)
 ```
 
 ## 📊 Models (GORM)
 
-| Model | Descrição |
-|-------|-----------|
-| `User` | Usuários do sistema (username, email, password bcrypt, role, avatar) |
-| `Node` | Equipamento de rede (nome, IP, vendor, credenciais, agendamento, status) |
-| `NodeBackup` | Versão de backup (config, hash SHA-256, status, versão incremental) |
-| `BackupRoutine` | Agendamento reutilizável (frequência, horário, dia da semana) |
-| `Credential` | Credencial SSH reutilizável (nome, username, senha AES-GCM, porta) |
-| `AccessAgent` | Legado — agente de acesso (mantido para compatibilidade) |
-| `SftpSettings` | Configuração do servidor SFTP para exportação |
-| `SystemLog` | Log de atividade do sistema (nível, categoria, mensagem) |
+| Model | Description |
+|-------|-------------|
+| `User` | System users (username, email, bcrypt password, role, avatar) |
+| `Node` | Network equipment (name, IP, vendor, credentials, schedule, status) |
+| `NodeBackup` | Backup version (config, SHA-256 hash, status, incremental version) |
+| `BackupRoutine` | Reusable schedule (frequency, time, day of week) |
+| `Credential` | Reusable SSH credential (name, username, AES-GCM password, port) |
+| `AccessAgent` | Legacy — access agent (kept for compatibility) |
+| `SftpSettings` | SFTP server configuration for export |
+| `SystemLog` | System activity log (level, category, message) |
 
-## ⚙️ Fluxo de Funcionamento
+## ⚙️ Operation Flow
 
-### Primeiro Acesso (Setup Wizard)
-1. App inicia → `AutoMigrate` cria as tabelas → `RequireSetup` detecta 0 usuários.
-2. Redireciona para `/setup` — confirmação visual do banco de dados.
-3. Redireciona para `/setup/superuser` — formulário de criação do administrador.
-4. Após criação, redireciona para `/login`.
+### First Access (Setup Wizard)
+1. App starts → `AutoMigrate` creates tables → `RequireSetup` detects 0 users.
+2. Redirects to `/setup` — visual database confirmation.
+3. Redirects to `/setup/superuser` — admin creation form.
+4. After creation, redirects to `/login`.
 
-### Operação Normal
-1. **Cadastro**: Usuário cria um `Node` com IP, vendor e credenciais (diretas ou via `Credential`).
-2. **Criptografia**: Senhas criptografadas com `SECRET_KEY` (auto-gerada e persistida em `.mimic_secret` caso não exista no ambiente) via AES-GCM antes de salvar no Postgres.
-3. **Segurança**: Consultas ao banco de dados usam queries parametrizadas (`Where("id = ?", id)`) para prevenir SQL Injection (auditado via Snyk).
-4. **Agendamento**: O `Scheduler` verifica `NextBackupAt` a cada minuto.
-5. **Execução**: Goroutine abre SSH, identifica o driver em `ssh/vendors`, executa comando de coleta, normaliza via RegEx, salva `NodeBackup` se o hash SHA-256 mudou.
-6. **Exportação**: Usuário pode enviar backups para SFTP (individual ou sync em massa).
+### Normal Operation
+1. **Registration**: User creates a `Node` with IP, vendor, and credentials (direct or via `Credential`).
+2. **Cryptography**: Passwords encrypted with `SECRET_KEY` (auto-generated and persisted in `.mimic_secret` if not in env) via AES-GCM before saving to Postgres.
+3. **Security**: DB queries use parameterized queries (`Where("id = ?", id)`) to prevent SQL Injection.
+4. **Scheduling**: The `Scheduler` checks `NextBackupAt` every minute.
+5. **Execution**: Goroutine opens an Interactive SSH Shell via PTY, identifies the driver in `ssh/vendors`, executes preparation commands (to bypass pagination like `--More--`), executes collection command, normalizes via RegEx, saves `NodeBackup` if the SHA-256 hash changed.
+6. **Export**: User can send backups to SFTP (individual or bulk sync).
 
 ## 🔐 Middleware
 
-| Middleware | Descrição |
-|-----------|-----------|
-| `RequireSetup` | Redireciona para `/setup` se não há usuários. Cacheia o resultado após sucesso. |
-| `RequireAuth` | Verifica sessão autenticada. Para HTMX, retorna header `HX-Redirect`. |
+| Middleware | Description |
+|-----------|-------------|
+| `RequireSetup` | Redirects to `/setup` if no users exist. Caches result on success. |
+| `RequireAuth` | Checks authenticated session. For HTMX, returns `HX-Redirect` header. |
 
-**Ordem**: Static Files → RequireSetup → Setup/Auth Routes → RequireAuth → Protected Routes.
+**Order**: Static Files → RequireSetup → Setup/Auth Routes → RequireAuth → Protected Routes.
 
 ## 🎨 Design System
 
-- **Tema**: Dark neutro profissional (sem glassmorphism, gradients ou glow).
-- **Paleta**: `#0f1117` (bg) → `#232730` (hover), accent `#3b82f6` (azul).
-- **Tipografia**: Inter (UI) + JetBrains Mono (IPs, configs).
-- **Componentes**: `.card`, `.btn`, `.form-input`, `.table-wrap`, `.badge`, `.stat-card`, `.settings-layout`.
-- **Layout**: Sidebar fixa (240px) + main content scrollable.
+- **Theme**: Professional neutral dark (no glassmorphism, gradients, or glow).
+- **Palette**: `#0f1117` (bg) → `#232730` (hover), accent `#3b82f6` (blue).
+- **Typography**: Inter (UI) + JetBrains Mono (IPs, configs).
+- **Components**: `.card`, `.btn`, `.form-input`, `.table-wrap`, `.badge`, `.stat-card`, `.settings-layout`.
+- **Layout**: Fixed sidebar (240px) + main content scrollable. Mobile responsive with off-canvas hamburger menu and swipeable tables.
 
-## 🔌 Hub de Configurações
+## 🔌 Settings Hub
 
-A rota `/settings` é um hub unificado com **7 tabs** navegáveis via HTMX:
+The `/settings` route is a unified hub with **7 tabs** navigable via HTMX:
 
-| Tab | Rota | Conteúdo |
-|-----|------|----------|
-| Usuários | `/settings/users` | CRUD de usuários + papéis (Admin/Viewer) |
-| Credenciais | `/settings/credentials` | CRUD de credenciais SSH reutilizáveis |
-| Rotinas | `/settings/routines` | CRUD de agendamentos de backup |
-| SFTP | `/settings/sftp` | Configuração do servidor SFTP |
-| Exportar | `/settings/export` | Sync em massa + status por node |
-| Logs | `/settings/logs` | Últimos 200 logs do sistema |
-| Meu Perfil | `/settings/profile` | Editar username, email, senha |
+| Tab | Route | Content |
+|-----|-------|---------|
+| Users | `/settings/users` | Users CRUD + roles (Admin/Viewer) |
+| Credentials | `/settings/credentials` | Reusable SSH credentials CRUD |
+| Routines | `/settings/routines` | Backup schedules CRUD |
+| SFTP | `/settings/sftp` | SFTP server configuration |
+| Export | `/settings/export` | Bulk sync + per node status |
+| Logs | `/settings/logs` | Last 200 system logs |
+| Profile | `/settings/profile` | Edit username, email, password |
 
-Cada tab usa `hx-get` para carregar parciais sem reload. Navegação direta via URL também funciona (full page render).
+Each tab uses `hx-get` to load partials without reloading. Direct URL navigation also works (full page render).
 
-## 🚀 Como Continuar o Desenvolvimento
+## 🚀 How to Continue Development
 
-- **Novos Vendors**: Crie um novo arquivo em `internal/services/ssh/vendors/` implementando a interface `Driver` e registrando-o no `init()`.
-- **Novas Páginas**: Crie template em `templates/`, handler em `internal/handlers/`, rota em `main.go`.
-- **Novas Tabs de Settings**: Crie partial em `templates/partials/settings_*.html`, método em `SettingsHandler`, rota GET em `main.go`, e adicione o link no `settings.html`.
-- **Template Functions**: `seq(start, end)` e `deref(*uint)` estão registradas no engine.
+- **New Vendors**: Create a new file in `internal/services/ssh/vendors/` implementing the `Driver` interface (with `GetPrepCommands` and `GetBackupCommand`) and registering it in `init()`.
+- **New Pages**: Create template in `templates/`, handler in `internal/handlers/`, route in `main.go`.
+- **New Settings Tabs**: Create partial in `templates/partials/settings_*.html`, method in `SettingsHandler`, GET route in `main.go`, and add the link in `settings.html`.
+- **Template Functions**: `seq(start, end)` and `deref(*uint)` are registered in the engine.
 
-## ⚠️ Observações
+## ⚠️ Notes
 
-- A chave `SECRET_KEY` é obrigatória para criptografia. Se não for definida via variável de ambiente, o sistema gerará uma de forma segura no primeiro boot e salvará em `.mimic_secret`.
-- `AutoMigrate` roda no startup — adicionar campos em models é seguro (nunca remove colunas).
-- Scripts legados (`translate.go`, `fix_ui.go`, etc) que causavam colisões de package `main` foram permanentemente removidos.
-- O `AccessAgent` é legado; novos desenvolvimentos devem usar `Credential`.
-- Instalação funciona com binário Go único.
+- The `SECRET_KEY` is mandatory for encryption. If not defined via env var, the system generates one securely on first boot and saves it in `.mimic_secret`.
+- `AutoMigrate` runs on startup — adding fields to models is safe (it never drops columns).
+- Legacy scripts (`translate.go`, `fix_ui.go`, etc) that caused `main` package collisions were permanently removed.
+- `AccessAgent` is legacy; new developments should use `Credential`.
+- Installation works with a single Go binary.
 
 ---
-*Documento atualizado em 20 de maio de 2026.*
+*Document updated on July 6, 2026.*

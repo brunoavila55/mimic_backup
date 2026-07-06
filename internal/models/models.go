@@ -73,7 +73,9 @@ type Node struct {
 	SSHPublicFingerprint string
 	SSHPrivateKey        string
 	AlertSnoozeUntil     *time.Time `gorm:"index"`
+	SecurityScore        int        `gorm:"default:100;index"`
 	Backups              []NodeBackup `gorm:"foreignKey:NodeID"`
+	Violations           []SecurityViolation `gorm:"foreignKey:NodeID"`
 }
 
 func (n *Node) IsSnoozed() bool {
@@ -128,4 +130,23 @@ type AlertRule struct {
 	TelegramChatID string `json:"telegram_chat_id"`
 	AlertOnDiff    bool   `json:"alert_on_diff"`
 	AlertOnFailure bool   `json:"alert_on_failure"`
+}
+
+type SecurityRule struct {
+	gorm.Model
+	Name         string `json:"name"`
+	Description  string `json:"description"`
+	Vendor       string `json:"vendor" gorm:"default:'*'"` // '*' for any vendor
+	RegexPattern string `json:"regex_pattern"`
+	Penalty      int    `json:"penalty" gorm:"default:10"`
+	Severity     string `json:"severity" gorm:"default:'Warning'"` // Critical, Warning, Info
+}
+
+type SecurityViolation struct {
+	gorm.Model
+	NodeID        uint
+	Node          Node
+	RuleID        uint
+	Rule          SecurityRule
+	BackupVersion int
 }

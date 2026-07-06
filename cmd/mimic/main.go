@@ -54,6 +54,8 @@ ________________________________________________`)
 		&models.SftpSettings{},
 		&models.SystemLog{},
 		&models.AlertRule{},
+		&models.SecurityRule{},
+		&models.SecurityViolation{},
 	)
 
 	// Ensure at least one SFTP settings record exists
@@ -182,6 +184,8 @@ ________________________________________________`)
 	app.Get("/settings/routines/:id/edit", middleware.RequireAdmin(), formHandler.EditRoutine)
 	app.Get("/settings/alerts/new", middleware.RequireAdmin(), formHandler.NewAlertRule)
 	app.Get("/settings/alerts/:id/edit", middleware.RequireAdmin(), formHandler.EditAlertRule)
+	app.Get("/settings/security/new", middleware.RequireAdmin(), formHandler.NewSecurityRule)
+	app.Get("/settings/security/:id/edit", middleware.RequireAdmin(), formHandler.EditSecurityRule)
 
 	// ── Settings Actions ──────────────────────────────
 	app.Post("/settings/users/save", middleware.RequireAdmin(), formHandler.SaveUser)
@@ -193,12 +197,15 @@ ________________________________________________`)
 	app.Post("/settings/alerts/save", middleware.RequireAdmin(), formHandler.SaveAlertRule)
 	app.Post("/settings/alerts/save/:id", middleware.RequireAdmin(), formHandler.SaveAlertRule)
 	app.Post("/settings/alerts/test", middleware.RequireAdmin(), formHandler.TestAlertRule)
+	app.Post("/settings/security/save", middleware.RequireAdmin(), formHandler.SaveSecurityRule)
+	app.Post("/settings/security/save/:id", middleware.RequireAdmin(), formHandler.SaveSecurityRule)
 
 	// ── Delete Actions ────────────────────────────────
 	app.Delete("/settings/users/:id", middleware.RequireAdmin(), formHandler.DeleteUser)
 	app.Delete("/settings/credentials/:id", middleware.RequireAdmin(), formHandler.DeleteCredential)
 	app.Delete("/settings/routines/:id", middleware.RequireAdmin(), formHandler.DeleteRoutine)
 	app.Delete("/settings/alerts/:id", middleware.RequireAdmin(), formHandler.DeleteAlertRule)
+	app.Delete("/settings/security/:id", middleware.RequireAdmin(), formHandler.DeleteSecurityRule)
 	app.Post("/settings/sftp/save", middleware.RequireAdmin(), formHandler.SaveSettings)
 	app.Post("/settings/sftp/test", middleware.RequireAdmin(), formHandler.TestSFTPConnection)
 	app.Post("/settings/profile/save", formHandler.SaveProfile)

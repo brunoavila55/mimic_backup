@@ -29,6 +29,15 @@
             {{ end }}
         </td>
         <td>
+            {{ if eq .SecurityScore 100 }}
+                <span class="badge badge-success" style="font-weight: 600;"><i class='bx bx-shield-quarter'></i> 100</span>
+            {{ else if gt .SecurityScore 70 }}
+                <span class="badge badge-warning" style="font-weight: 600;"><i class='bx bx-shield-quarter'></i> {{ .SecurityScore }}</span>
+            {{ else }}
+                <span class="badge badge-danger" style="font-weight: 600;"><i class='bx bxs-shield-x'></i> {{ .SecurityScore }}</span>
+            {{ end }}
+        </td>
+        <td>
             {{ if .LastBackupAt }}
                 <span class="text-secondary">{{ .LastBackupAt.Format "02/01/2006 15:04" }}</span>
             {{ else }}

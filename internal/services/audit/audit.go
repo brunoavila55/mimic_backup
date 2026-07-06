@@ -1,0 +1,48 @@
+package audit
+
+import (
+	"mimic/internal/models"
+	"regexp"
+
+	"gorm.io/gorm"
+)
+
+// RunAudit evaluates the configuration against all applicable security rules and calculates a security score.
+func RunAudit(db *gorm.DB, node *models.Node, backupVersion int, configText string) {
+	var rules []models.SecurityRule
+	db.Where("vendor = ? OR vendor = '*'", node.Vendor).Find(&rules)
+
+	// Clear previous violations for this node
+	// Unscoped because we don't want soft-deletes lingering around for violations (or at least, we hard delete them to keep it clean)
+	db.Unscoped().Where("node_id = ?", node.ID).Delete(&models.SecurityViolation{})
+
+	var violations []models.SecurityViolation
+	score := 100
+
+	for _, rule := range rules {
+		re, err := regexp.Compile(rule.RegexPattern)
+		if err != nil || rule.RegexPattern == "" {
+			continue
+		}
+
+		if re.MatchString(configText) {
+			score -= rule.Penalty
+			violations = append(violations, models.SecurityViolation{
+				NodeID:        node.ID,
+				RuleID:        rule.ID,
+				BackupVersion: backupVersion,
+			})
+		}
+	}
+
+	if score < 0 {
+		score = 0
+	}
+
+	node.SecurityScore = score
+	db.Save(node)
+
+	for _, v := range violations {
+		db.Create(&v)
+	}
+}

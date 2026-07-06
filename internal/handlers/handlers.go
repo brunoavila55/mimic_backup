@@ -126,7 +126,7 @@ func (h *NodeHandler) NodeDetails(c *fiber.Ctx) error {
 	var node models.Node
 	if err := h.DB.Preload("Backups", func(db *gorm.DB) *gorm.DB {
 		return db.Order("version desc")
-	}).Preload("Credential").Where("id = ?", id).First(&node).Error; err != nil {
+	}).Preload("Credential").Preload("Violations.Rule").Where("id = ?", id).First(&node).Error; err != nil {
 		return c.Status(404).SendString("Node not found")
 	}
 
@@ -331,6 +331,8 @@ func (h *SettingsHandler) renderTab(c *fiber.Ctx, tab string, data fiber.Map) er
 		"sftp":        "SFTP Configuration",
 		"export":      "Export",
 		"logs":        "System Logs",
+		"alerts":      "Alerting Rules",
+		"security":    "Security Auditing",
 		"profile":     "My Profile",
 	}
 
@@ -364,6 +366,15 @@ func (h *SettingsHandler) GetUsersTab(c *fiber.Ctx) error {
 
 	return h.renderTab(c, "users", fiber.Map{
 		"Users": users,
+	})
+}
+
+func (h *SettingsHandler) GetSecurityTab(c *fiber.Ctx) error {
+	var rules []models.SecurityRule
+	h.DB.Order("vendor asc, name asc").Find(&rules)
+
+	return h.renderTab(c, "security", fiber.Map{
+		"Rules": rules,
 	})
 }
 

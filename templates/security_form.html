@@ -1,0 +1,61 @@
+{{ define "content" }}
+<div class="page-header">
+    <div style="display: flex; align-items: center; gap: 16px;">
+        <a href="/settings/security" class="action-btn" title="Back to Settings">
+            <i class="bx bx-arrow-back" style="font-size: 20px;"></i>
+        </a>
+        <h1 class="page-title">{{ .Title }}</h1>
+    </div>
+</div>
+
+<div class="card" style="max-width: 600px;">
+    <div class="card-body">
+        <form action="{{ if .Rule }}{{ if .Rule.ID }}/settings/security/save/{{ .Rule.ID }}{{ else }}/settings/security/save{{ end }}{{ else }}/settings/security/save{{ end }}" method="POST" class="flex flex-col" style="gap: 16px;">
+            <div class="form-group">
+                <label>Rule Name</label>
+                <input type="text" name="name" class="form-control" value="{{ if .Rule }}{{ .Rule.Name }}{{ end }}" required placeholder="e.g. Public SNMP Community">
+            </div>
+
+            <div class="form-group">
+                <label>Description</label>
+                <input type="text" name="description" class="form-control" value="{{ if .Rule }}{{ .Rule.Description }}{{ end }}" placeholder="e.g. Detects if SNMP community is set to public">
+            </div>
+
+            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label>Vendor Filter</label>
+                    <input type="text" name="vendor" class="form-control" value="{{ if .Rule }}{{ .Rule.Vendor }}{{ else }}*{{ end }}" placeholder="*" required>
+                    <div class="form-help">Use * to apply to all vendors.</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Severity</label>
+                    <select name="severity" class="form-control" required>
+                        <option value="Info" {{ if .Rule }}{{ if eq .Rule.Severity "Info" }}selected{{ end }}{{ end }}>Info</option>
+                        <option value="Warning" {{ if .Rule }}{{ if eq .Rule.Severity "Warning" }}selected{{ end }}{{ else }}selected{{ end }}>Warning</option>
+                        <option value="Critical" {{ if .Rule }}{{ if eq .Rule.Severity "Critical" }}selected{{ end }}{{ end }}>Critical</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Regex Pattern</label>
+                <input type="text" name="regex_pattern" class="form-control" value="{{ if .Rule }}{{ .Rule.RegexPattern }}{{ end }}" required placeholder="e.g. snmp-server community public\s+RO" style="font-family: monospace;">
+                <div class="form-help">The regex will be evaluated against the raw configuration text.</div>
+            </div>
+
+            <div class="form-group">
+                <label>Score Penalty</label>
+                <input type="number" name="penalty" class="form-control" value="{{ if .Rule }}{{ .Rule.Penalty }}{{ else }}10{{ end }}" required min="0" max="100">
+                <div class="form-help">Amount to deduct from the node's Security Score (0-100) if matched.</div>
+            </div>
+
+            <div style="margin-top: 16px;">
+                <button type="submit" class="btn btn-primary">
+                    Save Security Rule
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{{ end }}

@@ -6,6 +6,7 @@ import (
 	"log"
 	"mimic/internal/models"
 	"mimic/internal/services/alert"
+	"mimic/internal/services/audit"
 	"mimic/internal/services/sftp"
 	"mimic/internal/services/ssh"
 	"mimic/pkg/diff"
@@ -145,6 +146,9 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 			}
 			s.db.Create(&backup)
 		}
+
+		// Calculate Security & Compliance Score
+		audit.RunAudit(s.db, node, version, config)
 
 		// Alerta de Recovery: Se o último status foi erro, significa que o serviço recuperou
 		if node.LastStatus == "error" {

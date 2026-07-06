@@ -42,6 +42,62 @@
             <div class="detail-value">{{ if .Node.Enabled }}Yes{{ else }}No{{ end }}</div>
         </div>
     </div>
+    
+    <!-- Security & Compliance Card -->
+    <div class="card mb-4">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span class="card-title"><i class='bx bx-check-shield'></i> Security & Compliance</span>
+            <div>
+                {{ if eq .Node.SecurityScore 100 }}
+                    <span class="badge badge-success" style="font-size: 16px; padding: 4px 8px;">Score: 100</span>
+                {{ else if gt .Node.SecurityScore 70 }}
+                    <span class="badge badge-warning" style="font-size: 16px; padding: 4px 8px;">Score: {{ .Node.SecurityScore }}</span>
+                {{ else }}
+                    <span class="badge badge-danger" style="font-size: 16px; padding: 4px 8px;">Score: {{ .Node.SecurityScore }}</span>
+                {{ end }}
+            </div>
+        </div>
+        <div class="card-body">
+            {{ if .Node.Violations }}
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Rule</th>
+                                <th>Severity / Penalty</th>
+                                <th>First Detected Version</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{ range .Node.Violations }}
+                            <tr>
+                                <td>
+                                    <div style="font-weight: 600;">{{ .Rule.Name }}</div>
+                                    <div style="font-size: 12px; color: var(--text-muted);">{{ .Rule.Description }}</div>
+                                </td>
+                                <td>
+                                    {{ if eq .Rule.Severity "Critical" }}
+                                        <span class="badge badge-danger">Critical (-{{ .Rule.Penalty }})</span>
+                                    {{ else if eq .Rule.Severity "Warning" }}
+                                        <span class="badge badge-warning">Warning (-{{ .Rule.Penalty }})</span>
+                                    {{ else }}
+                                        <span class="badge badge-info">Info (-{{ .Rule.Penalty }})</span>
+                                    {{ end }}
+                                </td>
+                                <td>v{{ .BackupVersion }}</td>
+                            </tr>
+                            {{ end }}
+                        </tbody>
+                    </table>
+                </div>
+            {{ else }}
+                <div style="text-align: center; color: var(--success); padding: 20px 0; font-weight: 500;">
+                    <i class='bx bx-shield-check' style="font-size: 48px; display: block; margin-bottom: 8px;"></i>
+                    No configuration vulnerabilities found in the latest backup.
+                </div>
+            {{ end }}
+        </div>
+    </div>
 
     {{ if .Node.LastError }}
     <div class="card mb-4" style="border-color: rgba(239, 68, 68, 0.2);">

@@ -927,3 +927,64 @@ func (h *FormHandler) SnoozeNode(c *fiber.Ctx) error {
 	c.Set("HX-Redirect", "/nodes")
 	return c.SendStatus(200)
 }
+
+// ── Security Rules ────────────────────────────────
+func (h *FormHandler) NewSecurityRule(c *fiber.Ctx) error {
+	return c.Render("security_form", fiber.Map{
+		"Title": "New Security Rule",
+	}, "base")
+}
+
+func (h *FormHandler) EditSecurityRule(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var rule models.SecurityRule
+	if err := h.DB.First(&rule, id).Error; err != nil {
+		return c.Redirect("/settings/security")
+	}
+
+	return c.Render("security_form", fiber.Map{
+		"Title": "Edit Security Rule",
+		"Rule":  rule,
+	}, "base")
+}
+
+func (h *FormHandler) SaveSecurityRule(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var rule models.SecurityRule
+
+	if id != "" {
+		h.DB.Where("id = ?", id).First(&rule)
+	}
+
+	rule.Name = c.FormValue("name")
+	rule.Description = c.FormValue("description")
+	rule.Vendor = c.FormValue("vendor")
+	if rule.Vendor == "" {
+		rule.Vendor = "*"
+	}
+	rule.RegexPattern = c.FormValue("regex_pattern")
+	rule.Severity = c.FormValue("severity")
+	
+	penalty, _ := strconv.Atoi(c.FormValue("penalty"))
+	rule.Penalty = penalty
+
+	if err := h.DB.Save(&rule).Error; err != nil {
+		c.Set("HX-Trigger", fmt.Sprintf(`{"showNotification": {"message": "Failed to save security rule: %v", "type": "error"}}`, err))
+		return c.SendStatus(500)
+	}
+
+	c.Set("HX-Trigger", `{"showNotification": {"message": "Security rule saved successfully", "type": "success"}}`)
+	return c.Redirect("/settings/security")
+}
+
+func (h *FormHandler) DeleteSecurityRule(c *fiber.Ctx) error {
+	id := c.Params("id")
+	h.DB.Where("id = ?", id).Delete(&models.SecurityRule{})
+
+	if c.Get("HX-Request") == "true" {
+		c.Set("HX-Trigger", `{"showNotification": {"message": "Security rule deleted", "type": "success"}}`)
+		return c.SendStatus(200)
+	}
+
+	return c.Redirect("/settings/security")
+}

@@ -137,12 +137,26 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 			}
 			s.db.Create(&backup)
 		}
+
+		// Alerta de Recovery: Se o último status foi erro, significa que o serviço recuperou
+		if node.LastStatus == "error" {
+			var alertSettings models.AlertSettings
+			if s.db.First(&alertSettings).Error == nil && alertSettings.Enabled && alertSettings.AlertOnFailure {
+				msg := fmt.Sprintf("✅ *Backup Recovered*\n\n*Node:* %s\n*IP:* %s\n\nBackup is now succeeding again.", node.Name, node.IP)
+				alert.Dispatch(alertSettings, msg)
+			}
+		}
+
 	} else {
-		// Se deu erro e o Alerta de Falha estiver ligado
-		var alertSettings models.AlertSettings
-		if s.db.First(&alertSettings).Error == nil && alertSettings.Enabled && alertSettings.AlertOnFailure {
-			msg := fmt.Sprintf("❌ *Backup Failed*\n\n*Node:* %s\n*IP:* %s\n*Error:* %s", node.Name, node.IP, errorMessage)
-			alert.Dispatch(alertSettings, msg)
+		// Deduplicação (State Transition): Só alerta falha se o node não estava falhando antes
+		if node.LastStatus != "error" {
+			var alertSettings models.AlertSettings
+			if s.db.First(&alertSettings).Error == nil && alertSettings.Enabled && alertSettings.AlertOnFailure {
+				msg := fmt.Sprintf("❌ *Backup Failed*\n\n*Node:* %s\n*IP:* %s\n*Error:* %s", node.Name, node.IP, errorMessage)
+				alert.Dispatch(alertSettings, msg)
+			}
+		} else {
+			log.Printf("[Scheduler] Backup failed for %s, but skipping alert to prevent fatigue.", node.Name)
 		}
 	}
 

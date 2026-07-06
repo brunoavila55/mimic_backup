@@ -6,7 +6,34 @@ import (
 	"log"
 
 	"gorm.io/gorm"
+	"sync"
 )
+
+var (
+	regexCache = make(map[string]*regexp.Regexp)
+	regexMutex sync.RWMutex
+)
+
+func getCompiledRegex(pattern string) (*regexp.Regexp, error) {
+	regexMutex.RLock()
+	re, exists := regexCache[pattern]
+	regexMutex.RUnlock()
+
+	if exists {
+		return re, nil
+	}
+
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, err
+	}
+
+	regexMutex.Lock()
+	regexCache[pattern] = re
+	regexMutex.Unlock()
+
+	return re, nil
+}
 
 // RunAudit evaluates the configuration against all applicable security rules and calculates a security score.
 func RunAudit(db *gorm.DB, node *models.Node, backupVersion int, configText string) []models.SecurityViolation {
@@ -49,7 +76,7 @@ func RunAudit(db *gorm.DB, node *models.Node, backupVersion int, configText stri
 				return // Skip whitelisted rules entirely for this node
 			}
 
-			re, err := regexp.Compile(rule.RegexPattern)
+			re, err := getCompiledRegex(rule.RegexPattern)
 			if err != nil || rule.RegexPattern == "" {
 				return
 			}

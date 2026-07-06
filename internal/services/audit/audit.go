@@ -3,6 +3,7 @@ package audit
 import (
 	"mimic/internal/models"
 	"regexp"
+	"log"
 
 	"gorm.io/gorm"
 )

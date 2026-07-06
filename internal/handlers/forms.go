@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"mimic/internal/models"
+	"mimic/internal/services/alert"
 	"mimic/internal/services/sftp"
 	"mimic/pkg/crypto"
 	"strconv"
@@ -845,4 +846,59 @@ func (h *FormHandler) DeleteAlertRule(c *fiber.Ctx) error {
 	}
 
 	return c.Redirect("/settings/alerts")
+}
+
+func (h *FormHandler) TestAlertRule(c *fiber.Ctx) error {
+	provider := c.FormValue("provider")
+	id := c.FormValue("id")
+	msg := "👋 Test message from Mimic Backup System!"
+
+	if provider == "webhook" {
+		whURL := c.FormValue("webhook_url")
+		if whURL == "" && id != "" && id != "0" {
+			var rule models.AlertRule
+			if h.DB.Where("id = ?", id).First(&rule).Error == nil && rule.WebhookURL != "" {
+				whURL, _ = crypto.Decrypt(rule.WebhookURL)
+			}
+		}
+		if whURL == "" {
+			c.Set("HX-Trigger", `{"showNotification": {"message": "Webhook URL is required.", "type": "error"}}`)
+			return c.SendStatus(400)
+		}
+		
+		err := alert.SendWebhook(whURL, msg)
+		if err != nil {
+			c.Set("HX-Trigger", fmt.Sprintf(`{"showNotification": {"message": "Webhook test failed: %v", "type": "error"}}`, err))
+			return c.SendStatus(500)
+		}
+	} else if provider == "telegram" {
+		token := c.FormValue("telegram_token")
+		chatID := c.FormValue("telegram_chat_id")
+		
+		if (token == "" || chatID == "") && id != "" && id != "0" {
+			var rule models.AlertRule
+			if h.DB.Where("id = ?", id).First(&rule).Error == nil {
+				if token == "" && rule.TelegramToken != "" {
+					token, _ = crypto.Decrypt(rule.TelegramToken)
+				}
+				if chatID == "" && rule.TelegramChatID != "" {
+					chatID, _ = crypto.Decrypt(rule.TelegramChatID)
+				}
+			}
+		}
+		
+		if token == "" || chatID == "" {
+			c.Set("HX-Trigger", `{"showNotification": {"message": "Telegram Token and Chat ID are required.", "type": "error"}}`)
+			return c.SendStatus(400)
+		}
+		
+		err := alert.SendTelegram(token, chatID, msg)
+		if err != nil {
+			c.Set("HX-Trigger", fmt.Sprintf(`{"showNotification": {"message": "Telegram test failed: %v", "type": "error"}}`, err))
+			return c.SendStatus(500)
+		}
+	}
+
+	c.Set("HX-Trigger", `{"showNotification": {"message": "Test successful! Check your app.", "type": "success"}}`)
+	return c.SendStatus(200)
 }

@@ -13,6 +13,7 @@
     <div class="card" style="max-width: 600px;">
         <div class="card-body">
             <form action="{{ if .Alert.ID }}/settings/alerts/save/{{ .Alert.ID }}{{ else }}/settings/alerts/save{{ end }}" method="POST" x-data="{ provider: '{{ if .Alert.Provider }}{{ .Alert.Provider }}{{ else }}webhook{{ end }}' }" class="flex flex-col" style="gap: 16px;">
+                <input type="hidden" name="id" value="{{ .Alert.ID }}" />
                 
                 <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
                     <input type="checkbox" name="enabled" id="alerts_enabled" {{ if .Alert.Enabled }}checked{{ end }} />
@@ -75,9 +76,12 @@
                     </div>
                 </div>
 
-                <div style="margin-top: 16px;">
+                <div style="margin-top: 16px; display: flex; gap: 12px; align-items: center;">
                     <button type="submit" class="btn btn-primary">
                         Save Alert Rule
+                    </button>
+                    <button type="button" class="btn btn-secondary" hx-post="/settings/alerts/test" hx-swap="none" hx-include="closest form" onclick="this.innerHTML='<span class=\'spinner\'></span> Testing...'">
+                        <i class="bx bx-check"></i> Test Connection
                     </button>
                 </div>
             </form>

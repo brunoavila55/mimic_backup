@@ -30,7 +30,7 @@ func Dispatch(db *gorm.DB, rule models.AlertRule, message string) {
 				log.Printf("[Alert] Failed to decrypt Webhook URL: %v", decErr)
 				return
 			}
-			err = sendWebhook(url, message)
+			err = SendWebhook(url, message)
 		} else if rule.Provider == "telegram" && rule.TelegramToken != "" && rule.TelegramChatID != "" {
 			token, decErr1 := crypto.Decrypt(rule.TelegramToken)
 			chatID, decErr2 := crypto.Decrypt(rule.TelegramChatID)
@@ -39,7 +39,7 @@ func Dispatch(db *gorm.DB, rule models.AlertRule, message string) {
 				log.Printf("[Alert] Failed to decrypt Telegram credentials")
 				return
 			}
-			err = sendTelegram(token, chatID, message)
+			err = SendTelegram(token, chatID, message)
 		} else {
 			log.Printf("[Alert] Enabled but invalid provider config. Provider=%s", rule.Provider)
 			return
@@ -61,7 +61,7 @@ func Dispatch(db *gorm.DB, rule models.AlertRule, message string) {
 	}()
 }
 
-func sendWebhook(url string, message string) error {
+func SendWebhook(url string, message string) error {
 	payload := WebhookPayload{Text: message}
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -88,7 +88,7 @@ func sendWebhook(url string, message string) error {
 	return nil
 }
 
-func sendTelegram(token string, chatID string, message string) error {
+func SendTelegram(token string, chatID string, message string) error {
 	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token)
 	
 	payload := map[string]string{

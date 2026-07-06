@@ -191,6 +191,7 @@ ________________________________________________`)
 	app.Post("/settings/routines/save/:id", middleware.RequireAdmin(), formHandler.SaveRoutine)
 	app.Post("/settings/alerts/save", middleware.RequireAdmin(), formHandler.SaveAlertRule)
 	app.Post("/settings/alerts/save/:id", middleware.RequireAdmin(), formHandler.SaveAlertRule)
+	app.Post("/settings/alerts/test", middleware.RequireAdmin(), formHandler.TestAlertRule)
 
 	// ── Delete Actions ────────────────────────────────
 	app.Delete("/settings/users/:id", middleware.RequireAdmin(), formHandler.DeleteUser)

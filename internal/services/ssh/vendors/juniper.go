@@ -26,3 +26,7 @@ func (d *JuniperDriver) NormalizeConfig(raw string) string {
 	config = re.ReplaceAllString(config, "")
 	return strings.TrimSpace(config)
 }
+
+func (d *JuniperDriver) RequiresPTY() bool {
+	return false
+}

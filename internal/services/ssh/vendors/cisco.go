@@ -27,3 +27,7 @@ func (d *CiscoDriver) NormalizeConfig(raw string) string {
 	config = re.ReplaceAllString(config, "")
 	return strings.TrimSpace(config)
 }
+
+func (d *CiscoDriver) RequiresPTY() bool {
+	return true
+}

@@ -25,3 +25,7 @@ func (d *HuaweiDriver) NormalizeConfig(raw string) string {
 	config = re.ReplaceAllString(config, "")
 	return strings.TrimSpace(config)
 }
+
+func (d *HuaweiDriver) RequiresPTY() bool {
+	return true
+}

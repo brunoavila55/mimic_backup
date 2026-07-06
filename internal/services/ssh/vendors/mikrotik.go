@@ -26,3 +26,7 @@ func (d *MikroTikDriver) NormalizeConfig(raw string) string {
 	config = re.ReplaceAllString(config, "")
 	return strings.TrimSpace(config)
 }
+
+func (d *MikroTikDriver) RequiresPTY() bool {
+	return false
+}

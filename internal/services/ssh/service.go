@@ -181,12 +181,33 @@ func (s *SSHService) PerformBackup(node *models.Node) (string, error) {
 		return "", err
 	}
 
-	raw, err := s.RunInteractiveCommand(client, driver.GetPrepCommands(), driver.GetBackupCommand())
+	var raw string
+	if driver.RequiresPTY() {
+		raw, err = s.RunInteractiveCommand(client, driver.GetPrepCommands(), driver.GetBackupCommand())
+	} else {
+		raw, err = s.RunExecCommand(client, driver.GetPrepCommands(), driver.GetBackupCommand())
+	}
 	if err != nil {
 		return "", translateSSHError(fmt.Errorf("failed to run command: %v", err))
 	}
 
 	return driver.NormalizeConfig(raw), nil
+}
+
+func (s *SSHService) RunExecCommand(client *ssh.Client, prepCommands []string, mainCommand string) (string, error) {
+	cmdStr := mainCommand
+	if len(prepCommands) > 0 {
+		cmdStr = strings.Join(prepCommands, "; ") + "; " + mainCommand
+	}
+
+	session, err := client.NewSession()
+	if err != nil {
+		return "", fmt.Errorf("failed to create session: %v", err)
+	}
+	defer session.Close()
+
+	out, err := session.CombinedOutput(cmdStr)
+	return string(out), err
 }
 
 func translateSSHError(err error) error {

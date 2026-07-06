@@ -9,6 +9,7 @@ type Driver interface {
 	GetPrepCommands() []string
 	GetBackupCommand() string
 	NormalizeConfig(raw string) string
+	RequiresPTY() bool
 }
 
 var registry = make(map[string]Driver)

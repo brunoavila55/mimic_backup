@@ -2,11 +2,12 @@ package audit
 
 import (
 	"mimic/internal/models"
-	"regexp"
 	"log"
+	"regexp"
+	"strings"
+	"sync"
 
 	"gorm.io/gorm"
-	"sync"
 )
 
 var (
@@ -33,6 +34,46 @@ func getCompiledRegex(pattern string) (*regexp.Regexp, error) {
 	regexMutex.Unlock()
 
 	return re, nil
+}
+
+// extractBlock extracts a chunk of text starting from the match location.
+// It stops when it encounters a line that is completely empty, or a line that
+// does not start with whitespace (e.g., exiting a block's indentation level).
+func extractBlock(config string, startIdx int) string {
+	// Find the start of the line where the match occurred
+	lineStart := 0
+	for i := startIdx; i >= 0; i-- {
+		if config[i] == '\n' {
+			lineStart = i + 1
+			break
+		}
+	}
+
+	remaining := config[lineStart:]
+	lines := strings.Split(remaining, "\n")
+
+	var block []string
+	if len(lines) > 0 {
+		block = append(block, lines[0]) // Include the first line (the context match)
+	}
+
+	// Read subsequent lines until we hit a blank line or a line without leading whitespace
+	for i := 1; i < len(lines); i++ {
+		line := lines[i]
+		trimmed := strings.TrimRight(line, "\r\t ")
+
+		if trimmed == "" {
+			break // Blank line terminates block
+		}
+
+		if !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "\t") {
+			break // Left the indentation level
+		}
+
+		block = append(block, line)
+	}
+
+	return strings.Join(block, "\n")
 }
 
 // RunAudit evaluates the configuration against all applicable security rules and calculates a security score.
@@ -81,13 +122,40 @@ func RunAudit(db *gorm.DB, node *models.Node, backupVersion int, configText stri
 				return
 			}
 
-			matched := re.MatchString(configText)
+			targetText := configText
+			contextMissing := false
+
+			// If ContextBlock is provided, scope the targetText down to that block
+			if rule.ContextBlock != "" {
+				ctxRe, err := getCompiledRegex(rule.ContextBlock)
+				if err == nil {
+					loc := ctxRe.FindStringIndex(configText)
+					if loc != nil {
+						targetText = extractBlock(configText, loc[0])
+					} else {
+						// Context block is completely missing from the config
+						targetText = ""
+						contextMissing = true
+					}
+				}
+			}
+
 			triggerViolation := false
 
-			if rule.MatchType == "not_contains" && !matched {
-				triggerViolation = true
-			} else if (rule.MatchType == "contains" || rule.MatchType == "") && matched {
-				triggerViolation = true
+			if contextMissing {
+				// User confirmation applied: if the block is missing, the pattern is inherently not found.
+				// For 'contains' -> no match -> no violation.
+				// For 'not_contains' -> no match -> IS A VIOLATION (e.g. NTP not configured at all).
+				if rule.MatchType == "not_contains" {
+					triggerViolation = true
+				}
+			} else {
+				matched := re.MatchString(targetText)
+				if rule.MatchType == "not_contains" && !matched {
+					triggerViolation = true
+				} else if (rule.MatchType == "contains" || rule.MatchType == "") && matched {
+					triggerViolation = true
+				}
 			}
 
 			if triggerViolation {

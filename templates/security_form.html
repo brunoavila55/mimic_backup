@@ -1,124 +1,255 @@
-
-<div class="page-enter" style="max-width: 600px; margin: 0 auto;" x-data="{
+<div class="page-enter" style="max-width: 1200px; margin: 0 auto;" x-data="{
     vendor: '{{ if .Rule }}{{ .Rule.Vendor }}{{ else }}*{{ end }}',
     matchType: '{{ if .Rule }}{{ .Rule.MatchType }}{{ else }}contains{{ end }}',
-    showHelp: false
-}">
+    regexPattern: '{{ if .Rule }}{{ .Rule.RegexPattern | js }}{{ else }}{{ end }}',
+    contextBlock: '{{ if .Rule }}{{ .Rule.ContextBlock | js }}{{ else }}{{ end }}',
+    testConfig: '',
+    testResult: 'none', 
+    violationStatus: 'none', 
+    hasTested: false,
+    
+    examples: {
+        mikrotik: {
+            configured: '/system ntp client\nset enabled=yes primary-ntp=1.1.1.1\n/ip service\nset telnet disabled=yes\nset ftp disabled=yes',
+            unconfigured: '/ip address\nadd address=10.0.0.1/24 interface=ether1\n/ip service\nset telnet disabled=no\n# Missing NTP completely'
+        },
+        cisco: {
+            configured: 'ntp server 1.1.1.1\n!\nline vty 0 4\n transport input ssh\n access-class VTY_IN in\n!',
+            unconfigured: 'interface GigabitEthernet0/0\n ip address dhcp\n!\nline vty 0 4\n login\n! (Telnet enabled, no ACL)'
+        },
+        huawei: {
+            configured: 'ntp-service unicast-server 1.1.1.1\ntelnet server disable\n',
+            unconfigured: 'interface GigabitEthernet0/0/0\n ip address 10.0.0.1 24\ntelnet server enable\n'
+        },
+        juniper: {
+            configured: 'system {\n    services {\n        ssh;\n    }\n    ntp {\n        server 1.1.1.1;\n    }\n}',
+            unconfigured: 'system {\n    services {\n        telnet;\n        ssh;\n    }\n}'
+        }
+    },
+
+    loadExample(type) {
+        if (this.vendor !== '*' && this.examples[this.vendor]) {
+            this.testConfig = this.examples[this.vendor][type];
+            this.evaluateRegex();
+        }
+    },
+
+    evaluateRegex() {
+        if (this.testConfig.trim() !== '') this.hasTested = true;
+
+        if (!this.testConfig.trim() && !this.regexPattern.trim() && !this.contextBlock.trim()) {
+            this.testResult = 'none';
+            this.violationStatus = 'none';
+            return;
+        }
+        
+        try {
+            let targetText = this.testConfig;
+            let contextMissing = false;
+
+            if (this.contextBlock.trim() !== '') {
+                const ctxRe = new RegExp(this.contextBlock, 'm');
+                const match = ctxRe.exec(this.testConfig);
+                if (match) {
+                    const startIdx = match.index;
+                    let lineStart = this.testConfig.lastIndexOf('\n', startIdx);
+                    if (lineStart === -1) lineStart = 0; else lineStart++;
+                    
+                    const remaining = this.testConfig.substring(lineStart);
+                    const lines = remaining.split('\n');
+                    let block = [];
+                    if (lines.length > 0) block.push(lines[0]);
+                    
+                    for (let i = 1; i < lines.length; i++) {
+                        const line = lines[i];
+                        const trimmed = line.replace(/[\r\t ]+$/, '');
+                        if (trimmed === '') break;
+                        if (!line.startsWith(' ') && !line.startsWith('\t')) break;
+                        block.push(line);
+                    }
+                    targetText = block.join('\n');
+                } else {
+                    targetText = '';
+                    contextMissing = true;
+                }
+            }
+
+            let isMatch = false;
+            
+            if (!contextMissing && this.regexPattern.trim() !== '') {
+                const re = new RegExp(this.regexPattern, 'm');
+                isMatch = re.test(targetText);
+            }
+
+            if (contextMissing) {
+                this.testResult = 'no_match';
+                this.violationStatus = this.matchType === 'not_contains' ? 'violation' : 'compliant';
+            } else {
+                this.testResult = isMatch ? 'match' : 'no_match';
+                if (this.matchType === 'not_contains') {
+                    this.violationStatus = isMatch ? 'compliant' : 'violation';
+                } else {
+                    this.violationStatus = isMatch ? 'violation' : 'compliant';
+                }
+            }
+        } catch (e) {
+            this.testResult = 'error';
+            this.violationStatus = 'none';
+        }
+    }
+}" x-init="$watch('regexPattern', () => evaluateRegex()); $watch('contextBlock', () => evaluateRegex()); $watch('matchType', () => evaluateRegex()); $watch('testConfig', () => evaluateRegex());">
+    
     <div class="page-header">
-        <div style="display: flex; align-items: center; gap: 16px;">
-            <a href="/settings/security" class="action-btn" title="Back to Settings">
-                <i class="bx bx-arrow-back" style="font-size: 20px;"></i>
-            </a>
-            <h1 class="page-title">{{ .Title }}</h1>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <a href="/settings/security" class="action-btn" title="Back to Settings">
+                    <i class="bx bx-arrow-back" style="font-size: 20px;"></i>
+                </a>
+                <h1 class="page-title">{{ .Title }}</h1>
+                
+                {{ if .Rule }}
+                <div class="badge badge-warning" style="margin-left: 12px; font-size: 12px;">
+                    <i class='bx bx-edit'></i> Editing Existing Rule: {{ .Rule.Name }}
+                </div>
+                {{ end }}
+            </div>
         </div>
     </div>
 
-<div class="card" style="max-width: 600px;">
-    <div class="card-body">
-        <form action="{{ if .Rule }}{{ if .Rule.ID }}/settings/security/save/{{ .Rule.ID }}{{ else }}/settings/security/save{{ end }}{{ else }}/settings/security/save{{ end }}" method="POST" class="flex flex-col" style="gap: 16px;">
-            <div class="form-group">
-                <label class="form-label">Rule Name</label>
-                <input type="text" name="name" class="form-input" value="{{ if .Rule }}{{ .Rule.Name }}{{ end }}" required placeholder="e.g. Public SNMP Community">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Description</label>
-                <input type="text" name="description" class="form-input" value="{{ if .Rule }}{{ .Rule.Description }}{{ end }}" placeholder="e.g. Detects if SNMP community is set to public">
-            </div>
-
-            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                <div class="form-group">
-                    <label class="form-label">Vendor Filter</label>
-                    <select name="vendor" class="form-input" x-model="vendor" required>
-                        <option value="*">All Vendors (*)</option>
-                        <option value="mikrotik">MikroTik</option>
-                        <option value="cisco">Cisco</option>
-                        <option value="huawei">Huawei</option>
-                        <option value="juniper">Juniper</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Severity</label>
-                    <select name="severity" class="form-input" required>
-                        <option value="Info" {{ if .Rule }}{{ if eq .Rule.Severity "Info" }}selected{{ end }}{{ end }}>Info</option>
-                        <option value="Warning" {{ if .Rule }}{{ if eq .Rule.Severity "Warning" }}selected{{ end }}{{ else }}selected{{ end }}>Warning</option>
-                        <option value="Critical" {{ if .Rule }}{{ if eq .Rule.Severity "Critical" }}selected{{ end }}{{ end }}>Critical</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Match Condition</label>
-                <select name="match_type" class="form-input" x-model="matchType" required>
-                    <option value="contains" {{ if .Rule }}{{ if eq .Rule.MatchType "contains" }}selected{{ end }}{{ else }}selected{{ end }}>Violates if pattern IS found (e.g. public community)</option>
-                    <option value="not_contains" {{ if .Rule }}{{ if eq .Rule.MatchType "not_contains" }}selected{{ end }}{{ end }}>Violates if pattern IS NOT found (e.g. missing NTP)</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" style="display: flex; align-items: center;">
-                    Regex Pattern
-                    <button type="button" @click="showHelp = !showHelp" style="background: none; border: none; color: var(--accent); cursor: pointer; margin-left: 8px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">
-                        <i class='bx bx-info-circle'></i> See Examples
-                    </button>
-                </label>
-                <input type="text" name="regex_pattern" class="form-input" value="{{ if .Rule }}{{ .Rule.RegexPattern }}{{ end }}" required placeholder="e.g. snmp-server community public\s+RO" style="font-family: monospace;">
-                
-                <div x-show="showHelp" x-collapse style="margin-top: 8px; background: var(--bg-body); padding: 12px; border-radius: 6px; border: 1px solid var(--border); font-size: 12px; color: var(--text-secondary); display: none;">
-                    <div style="margin-bottom: 8px;"><strong>Examples for <span x-text="vendor === '*' ? 'All Vendors' : vendor" style="text-transform: capitalize;"></span>:</strong></div>
+    <form id="ruleForm" action="{{ if .Rule }}{{ if .Rule.ID }}/settings/security/save/{{ .Rule.ID }}{{ else }}/settings/security/save{{ end }}{{ else }}/settings/security/save{{ end }}" method="POST" @submit="if(!hasTested) { if(!confirm('You have not tested this rule against any configuration. Are you sure you want to save?')) { $event.preventDefault(); } }">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start;">
+            
+            <!-- Left Column: Rule Definition -->
+            <div class="card">
+                <div class="card-body flex flex-col" style="gap: 16px;">
+                    <h3 style="font-size: 14px; font-weight: 600; color: var(--text); padding-bottom: 8px; border-bottom: 1px solid var(--border-light);">Rule Definition</h3>
                     
-                    <div x-show="vendor === '*'">
-                        <ul style="padding-left: 16px; margin: 0; list-style-type: disc;">
-                            <li style="margin-bottom: 4px;"><strong>SNMP (Contains):</strong> <code style="background: var(--bg-surface); padding: 2px 4px; border-radius: 4px; color: var(--accent);">community\s+public</code></li>
-                            <li><strong>Logging (Not Contains):</strong> <code style="background: var(--bg-surface); padding: 2px 4px; border-radius: 4px; color: var(--accent);">logging trap</code></li>
-                        </ul>
+                    <div class="form-group">
+                        <label class="form-label">Rule Name</label>
+                        <input type="text" name="name" class="form-input" value="{{ if .Rule }}{{ .Rule.Name }}{{ end }}" required placeholder="e.g. Public SNMP Community" id="ruleNameInput">
                     </div>
-                    <div x-show="vendor === 'cisco'">
-                        <ul style="padding-left: 16px; margin: 0; list-style-type: disc;">
-                            <li style="margin-bottom: 4px;"><strong>Plain Text Password (Contains):</strong> <code style="background: var(--bg-surface); padding: 2px 4px; border-radius: 4px; color: var(--accent);">password 0 </code></li>
-                            <li><strong>VTY ACL (Not Contains):</strong> <code style="background: var(--bg-surface); padding: 2px 4px; border-radius: 4px; color: var(--accent);">line vty.*access-class</code></li>
-                        </ul>
+
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <input type="text" name="description" class="form-input" value="{{ if .Rule }}{{ .Rule.Description }}{{ end }}" placeholder="e.g. Detects if SNMP community is set to public">
                     </div>
-                    <div x-show="vendor === 'mikrotik'">
-                        <ul style="padding-left: 16px; margin: 0; list-style-type: disc;">
-                            <li style="margin-bottom: 4px;"><strong>Telnet Enabled (Contains):</strong> <code style="background: var(--bg-surface); padding: 2px 4px; border-radius: 4px; color: var(--accent);">/ip service.*telnet.*disabled=no</code></li>
-                            <li><strong>Firewall Input Drop (Not Contains):</strong> <code style="background: var(--bg-surface); padding: 2px 4px; border-radius: 4px; color: var(--accent);">chain=input.*action=drop</code></li>
-                        </ul>
+
+                    <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group">
+                            <label class="form-label">Vendor Filter</label>
+                            <select name="vendor" class="form-input" x-model="vendor" required>
+                                <option value="*">All Vendors (*)</option>
+                                <option value="mikrotik">MikroTik</option>
+                                <option value="cisco">Cisco</option>
+                                <option value="huawei">Huawei</option>
+                                <option value="juniper">Juniper</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Severity</label>
+                            <select name="severity" class="form-input" required>
+                                <option value="Info" {{ if .Rule }}{{ if eq .Rule.Severity "Info" }}selected{{ end }}{{ end }}>Info</option>
+                                <option value="Warning" {{ if .Rule }}{{ if eq .Rule.Severity "Warning" }}selected{{ end }}{{ else }}selected{{ end }}>Warning</option>
+                                <option value="Critical" {{ if .Rule }}{{ if eq .Rule.Severity "Critical" }}selected{{ end }}{{ end }}>Critical</option>
+                            </select>
+                        </div>
                     </div>
-                    <div x-show="vendor === 'huawei'">
-                        <ul style="padding-left: 16px; margin: 0; list-style-type: disc;">
-                            <li style="margin-bottom: 4px;"><strong>Telnet Enabled (Contains):</strong> <code style="background: var(--bg-surface); padding: 2px 4px; border-radius: 4px; color: var(--accent);">telnet server enable</code></li>
-                            <li><strong>Public SNMP (Contains):</strong> <code style="background: var(--bg-surface); padding: 2px 4px; border-radius: 4px; color: var(--accent);">snmp-agent community read public</code></li>
-                        </ul>
+
+                    <div class="form-group">
+                        <label class="form-label">Context Scope (Optional Block)</label>
+                        <input type="text" name="context_block" class="form-input" x-model="contextBlock" placeholder="e.g. /system ntp client" style="font-family: monospace;">
+                        <div class="form-help">If provided, the Regex Pattern below will only run inside this block (until the next blank line or unindented line).</div>
                     </div>
-                    <div x-show="vendor === 'juniper'">
-                        <ul style="padding-left: 16px; margin: 0; list-style-type: disc;">
-                            <li style="margin-bottom: 4px;"><strong>Telnet Enabled (Contains):</strong> <code style="background: var(--bg-surface); padding: 2px 4px; border-radius: 4px; color: var(--accent);">set system services telnet</code></li>
-                            <li><strong>Plain Text Auth (Contains):</strong> <code style="background: var(--bg-surface); padding: 2px 4px; border-radius: 4px; color: var(--accent);">authentication plain-text-password</code></li>
-                        </ul>
+
+                    <div class="form-group">
+                        <label class="form-label">Match Condition</label>
+                        <select name="match_type" class="form-input" x-model="matchType" required>
+                            <option value="contains">Violates if pattern IS found (e.g. public community)</option>
+                            <option value="not_contains">Violates if pattern IS NOT found (e.g. missing NTP)</option>
+                        </select>
                     </div>
-                    
-                    <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--border);">
-                        <strong>Current Logic:</strong> 
-                        <span x-show="matchType === 'contains'">Rule violates if the pattern <strong style="color: var(--danger);">IS FOUND</strong>.</span>
-                        <span x-show="matchType === 'not_contains'">Rule violates if the pattern <strong style="color: var(--warning);">IS MISSING</strong>.</span>
+
+                    <div class="form-group">
+                        <label class="form-label">Regex Pattern</label>
+                        <input type="text" name="regex_pattern" class="form-input" x-model="regexPattern" required placeholder="e.g. enabled=yes" style="font-family: monospace;">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Score Penalty</label>
+                        <input type="number" name="penalty" id="penaltyInput" class="form-input" value="{{ if .Rule }}{{ .Rule.Penalty }}{{ else }}10{{ end }}" required min="0" max="100">
+                        <div class="form-help">Amount to deduct from the node's Security Score (0-100) if matched.</div>
+                    </div>
+
+                    <div style="margin-top: 16px; display: flex; gap: 12px;">
+                        <button type="submit" class="btn btn-primary">
+                            Save Security Rule
+                        </button>
+                        
+                        {{ if .Rule }}
+                        <button type="button" class="btn" style="background: var(--bg-surface); border: 1px solid var(--border);" onclick="
+                            document.getElementById('ruleForm').action = '/settings/security/save';
+                            document.getElementById('ruleNameInput').value = document.getElementById('ruleNameInput').value + ' (Copy)';
+                            document.getElementById('ruleForm').submit();
+                        ">
+                            <i class='bx bx-duplicate'></i> Save as New Rule (Duplicate)
+                        </button>
+                        {{ end }}
                     </div>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label class="form-label">Score Penalty</label>
-                <input type="number" name="penalty" class="form-input" value="{{ if .Rule }}{{ .Rule.Penalty }}{{ else }}10{{ end }}" required min="0" max="100">
-                <div class="form-help">Amount to deduct from the node's Security Score (0-100) if matched.</div>
+            <!-- Right Column: Live Tester -->
+            <div class="card" style="background: var(--bg-body); border: 1px dashed var(--accent);">
+                <div class="card-body">
+                    <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text);"><i class='bx bx-test-tube text-accent'></i> Live Sandbox Tester</h3>
+                    
+                    <div class="flex gap-2 mb-3">
+                        <button type="button" class="btn btn-sm" style="background: var(--bg-surface); border: 1px solid var(--border);" @click="loadExample('configured')" :disabled="vendor === '*'">
+                            Load 'Configured' Example
+                        </button>
+                        <button type="button" class="btn btn-sm" style="background: var(--bg-surface); border: 1px solid var(--border);" @click="loadExample('unconfigured')" :disabled="vendor === '*'">
+                            Load 'Missing' Example
+                        </button>
+                        <span x-show="vendor === '*'" class="text-muted" style="font-size: 11px; align-self: center; margin-left: 8px;">Select a vendor first</span>
+                    </div>
+
+                    <textarea class="form-input font-mono" rows="12" x-model="testConfig" placeholder="Paste device configuration here to test your rules before saving..." style="font-size: 12px; resize: vertical; line-height: 1.4;"></textarea>
+
+                    <div class="mt-4 p-4 rounded" style="background: var(--bg-surface); border: 1px solid var(--border-light);">
+                        <div style="font-size: 11px; text-transform: uppercase; font-weight: 600; color: var(--text-muted); margin-bottom: 12px;">Evaluation Result</div>
+                        
+                        <div class="flex items-center gap-3">
+                            <span class="badge" :class="{
+                                'badge-success': testResult === 'match',
+                                'badge-danger': testResult === 'no_match',
+                                'bg-red-900 text-red-200': testResult === 'error',
+                                'bg-gray-700': testResult === 'none'
+                            }" style="padding: 6px 12px;">
+                                <span x-show="testResult === 'none'">Waiting for config/regex...</span>
+                                <span x-show="testResult === 'match'"><i class='bx bx-check'></i> Regex Matched</span>
+                                <span x-show="testResult === 'no_match'">No Match</span>
+                                <span x-show="testResult === 'error'"><i class='bx bx-error-circle'></i> ⚠️ Invalid Regex</span>
+                            </span>
+
+                            <i class='bx bx-right-arrow-alt text-muted' x-show="testResult !== 'none' && testResult !== 'error'"></i>
+
+                            <span class="badge" x-show="testResult !== 'none' && testResult !== 'error'" :class="{
+                                'badge-success': violationStatus === 'compliant',
+                                'badge-danger': violationStatus === 'violation'
+                            }" style="padding: 6px 12px;">
+                                <span x-show="violationStatus === 'compliant'">✅ Compliant (Pass)</span>
+                                <span x-show="violationStatus === 'violation'">❌ Violation (Fail)</span>
+                            </span>
+                        </div>
+                        
+                        <div x-show="violationStatus === 'violation'" class="text-danger mt-3" style="font-size: 12px; background: rgba(239, 68, 68, 0.1); padding: 8px; border-radius: 4px;">
+                            <i class='bx bx-info-circle'></i> This configuration would trigger a penalty of <strong x-text="document.getElementById('penaltyInput').value || 10"></strong> points on the Security Score.
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div style="margin-top: 16px;">
-                <button type="submit" class="btn btn-primary">
-                    Save Security Rule
-                </button>
-            </div>
-        </form>
-</div>
-</div>
+        </div>
+    </form>
 </div>

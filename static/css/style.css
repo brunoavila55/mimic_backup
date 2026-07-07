@@ -1451,8 +1451,8 @@ tbody tr:hover { background: var(--bg-hover); }
 }
 
 .diff-table th, .diff-table td {
-    padding: 2px 8px;
-    line-height: 1.5;
+    padding: 0;
+    line-height: 1.25;
     white-space: pre-wrap;
     word-break: break-all;
     border: none;
@@ -1465,19 +1465,20 @@ tbody tr:hover { background: var(--bg-hover); }
     color: var(--text-muted);
     user-select: none;
     border-right: 1px solid var(--border-light) !important;
-    padding-right: 8px !important;
+    padding-right: 4px !important;
     font-size: 11px;
 }
 
 .diff-col-sign {
     width: 20px;
+    min-width: 20px;
     text-align: center;
     user-select: none;
     font-weight: bold;
 }
 
 .diff-col-text {
-    padding-left: 12px !important;
+    padding: 0 4px 0 8px !important;
 }
 
 /* Row states - Unified (td) and Split (div) */
@@ -1542,6 +1543,6 @@ tbody tr:hover { background: var(--bg-hover); }
 
 .diff-split-row-inner .diff-col-text {
     flex: 1;
-    padding: 2px 12px 2px 8px !important;
+    padding: 0 12px 0 8px !important;
 }
 

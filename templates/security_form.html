@@ -187,7 +187,7 @@
                         </button>
                         
                         {{ if .Rule }}
-                        <button type="button" class="btn" style="background: var(--bg-surface); border: 1px solid var(--border);" onclick="
+                        <button type="button" class="btn btn-secondary" onclick="
                             document.getElementById('ruleForm').action = '/settings/security/save';
                             document.getElementById('ruleNameInput').value = document.getElementById('ruleNameInput').value + ' (Copy)';
                             document.getElementById('ruleForm').submit();
@@ -214,7 +214,7 @@
                         <span x-show="vendor === '*'" class="text-muted" style="font-size: 11px; align-self: center; margin-left: 8px;">Select a vendor first</span>
                     </div>
 
-                    <textarea class="form-input font-mono" rows="12" x-model="testConfig" placeholder="Paste device configuration here to test your rules before saving..." style="font-size: 12px; resize: vertical; line-height: 1.4;"></textarea>
+                    <textarea class="form-input font-mono" rows="12" x-model="testConfig" placeholder="Paste device configuration here to test your rules before saving..." style="font-size: 12px; resize: vertical; line-height: 1.4; padding: 12px;"></textarea>
 
                     <div class="mt-4 p-4 rounded" style="background: var(--bg-surface); border: 1px solid var(--border-light);">
                         <div style="font-size: 11px; text-transform: uppercase; font-weight: 600; color: var(--text-muted); margin-bottom: 12px;">Evaluation Result</div>

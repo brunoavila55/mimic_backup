@@ -7,7 +7,7 @@
     <table class="diff-split-table diff-table">
         <tbody>
             {{ range .SplitRows }}
-            <tr class="diff-split-row">
+            <tr class="diff-split-row" x-show="!hideEqual || '{{ .LeftClass }}' !== 'diff-equal' || '{{ .RightClass }}' !== 'diff-equal'">
                 <!-- Left Side (Base Version) -->
                 <td class="diff-split-cell">
                     <div class="diff-split-row-inner {{ if eq .LeftClass "diff-delete" }}diff-row-delete{{ else if eq .LeftClass "diff-empty" }}diff-row-empty{{ else }}diff-row-equal{{ end }}">
@@ -39,7 +39,8 @@
     <table class="diff-table">
         <tbody>
             {{ range .UnifiedRows }}
-            <tr class="{{ if eq .Class "diff-delete" }}diff-row-delete{{ else if eq .Class "diff-insert" }}diff-row-insert{{ else }}diff-row-equal{{ end }}">
+            <tr class="{{ if eq .Class "diff-delete" }}diff-row-delete{{ else if eq .Class "diff-insert" }}diff-row-insert{{ else }}diff-row-equal{{ end }}"
+                x-show="!hideEqual || '{{ .Class }}' !== 'diff-equal'">
                 <td class="diff-col-num">{{ .Num }}</td>
                 <td class="diff-col-sign">{{ .Sign }}</td>
                 <td class="diff-col-text">{{ .Line }}</td>

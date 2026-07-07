@@ -1,10 +1,10 @@
-<div x-data="{ viewMode: 'split', hideEqual: false }">
+<div x-data="{ viewMode: 'split', hideEqual: true }">
     <!-- Modal Header -->
     <div class="flex items-center justify-between mb-4 pb-2" style="border-bottom: 1px solid var(--border-light);">
         <div>
             <h3 style="font-size: 14px; font-weight: 600; color: var(--text);">
-                <i class="bx bx-git-compare" style="color: var(--accent); vertical-align: middle; margin-right: 4px;"></i> 
-                Config Diff: {{ .Node.Name }}
+                <i class="bx bx-check-shield" style="color: var(--warning); vertical-align: middle; margin-right: 4px;"></i> 
+                Golden Config Audit: {{ .Node.Name }}
             </h3>
             <p class="text-secondary" style="font-size: 11px; margin-top: 2px;">{{ .Node.Vendor }} &mdash; <span class="font-mono">{{ .Node.IP }}</span></p>
         </div>
@@ -13,33 +13,17 @@
         </button>
     </div>
 
-    <!-- Comparison Selector & Stats Bar -->
+    <!-- Comparison Info & Stats Bar -->
     <div class="diff-header-panel rounded mb-3" style="border: 1px solid var(--border);">
-        <div class="diff-selectors" id="diff-selector-form">
-            <div class="diff-selector-group">
-                <span class="text-muted" style="font-size: 11px; font-weight: 600; text-transform: uppercase;">Base:</span>
-                <select class="form-input" style="padding: 4px 8px; font-size: 12px; height: auto; min-width: 150px;" name="left_id"
-                        hx-get="/backups/diff/compare"
-                        hx-include="#diff-selector-form select"
-                        hx-target="#diff-body-area"
-                        hx-indicator="#global-loader">
-                    <option value="0">None (Empty)</option>
-                    {{ range .Backups }}
-                    <option value="{{ .ID }}" {{ if eq .ID $.LeftID }}selected{{ end }}>v{{ .Version }} ({{ .CreatedAt.Format "02/01 15:04" }})</option>
-                    {{ end }}
-                </select>
+        <div class="diff-selectors flex items-center" style="gap: 16px;">
+            <div>
+                <span class="text-muted" style="font-size: 11px; font-weight: 600; text-transform: uppercase;">Baseline:</span>
+                <span style="font-size: 13px; font-weight: 500; margin-left: 4px;">{{ .GoldenConfig.Name }}</span>
             </div>
-            <div class="diff-selector-group">
+            <i class='bx bx-right-arrow-alt text-muted'></i>
+            <div>
                 <span class="text-muted" style="font-size: 11px; font-weight: 600; text-transform: uppercase;">Target:</span>
-                <select class="form-input" style="padding: 4px 8px; font-size: 12px; height: auto; min-width: 150px;" name="right_id"
-                        hx-get="/backups/diff/compare"
-                        hx-include="#diff-selector-form select"
-                        hx-target="#diff-body-area"
-                        hx-indicator="#global-loader">
-                    {{ range .Backups }}
-                    <option value="{{ .ID }}" {{ if eq .ID $.RightID }}selected{{ end }}>v{{ .Version }} ({{ .CreatedAt.Format "02/01 15:04" }})</option>
-                    {{ end }}
-                </select>
+                <span style="font-size: 13px; font-weight: 500; margin-left: 4px;">Backup v{{ .CurrentBackup.Version }}</span>
             </div>
         </div>
 

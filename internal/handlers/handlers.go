@@ -251,9 +251,10 @@ func (h *NodeHandler) GoldenDiffView(c *fiber.Ctx) error {
 	// Compute diff
 	diffRes := diff.GenerateDiff(gc.ConfigTemplate, backup.Config)
 
-	return c.Render("partials/diff_view", fiber.Map{
+	return c.Render("partials/golden_diff_view", fiber.Map{
 		"Node":          backup.Node,
 		"CurrentBackup": backup,
+		"GoldenConfig":  gc,
 		"Backups":       []models.NodeBackup{backup}, // Only show the current backup in the dropdown context if needed
 		"HasPrev":       true,
 		"LeftVersion":   "Golden Baseline",

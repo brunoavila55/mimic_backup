@@ -205,10 +205,10 @@
                     <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text);"><i class='bx bx-test-tube text-accent'></i> Live Sandbox Tester</h3>
                     
                     <div class="flex gap-2 mb-3">
-                        <button type="button" class="btn btn-sm" style="background: var(--bg-surface); border: 1px solid var(--border);" @click="loadExample('configured')" :disabled="vendor === '*'">
+                        <button type="button" class="btn btn-sm btn-secondary" @click="loadExample('configured')" :disabled="vendor === '*'">
                             Load 'Configured' Example
                         </button>
-                        <button type="button" class="btn btn-sm" style="background: var(--bg-surface); border: 1px solid var(--border);" @click="loadExample('unconfigured')" :disabled="vendor === '*'">
+                        <button type="button" class="btn btn-sm btn-secondary" @click="loadExample('unconfigured')" :disabled="vendor === '*'">
                             Load 'Missing' Example
                         </button>
                         <span x-show="vendor === '*'" class="text-muted" style="font-size: 11px; align-self: center; margin-left: 8px;">Select a vendor first</span>

@@ -429,6 +429,7 @@ button { font-family: inherit; }
 }
 
 .btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
 
 .btn-primary {
     background: var(--accent);

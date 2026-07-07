@@ -1,5 +1,5 @@
 
-<div class="page-header" x-data="{
+<div class="page-enter" style="max-width: 600px; margin: 0 auto;" x-data="{
     vendor: '{{ if .Rule }}{{ .Rule.Vendor }}{{ else }}*{{ end }}',
     getRegexExamples() {
         if (this.vendor === '*') return 'e.g. community\\s+public | logging trap';
@@ -10,37 +10,38 @@
         return 'e.g. some-pattern';
     }
 }">
-    <div style="display: flex; align-items: center; gap: 16px;">
-        <a href="/settings/security" class="action-btn" title="Back to Settings">
-            <i class="bx bx-arrow-back" style="font-size: 20px;"></i>
-        </a>
-        <h1 class="page-title">{{ .Title }}</h1>
+    <div class="page-header">
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <a href="/settings/security" class="action-btn" title="Back to Settings">
+                <i class="bx bx-arrow-back" style="font-size: 20px;"></i>
+            </a>
+            <h1 class="page-title">{{ .Title }}</h1>
+        </div>
     </div>
-</div>
 
 <div class="card" style="max-width: 600px;">
     <div class="card-body">
         <form action="{{ if .Rule }}{{ if .Rule.ID }}/settings/security/save/{{ .Rule.ID }}{{ else }}/settings/security/save{{ end }}{{ else }}/settings/security/save{{ end }}" method="POST" class="flex flex-col" style="gap: 16px;">
             <div class="form-group">
-                <label>Rule Name</label>
-                <input type="text" name="name" class="form-control" value="{{ if .Rule }}{{ .Rule.Name }}{{ end }}" required placeholder="e.g. Public SNMP Community">
+                <label class="form-label">Rule Name</label>
+                <input type="text" name="name" class="form-input" value="{{ if .Rule }}{{ .Rule.Name }}{{ end }}" required placeholder="e.g. Public SNMP Community">
             </div>
 
             <div class="form-group">
-                <label>Description</label>
-                <input type="text" name="description" class="form-control" value="{{ if .Rule }}{{ .Rule.Description }}{{ end }}" placeholder="e.g. Detects if SNMP community is set to public">
+                <label class="form-label">Description</label>
+                <input type="text" name="description" class="form-input" value="{{ if .Rule }}{{ .Rule.Description }}{{ end }}" placeholder="e.g. Detects if SNMP community is set to public">
             </div>
 
             <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                 <div class="form-group">
-                    <label>Vendor Filter</label>
-                    <input type="text" name="vendor" class="form-control" x-model="vendor" placeholder="*" required>
+                    <label class="form-label">Vendor Filter</label>
+                    <input type="text" name="vendor" class="form-input" x-model="vendor" placeholder="*" required>
                     <div class="form-help">Use * to apply to all vendors. Current examples based on: <span x-text="vendor"></span></div>
                 </div>
 
                 <div class="form-group">
-                    <label>Severity</label>
-                    <select name="severity" class="form-control" required>
+                    <label class="form-label">Severity</label>
+                    <select name="severity" class="form-input" required>
                         <option value="Info" {{ if .Rule }}{{ if eq .Rule.Severity "Info" }}selected{{ end }}{{ end }}>Info</option>
                         <option value="Warning" {{ if .Rule }}{{ if eq .Rule.Severity "Warning" }}selected{{ end }}{{ else }}selected{{ end }}>Warning</option>
                         <option value="Critical" {{ if .Rule }}{{ if eq .Rule.Severity "Critical" }}selected{{ end }}{{ end }}>Critical</option>
@@ -49,26 +50,26 @@
             </div>
 
             <div class="form-group">
-                <label>Match Condition</label>
-                <select name="match_type" class="form-control" required>
+                <label class="form-label">Match Condition</label>
+                <select name="match_type" class="form-input" required>
                     <option value="contains" {{ if .Rule }}{{ if eq .Rule.MatchType "contains" }}selected{{ end }}{{ else }}selected{{ end }}>Violates if pattern IS found (e.g. public community)</option>
                     <option value="not_contains" {{ if .Rule }}{{ if eq .Rule.MatchType "not_contains" }}selected{{ end }}{{ end }}>Violates if pattern IS NOT found (e.g. missing NTP)</option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label>Regex Pattern 
+                <label class="form-label">Regex Pattern 
                     <span style="font-size: 12px; font-weight: normal; color: var(--text-muted); margin-left: 8px;">
                         <i class='bx bx-info-circle'></i> <span x-text="getRegexExamples()"></span>
                     </span>
                 </label>
-                <input type="text" name="regex_pattern" class="form-control" value="{{ if .Rule }}{{ .Rule.RegexPattern }}{{ end }}" required placeholder="e.g. snmp-server community public\s+RO" style="font-family: monospace;">
+                <input type="text" name="regex_pattern" class="form-input" value="{{ if .Rule }}{{ .Rule.RegexPattern }}{{ end }}" required placeholder="e.g. snmp-server community public\s+RO" style="font-family: monospace;">
                 <div class="form-help">The regex will be evaluated against the raw configuration text.</div>
             </div>
 
             <div class="form-group">
-                <label>Score Penalty</label>
-                <input type="number" name="penalty" class="form-control" value="{{ if .Rule }}{{ .Rule.Penalty }}{{ else }}10{{ end }}" required min="0" max="100">
+                <label class="form-label">Score Penalty</label>
+                <input type="number" name="penalty" class="form-input" value="{{ if .Rule }}{{ .Rule.Penalty }}{{ else }}10{{ end }}" required min="0" max="100">
                 <div class="form-help">Amount to deduct from the node's Security Score (0-100) if matched.</div>
             </div>
 
@@ -78,6 +79,6 @@
                 </button>
             </div>
         </form>
-    </div>
 </div>
-
+</div>
+</div>

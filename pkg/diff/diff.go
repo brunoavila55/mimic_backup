@@ -37,6 +37,7 @@ func splitLines(content string) []string {
 		return []string{}
 	}
 	content = strings.ReplaceAll(content, "\r\n", "\n")
+	content = strings.ReplaceAll(content, "\r", "") // Strip stray CR from SSH
 	return strings.Split(content, "\n")
 }
 

@@ -18,7 +18,7 @@
         <div class="diff-selectors" id="diff-selector-form">
             <div class="diff-selector-group">
                 <span class="text-muted" style="font-size: 11px; font-weight: 600; text-transform: uppercase;">Base:</span>
-                <select class="diff-select" name="left_id"
+                <select class="form-input" style="padding: 4px 8px; font-size: 12px; height: auto; min-width: 150px;" name="left_id"
                         hx-get="/backups/diff/compare"
                         hx-include="#diff-selector-form select"
                         hx-target="#diff-body-area"
@@ -31,7 +31,7 @@
             </div>
             <div class="diff-selector-group">
                 <span class="text-muted" style="font-size: 11px; font-weight: 600; text-transform: uppercase;">Target:</span>
-                <select class="diff-select" name="right_id"
+                <select class="form-input" style="padding: 4px 8px; font-size: 12px; height: auto; min-width: 150px;" name="right_id"
                         hx-get="/backups/diff/compare"
                         hx-include="#diff-selector-form select"
                         hx-target="#diff-body-area"

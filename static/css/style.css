@@ -1480,47 +1480,48 @@ tbody tr:hover { background: var(--bg-hover); }
     padding-left: 12px !important;
 }
 
-/* Row states */
-.diff-row-equal td {
+/* Row states - Unified (td) and Split (div) */
+.diff-row-equal td, .diff-split-row-inner.diff-row-equal {
     background: transparent;
     color: var(--text-secondary);
 }
 
-.diff-row-delete td {
-    background: rgba(239, 68, 68, 0.12) !important;
-    color: #f87171 !important;
+.diff-row-delete td, .diff-split-row-inner.diff-row-delete {
+    background: rgba(239, 68, 68, 0.15) !important;
+    color: #fca5a5 !important;
 }
 
-.diff-row-insert td {
-    background: rgba(107, 203, 119, 0.12) !important;
-    color: #4ade80 !important;
+.diff-row-insert td, .diff-split-row-inner.diff-row-insert {
+    background: rgba(107, 203, 119, 0.15) !important;
+    color: #86efac !important;
 }
 
-.diff-row-empty td {
-    background: rgba(42, 45, 55, 0.2) !important;
+.diff-row-empty td, .diff-split-row-inner.diff-row-empty {
+    background: rgba(42, 45, 55, 0.4) !important;
 }
 
 .diff-row-delete .diff-col-num {
-    background: rgba(239, 68, 68, 0.15) !important;
-    color: rgba(248, 113, 113, 0.6) !important;
+    background: rgba(239, 68, 68, 0.25) !important;
+    color: rgba(252, 165, 165, 0.8) !important;
 }
 
 .diff-row-insert .diff-col-num {
-    background: rgba(107, 203, 119, 0.15) !important;
-    color: rgba(74, 222, 128, 0.6) !important;
+    background: rgba(107, 203, 119, 0.25) !important;
+    color: rgba(134, 239, 172, 0.8) !important;
 }
 
 /* Side-by-side (split) specific */
 .diff-split-table {
     width: 100%;
     table-layout: fixed;
+    border-collapse: collapse;
 }
 
 .diff-split-cell {
     width: 50%;
     vertical-align: top;
     padding: 0 !important;
-    border-right: 1px solid var(--border-light);
+    border-right: 1px solid var(--border);
 }
 
 .diff-split-cell:last-child {
@@ -1530,9 +1531,16 @@ tbody tr:hover { background: var(--bg-hover); }
 .diff-split-row-inner {
     display: flex;
     width: 100%;
+    align-items: stretch;
+    min-height: 20px;
 }
 
 .diff-split-row-inner .diff-col-num {
-    background: var(--bg-secondary);
+    background: var(--bg-surface);
+}
+
+.diff-split-row-inner .diff-col-text {
+    flex: 1;
+    padding: 2px 12px 2px 8px !important;
 }
 

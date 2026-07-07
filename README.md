@@ -38,17 +38,22 @@ Upon the first execution with an empty database, the system will automatically r
 
 Mimic is built with extensibility in mind. Support for new hardware vendors can be introduced seamlessly by implementing the standard driver interface. This allows the system to send vendor-specific commands to retrieve configurations and apply custom normalization rules to filter out volatile data (such as uptime or dynamic timestamps) before version comparison.
 
-## Recent Updates (v0.6.1)
+## Security Rules
 
-- **Performance (Regex Cache):** Implemented a thread-safe in-memory cache for compiled regex patterns in the Security Rules Engine to prevent CPU exhaustion during mass evaluations.
-- **Performance (Mass Audit Throttle):** Added a rate-limiting throttle to background audit re-evaluations to prevent PostgreSQL connection exhaustion.
-- **Golden Config Specificity:** Improved Golden Config matching logic to deterministically prioritize templates based on specificity weight (Target Group + Vendor).
-- **Golden Configs:** Added ability to define "Golden Config Templates" to compare network devices against an expected baseline, directly using the built-in diff engine.
-- **Security Compliance Alerts:** Security and compliance score drops now trigger organic Webhook and Telegram alerts directly from the scheduler.
-- **Security Rules Engine:** Added regular expression compliance auditing and "Security Score" penalty system.
-- **False Positive Exceptions:** Added ability to manually silence (whitelist) specific security rules on a per-node basis without modifying global rules.
-- **Smart Diff UI:** Visual side-by-side and unified diff viewer.
-- **Improved Backup Scheduling:** Replaced free-text time inputs with intuitive dropdown selections to streamline routine creation.
+The Mimic platform includes a Security Rules Engine designed to automatically audit configuration backups for security vulnerabilities and compliance deviations. 
+
+The system comes pre-seeded with a comprehensive catalog of security checks divided into three primary categories:
+- **Authentication / Access**: Checks for plain-text passwords, weak credentials, and exposed or unencrypted management protocols (Telnet, HTTP).
+- **Network / Exposure**: Verifies access controls on VTY lines, legacy SNMP versions, and critical firewall configurations.
+- **Logging / Auditing**: Ensures that devices are properly configured for centralized logging (Syslog) and time synchronization (NTP).
+
+These rules use Regular Expressions to parse raw device configurations. Based on the vendor filter and match conditions, non-compliant configurations will reduce a device's overall Security Score. The UI provides visual badges indicating vendor specificity and severity levels.
+
+## Recent Updates (v0.7.0)
+
+- **Security Rules Seed:** Added an initial catalog of default security rules covering Authentication, Network Exposure, and Logging for multiple vendors.
+- **Security Dashboard UI:** Enhanced the Security Rules listing to display visually distinct badges for Vendor targeting and Rule Severity.
+- **Regex Assistance:** Added dynamic contextual tooltips and inline examples in the Security Rule form to assist with vendor-specific Regex patterns.
 
 ## License
 

@@ -29,7 +29,21 @@
                                 <div style="font-weight: 600;">{{ .Name }}</div>
                                 <div style="font-size: 12px; color: var(--text-muted);">{{ .Description }}</div>
                             </td>
-                            <td><span class="badge badge-info">{{ .Vendor }}</span></td>
+                            <td>
+                                {{ if eq .Vendor "*" }}
+                                    <span class="badge badge-success">All Vendors (*)</span>
+                                {{ else if eq .Vendor "cisco" }}
+                                    <span class="badge badge-info" style="background-color: #0d6efd;">Cisco</span>
+                                {{ else if eq .Vendor "mikrotik" }}
+                                    <span class="badge badge-info" style="background-color: #6f42c1;">MikroTik</span>
+                                {{ else if eq .Vendor "huawei" }}
+                                    <span class="badge badge-info" style="background-color: #d63384;">Huawei</span>
+                                {{ else if eq .Vendor "juniper" }}
+                                    <span class="badge badge-info" style="background-color: #fd7e14;">Juniper</span>
+                                {{ else }}
+                                    <span class="badge badge-info">{{ .Vendor }}</span>
+                                {{ end }}
+                            </td>
                             <td>
                                 {{ if eq .Severity "Critical" }}
                                     <span class="badge badge-danger">Critical (-{{ .Penalty }})</span>

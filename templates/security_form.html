@@ -1,5 +1,15 @@
 
-<div class="page-header">
+<div class="page-header" x-data="{
+    vendor: '{{ if .Rule }}{{ .Rule.Vendor }}{{ else }}*{{ end }}',
+    getRegexExamples() {
+        if (this.vendor === '*') return 'e.g. community\\s+public | logging trap';
+        if (this.vendor === 'cisco') return 'e.g. password 0 | ip http server';
+        if (this.vendor === 'mikrotik') return 'e.g. /ip service.*telnet.*disabled=no';
+        if (this.vendor === 'huawei') return 'e.g. telnet server enable';
+        if (this.vendor === 'juniper') return 'e.g. set system services telnet';
+        return 'e.g. some-pattern';
+    }
+}">
     <div style="display: flex; align-items: center; gap: 16px;">
         <a href="/settings/security" class="action-btn" title="Back to Settings">
             <i class="bx bx-arrow-back" style="font-size: 20px;"></i>
@@ -24,8 +34,8 @@
             <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                 <div class="form-group">
                     <label>Vendor Filter</label>
-                    <input type="text" name="vendor" class="form-control" value="{{ if .Rule }}{{ .Rule.Vendor }}{{ else }}*{{ end }}" placeholder="*" required>
-                    <div class="form-help">Use * to apply to all vendors.</div>
+                    <input type="text" name="vendor" class="form-control" x-model="vendor" placeholder="*" required>
+                    <div class="form-help">Use * to apply to all vendors. Current examples based on: <span x-text="vendor"></span></div>
                 </div>
 
                 <div class="form-group">
@@ -47,7 +57,11 @@
             </div>
 
             <div class="form-group">
-                <label>Regex Pattern</label>
+                <label>Regex Pattern 
+                    <span style="font-size: 12px; font-weight: normal; color: var(--text-muted); margin-left: 8px;">
+                        <i class='bx bx-info-circle'></i> <span x-text="getRegexExamples()"></span>
+                    </span>
+                </label>
                 <input type="text" name="regex_pattern" class="form-control" value="{{ if .Rule }}{{ .Rule.RegexPattern }}{{ end }}" required placeholder="e.g. snmp-server community public\s+RO" style="font-family: monospace;">
                 <div class="form-help">The regex will be evaluated against the raw configuration text.</div>
             </div>

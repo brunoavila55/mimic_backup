@@ -31,18 +31,23 @@ func main() {
 		{Name: "Senha em Texto Plano (Cisco)", Vendor: "cisco", Severity: "Critical", MatchType: "contains", RegexPattern: `password 0 `, Penalty: 25, Description: "Detects passwords stored in plain text"},
 		{Name: "Enable Password Fraco (Cisco)", Vendor: "cisco", Severity: "Warning", MatchType: "contains", RegexPattern: `enable password`, Penalty: 15, Description: "Detects use of enable password instead of enable secret"},
 		{Name: "Senha não Criptografada (Juniper)", Vendor: "juniper", Severity: "Critical", MatchType: "contains", RegexPattern: `set system login user .* authentication plain-text-password`, Penalty: 25, Description: "Detects plain-text authentication configured for a user"},
+		// Validation: IS found. Juniper does not configure SNMP by default. Absence of block implies it is not enabled.
 		{Name: "SNMP RW Habilitado (Juniper)", Vendor: "juniper", Severity: "Critical", MatchType: "contains", RegexPattern: `set snmp community .* authorization read-write`, Penalty: 25, Description: "Detects SNMP Read-Write communities"},
 		{Name: "HTTP Admin sem HTTPS (MikroTik)", Vendor: "mikrotik", Severity: "Warning", MatchType: "contains", RegexPattern: `/ip service.*www.*disabled=no`, Penalty: 10, Description: "Detects HTTP admin interface enabled"},
 		{Name: "HTTP Server Ativo (Cisco)", Vendor: "cisco", Severity: "Warning", MatchType: "contains", RegexPattern: `ip http server`, Penalty: 10, Description: "Detects HTTP server enabled on Cisco"},
 		{Name: "API/Winbox sem Restrição de IP (MikroTik)", Vendor: "mikrotik", Severity: "Warning", MatchType: "not_contains", RegexPattern: `/ip service.*api.*address=`, Penalty: 15, Description: "Detects API access without IP restrictions"},
 
 		// Network / Exposure
+		// Validation: NOT found. Cisco lines vty 0 4 and 5 15 appear in default exports. If access-class is missing, it's vulnerable.
+		// [Needs Validation/Improvement]: The regex `line vty.*access-class` evaluates line-by-line without (?s). It will fail to match across newlines correctly, and might miss if only one VTY block lacks an ACL.
 		{Name: "VTY sem ACL (Cisco)", Vendor: "cisco", Severity: "Critical", MatchType: "not_contains", RegexPattern: `line vty.*access-class`, Penalty: 20, Description: "Detects VTY lines without access-class restrictions"},
 		{Name: "SNMP v1/v2c em Uso", Vendor: "*", Severity: "Warning", MatchType: "contains", RegexPattern: `snmp-server community|community.*ro|community.*rw`, Penalty: 10, Description: "Detects usage of older SNMP versions"},
 		{Name: "Firewall Input sem Drop Final (MikroTik)", Vendor: "mikrotik", Severity: "Critical", MatchType: "not_contains", RegexPattern: `chain=input.*action=drop`, Penalty: 20, Description: "Detects absence of a final drop rule on the input chain"},
 
 		// Logging / Auditing
+		// Validation: NOT found is SAFE. Remote syslog is not enabled by default on Cisco (logging host), Huawei (info-center loghost) or Juniper. Absence = not configured.
 		{Name: "Sem Syslog Remoto", Vendor: "*", Severity: "Warning", MatchType: "not_contains", RegexPattern: `logging \d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|logging trap`, Penalty: 15, Description: "Detects if remote syslog is not configured"},
+		// Validation: NOT found is SAFE. NTP is not configured by default on any supported vendor. Absence = not configured.
 		{Name: "Sem NTP Configurado", Vendor: "*", Severity: "Warning", MatchType: "not_contains", RegexPattern: `ntp server|ntp-server|set system ntp server`, Penalty: 10, Description: "Detects if NTP server is not configured"},
 		{Name: "SNMP Community Padrão Huawei", Vendor: "huawei", Severity: "Warning", MatchType: "contains", RegexPattern: `snmp-agent community read public`, Penalty: 10, Description: "Detects default public read community on Huawei"},
 	}

@@ -4,15 +4,21 @@
             <a href="/settings/security" class="btn btn-ghost btn-icon" title="Back to security rules"><i class="bx bx-arrow-back"></i></a>
             <div>
                 <div class="security-eyebrow"><i class='bx bx-shield-quarter'></i> Security policy builder</div>
-                <h1>{{ if .Rule }}Edit rule{{ else }}Create a security rule{{ end }}</h1>
+                <h1>{{ if .IsEdit }}Edit rule{{ else }}Create a security rule{{ end }}</h1>
                 <p>Describe the risk, choose the affected devices, then validate it with a real configuration.</p>
             </div>
         </div>
         <div class="security-editor-progress"><span class="is-active">1</span><i></i><span>2</span><i></i><span>3</span></div>
     </div>
 
-    <form id="ruleForm" action="{{ if .Rule }}/settings/security/save/{{ .Rule.ID }}{{ else }}/settings/security/save{{ end }}" method="POST"
+    <form id="ruleForm" action="{{ if .IsEdit }}/settings/security/save/{{ .Rule.ID }}{{ else }}/settings/security/save{{ end }}" method="POST"
           @submit="if (!hasTested && !confirm('This rule has not been tested with a configuration. Save anyway?')) $event.preventDefault()">
+        {{ if .Error }}
+        <div class="security-form-error">
+            <i class='bx bx-error-circle'></i>
+            <span>{{ .Error }}</span>
+        </div>
+        {{ end }}
         <div class="security-editor-grid">
             <div class="security-editor-stack">
                 <section class="security-editor-section">
@@ -23,17 +29,17 @@
 
                     <div class="form-group">
                         <label class="form-label" for="rule-name">Rule name <b>Required</b></label>
-                        <input id="rule-name" type="text" name="name" class="form-input security-input-lg" value="{{ if .Rule }}{{ .Rule.Name }}{{ end }}" required placeholder="Example: Telnet service enabled">
+                        <input id="rule-name" type="text" name="name" class="form-input security-input-lg" value="{{ .Rule.Name }}" required placeholder="Example: Telnet service enabled">
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="rule-description">Why is this important?</label>
-                        <textarea id="rule-description" name="description" class="form-input" rows="2" placeholder="Explain the risk in one short sentence.">{{ if .Rule }}{{ .Rule.Description }}{{ end }}</textarea>
+                        <textarea id="rule-description" name="description" class="form-input" rows="2" placeholder="Explain the risk in one short sentence.">{{ .Rule.Description }}</textarea>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Category</label>
-                            {{ $category := "General" }}{{ if .Rule }}{{ $category = .Rule.Category }}{{ end }}
+                            {{ $category := .Rule.Category }}
                             <select name="category" class="form-input">
                                 <option value="Authentication" {{ if eq $category "Authentication" }}selected{{ end }}>Authentication</option>
                                 <option value="Exposure" {{ if eq $category "Exposure" }}selected{{ end }}>Network exposure</option>
@@ -80,7 +86,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Node group</label>
-                            <input type="text" name="target_group" class="form-input" value="{{ if .Rule }}{{ .Rule.TargetGroup }}{{ else }}*{{ end }}" placeholder="* means every group">
+                            <input type="text" name="target_group" class="form-input" value="{{ .Rule.TargetGroup }}" placeholder="* means every group">
                         </div>
                     </div>
 
@@ -133,19 +139,19 @@
 
                     <div class="form-group">
                         <label class="form-label">How should the administrator fix it?</label>
-                        <textarea name="remediation" class="form-input" rows="3" placeholder="Example: Disable Telnet and allow SSH only from the management network.">{{ if .Rule }}{{ .Rule.Remediation }}{{ end }}</textarea>
+                        <textarea name="remediation" class="form-input" rows="3" placeholder="Example: Disable Telnet and allow SSH only from the management network.">{{ .Rule.Remediation }}</textarea>
                     </div>
 
                     <div class="security-toggle-row">
                         <div><strong>Enable this rule</strong><span>Run it automatically after every successful backup.</span></div>
-                        <label class="security-toggle"><input type="checkbox" name="enabled" {{ if .Rule }}{{ if .Rule.Enabled }}checked{{ end }}{{ else }}checked{{ end }}><span class="security-toggle-track"></span></label>
+                        <label class="security-toggle"><input type="checkbox" name="enabled" {{ if .Rule.Enabled }}checked{{ end }}><span class="security-toggle-track"></span></label>
                     </div>
                 </section>
 
                 <div class="security-editor-actions">
                     <a href="/settings/security" class="btn btn-ghost">Cancel</a>
                     <div class="flex gap-2">
-                        {{ if .Rule }}<button type="button" class="btn btn-secondary" @click="saveCopy()"><i class='bx bx-duplicate'></i> Save as copy</button>{{ end }}
+                        {{ if .IsEdit }}<button type="button" class="btn btn-secondary" @click="saveCopy()"><i class='bx bx-duplicate'></i> Save as copy</button>{{ end }}
                         <button type="submit" class="btn btn-primary"><i class='bx bx-save'></i> Save rule</button>
                     </div>
                 </div>
@@ -189,12 +195,12 @@
 <script>
 function securityRuleEditor() {
     return {
-        vendor: '{{ if .Rule }}{{ .Rule.Vendor }}{{ else }}*{{ end }}',
-        severity: '{{ if .Rule }}{{ .Rule.Severity }}{{ else }}Warning{{ end }}',
-        penalty: {{ if .Rule }}{{ .Rule.Penalty }}{{ else }}10{{ end }},
-        matchType: '{{ if .Rule }}{{ .Rule.MatchType }}{{ else }}contains{{ end }}',
-        regexPattern: '{{ if .Rule }}{{ .Rule.RegexPattern | js }}{{ end }}',
-        contextBlock: '{{ if .Rule }}{{ .Rule.ContextBlock | js }}{{ end }}',
+        vendor: '{{ .Rule.Vendor }}',
+        severity: '{{ .Rule.Severity }}',
+        penalty: {{ .Rule.Penalty }},
+        matchType: '{{ .Rule.MatchType }}',
+        regexPattern: '{{ .Rule.RegexPattern | js }}',
+        contextBlock: '{{ .Rule.ContextBlock | js }}',
         testConfig: '', testResult: 'none', violationStatus: 'none', hasTested: false,
         vendorInfo: {
             '*': { short: 'All vendors', title: 'Vendor-neutral rule', help: 'Use only patterns that genuinely appear across every supported vendor.', placeholder: 'Example: community\\s+public' },

@@ -26,6 +26,24 @@ interface GigabitEthernet0/2
 	}
 }
 
+func TestExtractBlockMikroTikMenu(t *testing.T) {
+	config := `/system ntp client
+set enabled=yes primary-ntp=1.1.1.1
+/ip service
+set telnet disabled=yes`
+
+	ctxRe, _ := getCompiledRegex(`/system ntp client`)
+	loc := ctxRe.FindStringIndex(config)
+
+	extracted := extractBlock(config, loc[0])
+	expected := `/system ntp client
+set enabled=yes primary-ntp=1.1.1.1`
+
+	if extracted != expected {
+		t.Errorf("Expected:\n%s\nGot:\n%s", expected, extracted)
+	}
+}
+
 func TestContextBlockMissing(t *testing.T) {
 	// If context block is missing, it should be treated as pattern not found in that block.
 	configText := `
@@ -121,5 +139,12 @@ func TestValidateRuleRejectsInvalidInput(t *testing.T) {
 	rule := models.SecurityRule{Name: "bad", MatchType: "contains", RegexPattern: "[", Penalty: 10}
 	if err := ValidateRule(rule); err == nil {
 		t.Fatal("expected invalid regex to be rejected")
+	}
+}
+
+func TestValidateRuleRejectsBlankPattern(t *testing.T) {
+	rule := models.SecurityRule{Name: "bad", MatchType: "contains", RegexPattern: "   ", Penalty: 10}
+	if err := ValidateRule(rule); err == nil {
+		t.Fatal("expected blank regex to be rejected")
 	}
 }

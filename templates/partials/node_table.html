@@ -19,7 +19,9 @@
                     <th>Health</th>
                     <th>Backups</th>
                     <th>Active</th>
+                    {{ if eq .Role "Administrator" }}
                     <th class="nodes-actions-col">Actions</th>
+                    {{ end }}
                 </tr>
             </thead>
             <tbody>

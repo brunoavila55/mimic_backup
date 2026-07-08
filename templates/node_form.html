@@ -96,18 +96,18 @@
                     <div class="node-form-grid">
                         <div class="form-group">
                             <label class="form-label">Group</label>
-                            <input type="text" name="group" list="group-list" class="form-input" value="{{ .Node.Group }}" placeholder="Core Network" autocomplete="off" />
+                            <input type="text" name="group" list="group-list" class="form-input" value="{{ .Node.Group }}" placeholder="Core Network" autocomplete="off" maxlength="60" pattern="[A-Za-z0-9 _.-]+" title="Use letters, numbers, spaces, dot, dash or underscore." />
                             <datalist id="group-list">
                                 {{ range .Groups }}
                                 <option value="{{ . }}"></option>
                                 {{ end }}
                             </datalist>
-                            <div class="form-hint">Use groups to filter inventory and apply shared routines.</div>
+                            <div class="form-hint">Group names are standardized automatically, for example: core network becomes Core Network.</div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Tags</label>
-                            <input type="text" name="tags" class="form-input" value="{{ .Node.Tags }}" placeholder="datacenter, edge, critical" />
-                            <div class="form-hint">Optional labels for faster search.</div>
+                            <input type="text" name="tags" class="form-input" value="{{ .Node.Tags }}" placeholder="datacenter, edge, critical" maxlength="120" pattern="[A-Za-z0-9,;| _.-]+" title="Separate tags with comma, semicolon or pipe." />
+                            <div class="form-hint">Tags are saved in lowercase and deduplicated.</div>
                         </div>
                     </div>
                 </div>

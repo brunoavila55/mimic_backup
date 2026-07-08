@@ -1,123 +1,196 @@
-<div class="page-enter" style="max-width: 700px; margin: 0 auto;">
-    <div class="page-header">
+<div class="page-enter node-import-page">
+    <div class="page-header node-import-header">
         <div class="flex items-center gap-3">
             <a href="/nodes" class="btn btn-ghost btn-icon"><i class="bx bx-arrow-back"></i></a>
-            <h1 class="page-title">Import Nodes via CSV</h1>
+            <div>
+                <div class="nodes-eyebrow">
+                    <i class="bx bx-upload"></i>
+                    Bulk import
+                </div>
+                <h1 class="page-title">Import Nodes via CSV</h1>
+                <p class="page-desc">Add multiple devices at once using a structured CSV file.</p>
+            </div>
         </div>
     </div>
 
     {{ if .Success }}
-    <div style="padding: 16px 20px; background: var(--success-soft); border: 1px solid rgba(107,203,119,0.2); border-radius: var(--radius-lg); margin-bottom: 20px; display: flex; align-items: center; gap: 12px;">
-        <i class="bx bx-check-circle" style="font-size: 22px; color: var(--success);"></i>
-        <div>
-            <div style="font-weight: 600; color: var(--success); font-size: 14px;">{{ .Success }}</div>
+    <div class="node-import-result success">
+        <div class="node-import-result-icon">
+            <i class="bx bx-check-circle"></i>
+        </div>
+        <div class="node-import-result-copy">
+            <span>Import complete</span>
+            <strong>{{ .Success }}</strong>
             {{ if .ErrorCount }}
-            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">{{ .ErrorCount }} row(s) with error.</div>
+            <p>{{ .ErrorCount }} row(s) need attention. Review the details below.</p>
+            {{ else }}
+            <p>All valid rows were added to the inventory.</p>
             {{ end }}
         </div>
-    </div>
-
-    {{ if .Errors }}
-    <div class="card" style="margin-bottom: 20px;">
-        <div class="card-header">
-            <span class="card-title" style="color: var(--danger);"><i class="bx bx-error"></i> Errors found</span>
-        </div>
-        <div class="card-body" style="padding: 12px 20px;">
-            {{ range .Errors }}
-            <div style="font-size: 12px; color: var(--text-secondary); padding: 4px 0; border-bottom: 1px solid var(--border-light); font-family: var(--font-mono);">{{ . }}</div>
-            {{ end }}
-        </div>
-    </div>
-    {{ end }}
-
-    <div style="text-align: center; margin-top: 8px;">
         <a href="/nodes" class="btn btn-primary">
             <i class="bx bx-server"></i>
             View Nodes
         </a>
     </div>
+
+    {{ if .Errors }}
+    <section class="card node-import-card">
+        <div class="card-header">
+            <div class="node-card-title">
+                <i class="bx bx-error-circle"></i>
+                <div>
+                    <strong>Rows with warnings or errors</strong>
+                    <span>These rows were skipped or imported with fallback behavior.</span>
+                </div>
+            </div>
+        </div>
+        <div class="node-import-error-list">
+            {{ range .Errors }}
+            <div class="node-import-error-item">{{ . }}</div>
+            {{ end }}
+        </div>
+    </section>
+    {{ end }}
     {{ else }}
 
     {{ if .Error }}
-    <div style="padding: 14px 18px; background: var(--danger-soft); border: 1px solid rgba(239,68,68,0.2); border-radius: var(--radius-lg); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--danger);">
-        <i class="bx bx-error-circle" style="font-size: 18px;"></i>
+    <div class="node-import-alert danger">
+        <i class="bx bx-error-circle"></i>
         <span>{{ .Error }}</span>
     </div>
     {{ end }}
 
-    <div class="card" style="margin-bottom: 20px;">
+    {{ if .Errors }}
+    <section class="card node-import-card">
         <div class="card-header">
-            <span class="card-title"><i class="bx bx-info-circle"></i> CSV Format</span>
-        </div>
-        <div class="card-body">
-            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
-                The CSV file must contain a header on the first row with the columns below. The columns <strong>name</strong>, <strong>ip</strong> and <strong>vendor</strong> are required.
-            </p>
-            <div style="background: var(--bg-tertiary); border-radius: var(--radius); padding: 12px 16px; font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); overflow-x: auto; line-height: 1.8;">
-                <div style="color: var(--accent); font-weight: 600; white-space: nowrap;">name,vendor,ip,port,username,password,group,schedule_type,frequency,backup_hour,backup_day,credential_name,routine_name,agent_name,enabled</div>
-                <div style="white-space: nowrap;">Switch-Core-01,cisco,192.168.1.1,22,admin,senha123,Datacenter,individual,24,02:00,,,,,true</div>
-                <div style="white-space: nowrap;">Router-Edge-01,mikrotik,10.0.0.1,22,,,,,routine,,,,,Daily Edge Backup,,true</div>
-            </div>
-
-            <div style="margin-top: 16px;">
-                <table style="width: 100%; font-size: 12px;">
-                    <thead>
-                        <tr style="background: var(--bg-tertiary);">
-                            <th style="padding: 8px 12px; text-align: left; color: var(--text-muted); font-weight: 600;">Column</th>
-                            <th style="padding: 8px 12px; text-align: left; color: var(--text-muted); font-weight: 600;">Required</th>
-                            <th style="padding: 8px 12px; text-align: left; color: var(--text-muted); font-weight: 600;">Default / Notes</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">name</td><td style="padding: 6px 12px;"><span class="badge badge-danger">Yes</span></td><td style="padding: 6px 12px; color: var(--text-muted);">-</td></tr>
-                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">vendor</td><td style="padding: 6px 12px;"><span class="badge badge-danger">Yes</span></td><td style="padding: 6px 12px; color: var(--text-muted);">-</td></tr>
-                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">ip</td><td style="padding: 6px 12px;"><span class="badge badge-danger">Yes</span></td><td style="padding: 6px 12px; color: var(--text-muted);">-</td></tr>
-                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">port</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">22</td></tr>
-                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">group</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">General</td></tr>
-                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">enabled</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">true</td></tr>
-                        
-                        <tr><td colspan="3" style="padding: 10px 12px 2px; font-weight: 600; color: var(--text); border-top: 1px solid var(--border-light);">Authentication</td></tr>
-                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">credential_name</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">Link by credential name</td></tr>
-                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">username</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">Ignored if credential_name is set</td></tr>
-                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">password</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">Plain text (will be encrypted)</td></tr>
-
-                        <tr><td colspan="3" style="padding: 10px 12px 2px; font-weight: 600; color: var(--text); border-top: 1px solid var(--border-light);">Scheduling</td></tr>
-                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">schedule_type</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">individual or routine</td></tr>
-                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">routine_name</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">Required if type is routine</td></tr>
-                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">frequency</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">1, 6, 12, 24, 168 (hours)</td></tr>
-                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">backup_hour</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">HH:MM (e.g. 02:00)</td></tr>
-                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">backup_day</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">0-6 (0 is Monday)</td></tr>
-                        
-                        <tr><td colspan="3" style="padding: 10px 12px 2px; font-weight: 600; color: var(--text); border-top: 1px solid var(--border-light);">Advanced</td></tr>
-                        <tr><td style="padding: 6px 12px; color: var(--text); font-weight: 500;">agent_name</td><td style="padding: 6px 12px;"><span class="badge badge-muted">No</span></td><td style="padding: 6px 12px; color: var(--text-muted);">Link by access agent name</td></tr>
-                    </tbody>
-                </table>
+            <div class="node-card-title">
+                <i class="bx bx-error-circle"></i>
+                <div>
+                    <strong>Rows with errors</strong>
+                    <span>Fix these rows and upload the CSV again.</span>
+                </div>
             </div>
         </div>
+        <div class="node-import-error-list">
+            {{ range .Errors }}
+            <div class="node-import-error-item">{{ . }}</div>
+            {{ end }}
+        </div>
+    </section>
+    {{ end }}
+
+    <div class="node-import-layout">
+        <section class="card node-import-upload-card">
+            <div class="card-header">
+                <div class="node-card-title">
+                    <i class="bx bx-file"></i>
+                    <div>
+                        <strong>Upload CSV</strong>
+                        <span>Choose the file and start the import.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <form action="/nodes/import" method="POST" enctype="multipart/form-data">
+                    <label class="node-file-drop">
+                        <input type="file" name="csv_file" accept=".csv" required />
+                        <i class="bx bx-cloud-upload"></i>
+                        <strong>Select a CSV file</strong>
+                        <span>Required columns: name, vendor and ip.</span>
+                    </label>
+
+                    <div class="node-import-checklist">
+                        <div>
+                            <i class="bx bx-check"></i>
+                            Header row included
+                        </div>
+                        <div>
+                            <i class="bx bx-check"></i>
+                            Vendor values match supported drivers
+                        </div>
+                        <div>
+                            <i class="bx bx-check"></i>
+                            Credential, routine and agent names already exist when referenced
+                        </div>
+                    </div>
+
+                    <div class="form-actions node-import-actions">
+                        <a href="/nodes" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bx bx-upload"></i>
+                            Import Nodes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <aside class="node-import-guide">
+            <div class="node-import-guide-card">
+                <span>Required</span>
+                <strong>name, vendor, ip</strong>
+                <p>Rows without name or IP are skipped. Port defaults to 22.</p>
+            </div>
+            <div class="node-import-guide-card">
+                <span>Defaults</span>
+                <strong>group: General</strong>
+                <p>enabled defaults to true, and schedule_type defaults to individual.</p>
+            </div>
+            <div class="node-import-guide-card">
+                <span>Security</span>
+                <strong>password is encrypted</strong>
+                <p>Plain text passwords are accepted only in the uploaded CSV and stored encrypted.</p>
+            </div>
+        </aside>
     </div>
 
-    <div class="card">
+    <section class="card node-import-card">
         <div class="card-header">
-            <span class="card-title"><i class="bx bx-upload"></i> File Upload</span>
+            <div class="node-card-title">
+                <i class="bx bx-table"></i>
+                <div>
+                    <strong>CSV structure</strong>
+                    <span>Use this exact header order for predictable imports.</span>
+                </div>
+            </div>
         </div>
         <div class="card-body">
-            <form action="/nodes/import" method="POST" enctype="multipart/form-data">
-                <div class="form-group">
-                    <label class="form-label">CSV File</label>
-                    <input type="file" name="csv_file" accept=".csv" class="form-input" required
-                           style="padding: 10px; cursor: pointer;" />
-                    <div class="form-hint">Select a .csv file with the nodes to import.</div>
+            <div class="node-csv-sample">
+                <div class="node-csv-line is-header">name,vendor,ip,port,username,password,group,tags,schedule_type,frequency,backup_hour,backup_day,credential_name,routine_name,agent_name,enabled</div>
+                <div class="node-csv-line">Switch-Core-01,cisco,192.168.1.1,22,admin,password123,Datacenter,core critical,individual,24,02:00,,,,,true</div>
+                <div class="node-csv-line">Router-Edge-01,mikrotik,10.0.0.1,22,,,,edge,routine,24,,,,Daily Edge Backup,,true</div>
+            </div>
+
+            <div class="node-import-columns">
+                <div class="node-import-column-group">
+                    <h3>Core fields</h3>
+                    <div class="node-import-column-row is-required"><span>name</span><strong>Required</strong><small>Device label in inventory.</small></div>
+                    <div class="node-import-column-row is-required"><span>vendor</span><strong>Required</strong><small>cisco, mikrotik, huawei or juniper.</small></div>
+                    <div class="node-import-column-row is-required"><span>ip</span><strong>Required</strong><small>IP address or hostname.</small></div>
+                    <div class="node-import-column-row"><span>port</span><strong>Default 22</strong><small>SSH port.</small></div>
+                    <div class="node-import-column-row"><span>group</span><strong>Default General</strong><small>Inventory grouping.</small></div>
+                    <div class="node-import-column-row"><span>tags</span><strong>Optional</strong><small>Search labels for inventory filters.</small></div>
+                    <div class="node-import-column-row"><span>enabled</span><strong>Default true</strong><small>false, 0 or no disables the node.</small></div>
                 </div>
 
-                <div class="form-actions">
-                    <a href="/nodes" class="btn btn-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bx bx-upload"></i>
-                        Import Nodes
-                    </button>
+                <div class="node-import-column-group">
+                    <h3>Authentication</h3>
+                    <div class="node-import-column-row"><span>credential_name</span><strong>Optional</strong><small>Links an existing credential by name.</small></div>
+                    <div class="node-import-column-row"><span>username</span><strong>Optional</strong><small>Used when credential_name is empty.</small></div>
+                    <div class="node-import-column-row"><span>password</span><strong>Optional</strong><small>Encrypted after import.</small></div>
+                    <div class="node-import-column-row"><span>agent_name</span><strong>Optional</strong><small>Links an existing access agent by name.</small></div>
                 </div>
-            </form>
+
+                <div class="node-import-column-group">
+                    <h3>Scheduling</h3>
+                    <div class="node-import-column-row"><span>schedule_type</span><strong>Default individual</strong><small>individual or routine.</small></div>
+                    <div class="node-import-column-row"><span>routine_name</span><strong>Optional</strong><small>Recommended when using routine.</small></div>
+                    <div class="node-import-column-row"><span>frequency</span><strong>Default 24</strong><small>1, 6, 12, 24 or 168 hours.</small></div>
+                    <div class="node-import-column-row"><span>backup_hour</span><strong>Optional</strong><small>HH:MM format.</small></div>
+                    <div class="node-import-column-row"><span>backup_day</span><strong>Optional</strong><small>0-6, where 0 is Monday.</small></div>
+                </div>
+            </div>
         </div>
-    </div>
+    </section>
     {{ end }}
 </div>

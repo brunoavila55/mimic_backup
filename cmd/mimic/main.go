@@ -9,7 +9,6 @@ import (
 	"mimic/internal/services/scheduler"
 	"mimic/internal/services/sftp"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -28,7 +27,7 @@ func main() {
 	fmt.Println(`   /  |/  (_)___ ___  (_)____  `)
 	fmt.Println(`  / /|_/ / / __ ` + "`" + `__ \/ / ___/  `)
 	fmt.Println(` / /  / / / / / / / / / /__    `)
-	fmt.Println(`/_/  /_/_/_/ /_/ /_/_/\___/  Backup Systems v0.6.1`)
+	fmt.Println(`/_/  /_/_/_/ /_/ /_/_/\___/  Backup Systems v0.7.1`)
 	fmt.Println("===================================================")
 
 	// Database connection
@@ -80,11 +79,7 @@ func main() {
 	// Get Version from Git or Build Flags
 	appVersion := AppVersion
 	if appVersion == "" {
-		appVersion = "0.6.1" // fallback
-		if out, err := exec.Command("git", "rev-list", "--count", "HEAD").Output(); err == nil {
-			count := strings.TrimSpace(string(out))
-			appVersion = "0.6." + count
-		}
+		appVersion = "0.7.1"
 	}
 
 	// Template Engine
@@ -111,7 +106,7 @@ func main() {
 
 	app := fiber.New(fiber.Config{
 		Views:   engine,
-		AppName: "Mimic Backup Systems v0.6.1",
+		AppName: "Mimic Backup Systems v0.7.1",
 	})
 
 	// Static Files
@@ -232,25 +227,12 @@ func main() {
 	app.Post("/nodes/:id/trigger", middleware.RequireAdmin(), func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		var node models.Node
-		if err := db.Preload("Credential").Preload("AccessAgent").Where("id = ?", id).First(&node).Error; err == nil {
-			go sch.RunBackup(&node)
-			c.Set("HX-Trigger", `{"showNotification": {"message": "Manual backup started", "type": "success"}}`)
+		if err := db.Preload("Credential").Preload("AccessAgent").Where("id = ?", id).First(&node).Error; err != nil {
+			c.Set("HX-Trigger", `{"showNotification": {"message": "Node not found", "type": "error"}}`)
+			return c.SendStatus(fiber.StatusNotFound)
 		}
-		return c.SendStatus(200)
-	})
-
-	app.Post("/trigger-backups", middleware.RequireAdmin(), func(c *fiber.Ctx) error {
-		sch.CheckBackups()
-		return c.SendStatus(200)
-	})
-
-	app.Post("/nodes/:id/trigger", middleware.RequireAdmin(), func(c *fiber.Ctx) error {
-		id := c.Params("id")
-		var node models.Node
-		if err := db.Preload("Credential").Preload("AccessAgent").Where("id = ?", id).First(&node).Error; err == nil {
-			go sch.RunBackup(&node)
-			c.Set("HX-Trigger", `{"showNotification": {"message": "Manual backup started", "type": "success"}}`)
-		}
+		go sch.RunBackup(&node)
+		c.Set("HX-Trigger", `{"showNotification": {"message": "Manual backup started", "type": "success"}}`)
 		return c.SendStatus(200)
 	})
 

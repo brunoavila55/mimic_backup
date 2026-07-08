@@ -1,170 +1,241 @@
-<div class="stats-grid">
-    <div class="stat-card">
-        <div class="stat-label">Total Nodes</div>
-        <div class="stat-value">{{ .Stats.TotalNodes }}</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">Active Nodes</div>
-        <div class="stat-value accent">{{ .Stats.ActiveNodes }}</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">Total Backups</div>
-        <div class="stat-value success">{{ .Stats.TotalBackups }}</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">Failures</div>
-        <div class="stat-value danger">{{ .Stats.FailedBackups }}</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">SFTP Unsynced</div>
-        <div class="stat-value {{ if gt .SftpUnsyncedCount 0 }}warning{{ else }}success{{ end }}">
-            {{ .SftpUnsyncedCount }}
+<section class="dashboard-hero">
+    <div class="dashboard-hero-copy">
+        <div class="nodes-eyebrow">
+            <i class="bx bx-pulse"></i>
+            Operations overview
         </div>
-        {{ if gt .SftpUnsyncedCount 0 }}
-        <div style="font-size: 11px; margin-top: 4px;"><a href="/settings/export" style="color: var(--warning);">Sync now &rarr;</a></div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-desc">Acompanhe saude dos nodes, falhas recentes, sincronizacao SFTP e proximas execucoes.</p>
+    </div>
+    <div class="dashboard-hero-actions">
+        <a href="/nodes" class="btn btn-secondary">
+            <i class="bx bx-server"></i>
+            Ver nodes
+        </a>
+        {{ if eq .Role "Administrator" }}
+        <button hx-post="/trigger-backups" hx-swap="none" class="btn btn-primary">
+            <i class="bx bx-refresh"></i>
+            Rodar backups
+        </button>
         {{ end }}
     </div>
-</div>
+</section>
 
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start;">
-
-    <!-- Left Column -->
-    <div style="display: flex; flex-direction: column; gap: 16px;">
-        
-        <!-- Precisa de Atenção (Failed + Silent Nodes) -->
-        <div class="card" style="border-left: 3px solid var(--danger);">
-            <div class="card-header">
-                <span class="card-title" style="color: var(--danger);">Needs Attention</span>
-            </div>
-            <div class="card-body">
-                {{ if or .FailedNodes .SilentNodes }}
-                <div class="activity-list">
-                    {{ range .FailedNodes }}
-                    <div class="activity-item">
-                        <div class="activity-dot" style="background: var(--danger);"></div>
-                        <div class="activity-content flex items-center justify-between" style="width: 100%;">
-                            <div style="flex: 1;">
-                                <div class="flex items-center justify-between">
-                                    <span class="activity-title"><a href="/nodes/{{ .ID }}" style="color: inherit; text-decoration: none;">{{ .Name }}</a></span>
-                                    <span class="activity-time badge badge-danger">FAILED</span>
-                                </div>
-                                <div class="activity-text" style="color: var(--danger); opacity: 0.8;">{{ if .LastError }}{{ .LastError }}{{ else }}Unknown error{{ end }}</div>
-                            </div>
-                            <button class="btn btn-sm btn-ghost" hx-post="/nodes/{{ .ID }}/trigger" hx-swap="none" onclick="this.innerHTML='<span class=\'spinner\'></span>';">Run Backup</button>
-                        </div>
-                    </div>
-                    {{ end }}
-                    {{ range .SilentNodes }}
-                    <div class="activity-item">
-                        <div class="activity-dot" style="background: var(--warning);"></div>
-                        <div class="activity-content flex items-center justify-between" style="width: 100%;">
-                            <div style="flex: 1;">
-                                <div class="flex items-center justify-between">
-                                    <span class="activity-title"><a href="/nodes/{{ .ID }}" style="color: inherit; text-decoration: none;">{{ .Name }}</a></span>
-                                    <span class="activity-time badge badge-warning">SILENT</span>
-                                </div>
-                                <div class="activity-text" style="color: var(--warning); opacity: 0.8;">No backup for over 48h</div>
-                            </div>
-                            <button class="btn btn-sm btn-ghost" hx-post="/nodes/{{ .ID }}/trigger" hx-swap="none" onclick="this.innerHTML='<span class=\'spinner\'></span>';">Run Backup</button>
-                        </div>
-                    </div>
-                    {{ end }}
-                </div>
-                {{ else }}
-                <div class="text-center text-muted" style="padding: 24px 0; font-size: 13px;">
-                    No devices with pending issues
-                </div>
-                {{ end }}
-            </div>
+<section class="dashboard-summary">
+    <div class="dashboard-health {{ if gt .Stats.AttentionNodes 0 }}is-warning{{ else }}is-good{{ end }}">
+        <div>
+            <span class="dashboard-card-label">Estado geral</span>
+            <strong>{{ if gt .Stats.AttentionNodes 0 }}Atencao necessaria{{ else }}Operacao estavel{{ end }}</strong>
+            <p>{{ .Stats.ActiveNodes }} nodes ativos, {{ .Stats.AttentionNodes }} exigindo acao.</p>
         </div>
-
-        <!-- Falhas por Fabricante -->
-        <div class="card">
-            <div class="card-header">
-                <span class="card-title">Failures by Vendor</span>
-            </div>
-            <div class="card-body">
-                {{ if .VendorFailures }}
-                <div class="activity-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px;">
-                    {{ range .VendorFailures }}
-                    <div style="background: var(--bg-color); padding: 12px; border-radius: 6px; text-align: center; border: 1px solid var(--border-color);">
-                        <div style="font-weight: 600; font-size: 13px; color: var(--text-color);">{{ .Vendor }}</div>
-                        <div style="font-size: 18px; font-weight: 700; color: var(--danger); margin-top: 4px;">{{ .Count }}</div>
-                    </div>
-                    {{ end }}
-                </div>
-                {{ else }}
-                <div class="text-center text-muted" style="padding: 24px 0; font-size: 13px;">
-                    No failures registered.
-                </div>
-                {{ end }}
-            </div>
-        </div>
+        <i class="bx {{ if gt .Stats.AttentionNodes 0 }}bx-error-circle{{ else }}bx-check-circle{{ end }}"></i>
     </div>
 
-    <!-- Right Column -->
-    <div style="display: flex; flex-direction: column; gap: 16px;">
-        
-        <!-- Feed de Mudanças -->
-        <div class="card">
-            <div class="card-header">
-                <span class="card-title">Change Feed</span>
-            </div>
-            <div class="card-body">
-                {{ if .RecentBackups }}
-                <div class="activity-list">
-                    {{ range .RecentBackups }}
-                    <div class="activity-item" style="cursor: pointer;" hx-get="/nodes/{{ .NodeID }}/backups/{{ .ID }}/diff" hx-target="body" hx-swap="beforeend">
-                        <div class="activity-dot" style="background: {{ if or (gt .DiffAdditions 0) (gt .DiffDeletions 0) }}var(--accent){{ else }}var(--success){{ end }};"></div>
-                        <div class="activity-content">
-                            <div class="flex items-center justify-between">
-                                <span class="activity-title">{{ .Node.Name }}</span>
-                                <div>
-                                    <span class="badge" style="background: rgba(34, 197, 94, 0.1); color: var(--success);">+{{ .DiffAdditions }}</span>
-                                    <span class="badge" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);">-{{ .DiffDeletions }}</span>
-                                </div>
-                            </div>
-                            <div class="activity-text">{{ .CreatedAt.Format "02/01/2006 15:04" }} &mdash; v{{ .Version }}</div>
-                        </div>
-                    </div>
-                    {{ end }}
-                </div>
-                {{ else }}
-                <div class="text-center text-muted" style="padding: 24px 0; font-size: 13px;">
-                    No recent change history.
-                </div>
-                {{ end }}
-            </div>
+    <div class="dashboard-kpis">
+        <a href="/nodes" class="dashboard-kpi">
+            <span>Total nodes</span>
+            <strong>{{ .Stats.TotalNodes }}</strong>
+            <small>{{ .Stats.ActiveNodes }} ativos</small>
+        </a>
+        <a href="/nodes?status=success" class="dashboard-kpi success">
+            <span>Saudaveis</span>
+            <strong>{{ .Stats.HealthyNodes }}</strong>
+            <small>ultimo backup ok</small>
+        </a>
+        <a href="/nodes?status=error" class="dashboard-kpi danger">
+            <span>Com falha</span>
+            <strong>{{ len .FailedNodes }}</strong>
+            <small>precisam revisao</small>
+        </a>
+        {{ if eq .Role "Administrator" }}
+        <a href="/settings/export" class="dashboard-kpi {{ if gt .Stats.SftpUnsyncedNodes 0 }}warning{{ else }}success{{ end }}">
+            <span>SFTP pendente</span>
+            <strong>{{ .Stats.SftpUnsyncedNodes }}</strong>
+            <small>nodes nao exportados</small>
+        </a>
+        {{ else }}
+        <div class="dashboard-kpi {{ if gt .Stats.SftpUnsyncedNodes 0 }}warning{{ else }}success{{ end }}">
+            <span>SFTP pendente</span>
+            <strong>{{ .Stats.SftpUnsyncedNodes }}</strong>
+            <small>nodes nao exportados</small>
         </div>
-
-        <!-- Next Backups -->
-        <div class="card">
-            <div class="card-header">
-                <span class="card-title">Upcoming Executions</span>
-            </div>
-            <div class="card-body">
-                {{ if .NextBackups }}
-                <div class="activity-list">
-                    {{ range .NextBackups }}
-                    <div class="activity-item">
-                        <div class="activity-dot" style="background: var(--text-muted);"></div>
-                        <div class="activity-content">
-                            <div class="flex items-center justify-between">
-                                <span class="activity-title"><a href="/nodes/{{ .ID }}" style="color: inherit; text-decoration: none;">{{ .Name }}</a></span>
-                                <span class="badge" style="background: rgba(108, 99, 166, 0.1); color: var(--accent);">{{ .NextBackupAt.Format "15:04" }}</span>
-                            </div>
-                            <div class="activity-text">Scheduled for {{ .NextBackupAt.Format "02/01/2006" }}</div>
-                        </div>
-                    </div>
-                    {{ end }}
-                </div>
-                {{ else }}
-                <div class="text-center text-muted" style="padding: 24px 0; font-size: 13px;">
-                    No scheduled backups at this time.
-                </div>
-                {{ end }}
-            </div>
-        </div>
-
+        {{ end }}
     </div>
-</div>
+</section>
+
+<section class="dashboard-grid">
+    <div class="dashboard-stack">
+        <article class="dashboard-panel dashboard-panel-attention">
+            <div class="dashboard-panel-header">
+                <div>
+                    <span class="dashboard-card-label">Fila de acao</span>
+                    <h2>Precisa de atencao</h2>
+                </div>
+                <span class="badge {{ if gt .Stats.AttentionNodes 0 }}badge-danger{{ else }}badge-success{{ end }}">
+                    {{ .Stats.AttentionNodes }} itens
+                </span>
+            </div>
+
+            {{ if or .FailedNodes .SilentNodes }}
+            <div class="dashboard-action-list">
+                {{ range .FailedNodes }}
+                <div class="dashboard-action-row danger">
+                    <div class="dashboard-status-dot"></div>
+                    <div class="dashboard-action-copy">
+                        <div class="dashboard-action-title">
+                            <a href="/nodes/{{ .ID }}">{{ .Name }}</a>
+                            <span class="badge badge-danger">Falha</span>
+                        </div>
+                        <p>{{ if .LastError }}{{ .LastError }}{{ else }}Erro no ultimo backup.{{ end }}</p>
+                    </div>
+                    {{ if eq $.Role "Administrator" }}
+                        <button class="btn btn-sm btn-ghost" hx-post="/nodes/{{ .ID }}/trigger" hx-swap="none">
+                            Rodar
+                        </button>
+                    {{ end }}
+                </div>
+                {{ end }}
+
+                {{ range .SilentNodes }}
+                <div class="dashboard-action-row warning">
+                    <div class="dashboard-status-dot"></div>
+                    <div class="dashboard-action-copy">
+                        <div class="dashboard-action-title">
+                            <a href="/nodes/{{ .ID }}">{{ .Name }}</a>
+                            <span class="badge badge-warning">Silencioso</span>
+                        </div>
+                        <p>Sem backup bem-sucedido ha mais de 48 horas.</p>
+                    </div>
+                    {{ if eq $.Role "Administrator" }}
+                        <button class="btn btn-sm btn-ghost" hx-post="/nodes/{{ .ID }}/trigger" hx-swap="none">
+                            Rodar
+                        </button>
+                    {{ end }}
+                </div>
+                {{ end }}
+            </div>
+            {{ else }}
+            <div class="dashboard-empty">
+                <i class="bx bx-check-circle"></i>
+                <strong>Nenhuma pendencia critica</strong>
+                <span>Falhas e nodes silenciosos vao aparecer aqui automaticamente.</span>
+            </div>
+            {{ end }}
+        </article>
+
+        <article class="dashboard-panel">
+            <div class="dashboard-panel-header">
+                <div>
+                    <span class="dashboard-card-label">Backups</span>
+                    <h2>Resumo de execucoes</h2>
+                </div>
+                <span class="badge badge-accent">{{ .Stats.SuccessRate }}% sucesso</span>
+            </div>
+            <div class="dashboard-backup-summary">
+                <div>
+                    <span>Total</span>
+                    <strong>{{ .Stats.TotalBackups }}</strong>
+                </div>
+                <div>
+                    <span>Sucesso</span>
+                    <strong class="success">{{ .Stats.SuccessfulBackups }}</strong>
+                </div>
+                <div>
+                    <span>Falhas</span>
+                    <strong class="danger">{{ .Stats.FailedBackups }}</strong>
+                </div>
+            </div>
+        </article>
+    </div>
+
+    <div class="dashboard-stack">
+        <article class="dashboard-panel">
+            <div class="dashboard-panel-header">
+                <div>
+                    <span class="dashboard-card-label">Mudancas</span>
+                    <h2>Change feed</h2>
+                </div>
+                <a href="/nodes" class="btn btn-sm btn-ghost">Ver todos</a>
+            </div>
+
+            {{ if .RecentBackups }}
+            <div class="dashboard-feed">
+                {{ range .RecentBackups }}
+                <button class="dashboard-feed-row" hx-get="/nodes/{{ .NodeID }}/backups/{{ .ID }}/diff" hx-target="body" hx-swap="beforeend">
+                    <span class="dashboard-status-dot {{ if or (gt .DiffAdditions 0) (gt .DiffDeletions 0) }}accent{{ else }}success{{ end }}"></span>
+                    <span class="dashboard-feed-copy">
+                        <strong>{{ .Node.Name }}</strong>
+                        <small>{{ .CreatedAt.Format "02/01/2006 15:04" }} - v{{ .Version }}</small>
+                    </span>
+                    <span class="dashboard-diff">
+                        <b class="success">+{{ .DiffAdditions }}</b>
+                        <b class="danger">-{{ .DiffDeletions }}</b>
+                    </span>
+                </button>
+                {{ end }}
+            </div>
+            {{ else }}
+            <div class="dashboard-empty">
+                <i class="bx bx-history"></i>
+                <strong>Sem historico recente</strong>
+                <span>As proximas alteracoes de configuracao vao aparecer aqui.</span>
+            </div>
+            {{ end }}
+        </article>
+
+        <article class="dashboard-panel">
+            <div class="dashboard-panel-header">
+                <div>
+                    <span class="dashboard-card-label">Agenda</span>
+                    <h2>Proximas execucoes</h2>
+                </div>
+                <span class="badge badge-muted">{{ len .NextBackups }} agendadas</span>
+            </div>
+
+            {{ if .NextBackups }}
+            <div class="dashboard-schedule">
+                {{ range .NextBackups }}
+                <a href="/nodes/{{ .ID }}" class="dashboard-schedule-row">
+                    <span class="dashboard-schedule-time">{{ .NextBackupAt.Format "15:04" }}</span>
+                    <span>
+                        <strong>{{ .Name }}</strong>
+                        <small>{{ .NextBackupAt.Format "02/01/2006" }}</small>
+                    </span>
+                </a>
+                {{ end }}
+            </div>
+            {{ else }}
+            <div class="dashboard-empty">
+                <i class="bx bx-calendar"></i>
+                <strong>Nenhum backup agendado</strong>
+                <span>Revise as rotinas ou o agendamento dos nodes ativos.</span>
+            </div>
+            {{ end }}
+        </article>
+
+        <article class="dashboard-panel">
+            <div class="dashboard-panel-header">
+                <div>
+                    <span class="dashboard-card-label">Fabricantes</span>
+                    <h2>Falhas por vendor</h2>
+                </div>
+            </div>
+
+            {{ if .VendorFailures }}
+            <div class="dashboard-vendors">
+                {{ range .VendorFailures }}
+                <div class="dashboard-vendor">
+                    <span>{{ .Vendor }}</span>
+                    <strong>{{ .Count }}</strong>
+                </div>
+                {{ end }}
+            </div>
+            {{ else }}
+            <div class="dashboard-empty compact">
+                <i class="bx bx-shield-quarter"></i>
+                <strong>Nenhum vendor com falha</strong>
+            </div>
+            {{ end }}
+        </article>
+    </div>
+</section>

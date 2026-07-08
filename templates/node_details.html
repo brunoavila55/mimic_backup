@@ -13,12 +13,14 @@
                 <i class="bx bx-check-shield"></i> Golden Config Diff
             </button>
             {{ end }}
+            {{ if eq .Role "Administrator" }}
             <button hx-post="/nodes/{{ .Node.ID }}/trigger" hx-swap="none" class="btn btn-secondary">
                 <i class="bx bx-play-circle"></i> Manual Backup
             </button>
             <a href="/nodes/{{ .Node.ID }}/edit" class="btn btn-primary">
                 <i class="bx bx-edit-alt"></i> Edit
             </a>
+            {{ end }}
         </div>
     </div>
 
@@ -71,7 +73,9 @@
                                 <th>Rule</th>
                                 <th>Severity / Penalty</th>
                                 <th>First Detected Version</th>
+                                {{ if eq $.Role "Administrator" }}
                                 <th style="width: 100px; text-align: center;">Actions</th>
+                                {{ end }}
                             </tr>
                         </thead>
                         <tbody>
@@ -92,6 +96,7 @@
                                     {{ end }}
                                 </td>
                                 <td>v{{ .BackupVersion }}<div style="font-size:11px;color:var(--text-muted);">Active since {{ .CreatedAt.Format "02/01/2006" }}</div></td>
+                                {{ if eq $.Role "Administrator" }}
                                 <td style="text-align: center;">
                                     <button hx-post="/nodes/{{ $.Node.ID }}/exceptions/{{ .RuleID }}" 
                                             hx-swap="none"
@@ -99,6 +104,7 @@
                                         <i class='bx bx-hide'></i>
                                     </button>
                                 </td>
+                                {{ end }}
                             </tr>
                             {{ end }}
                         </tbody>
@@ -120,7 +126,9 @@
                                 <tr>
                                     <th>Rule Name</th>
                                     <th>Reason</th>
+                                    {{ if eq $.Role "Administrator" }}
                                     <th style="width: 100px; text-align: center;">Actions</th>
+                                    {{ end }}
                                 </tr>
                             </thead>
                             <tbody>
@@ -128,6 +136,7 @@
                                 <tr>
                                     <td style="color: var(--text-muted);"><del>{{ .Rule.Name }}</del></td>
                                     <td style="color: var(--text-muted);">{{ .Reason }}</td>
+                                    {{ if eq $.Role "Administrator" }}
                                     <td style="text-align: center;">
                                         <button hx-delete="/nodes/{{ $.Node.ID }}/exceptions/{{ .RuleID }}" 
                                                 hx-swap="none"
@@ -135,6 +144,7 @@
                                             <i class='bx bx-revision'></i>
                                         </button>
                                     </td>
+                                    {{ end }}
                                 </tr>
                                 {{ end }}
                             </tbody>
@@ -195,11 +205,13 @@
                                          class="action-btn" title="View configuration">
                                      <i class="bx bx-code-block"></i>
                                  </button>
-                                 <button hx-post="/backups/{{ .ID }}/export"
-                                         hx-swap="none"
-                                         class="action-btn" title="Export to SFTP">
-                                     <i class="bx bx-export"></i>
-                                 </button>
+                                 {{ if eq $.Role "Administrator" }}
+                                     <button hx-post="/backups/{{ .ID }}/export"
+                                             hx-swap="none"
+                                             class="action-btn" title="Export to SFTP">
+                                         <i class="bx bx-export"></i>
+                                     </button>
+                                 {{ end }}
                              </div>
                         </td>
                     </tr>

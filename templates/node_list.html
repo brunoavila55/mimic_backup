@@ -8,6 +8,7 @@
             <h1 class="page-title">Nodes</h1>
             <p class="page-desc">Manage devices, backup health, schedules and maintenance actions in one place.</p>
         </div>
+        {{ if eq .Role "Administrator" }}
         <div class="nodes-hero-actions">
             <a href="/nodes/export" class="btn btn-secondary">
                 <i class="bx bx-download"></i>
@@ -26,6 +27,7 @@
                 New Node
             </a>
         </div>
+        {{ end }}
     </div>
 
     <div class="nodes-overview">

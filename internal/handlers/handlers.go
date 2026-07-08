@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/csv"
 	"fmt"
+	"html"
 	"mimic/internal/models"
 	"mimic/internal/services/sftp"
 	"mimic/pkg/diff"
@@ -29,33 +30,48 @@ type VendorFailure struct {
 	Count  int64
 }
 
+type DashboardStats struct {
+	TotalNodes        int64
+	ActiveNodes       int64
+	HealthyNodes      int64
+	TotalBackups      int64
+	SuccessfulBackups int64
+	FailedBackups     int64
+	AttentionNodes    int64
+	SilentNodes       int64
+	SftpUnsyncedNodes int64
+	SuccessRate       int64
+}
+
 func (h *DashboardHandler) GetDashboard(c *fiber.Ctx) error {
-	var stats struct {
-		TotalNodes    int64
-		ActiveNodes   int64
-		TotalBackups  int64
-		FailedBackups int64
-	}
+	now := time.Now()
+	thresholdTime := now.Add(-silentThresholdHours * time.Hour)
+
+	var stats DashboardStats
 	h.DB.Model(&models.Node{}).Count(&stats.TotalNodes)
 	h.DB.Model(&models.Node{}).Where("enabled = ?", true).Count(&stats.ActiveNodes)
-	h.DB.Model(&models.NodeBackup{}).Where("status = ?", "success").Count(&stats.TotalBackups)
+	h.DB.Model(&models.Node{}).Where("enabled = ? AND last_status = ?", true, "success").Count(&stats.HealthyNodes)
+	h.DB.Model(&models.NodeBackup{}).Count(&stats.TotalBackups)
+	h.DB.Model(&models.NodeBackup{}).Where("status = ?", "success").Count(&stats.SuccessfulBackups)
 	h.DB.Model(&models.NodeBackup{}).Where("status = ?", "error").Count(&stats.FailedBackups)
 
 	var failedNodes []models.Node
 	h.DB.Where("enabled = ? AND last_status = ?", true, "error").Order("updated_at desc").Find(&failedNodes)
 
 	var silentNodes []models.Node
-	thresholdTime := time.Now().Add(-silentThresholdHours * time.Hour)
-	h.DB.Where("enabled = ? AND last_status != ? AND (last_backup_at IS NULL OR last_backup_at < ?)", true, "error", thresholdTime).Order("last_backup_at asc").Find(&silentNodes)
+	h.DB.Where("enabled = ? AND (last_status IS NULL OR last_status != ?) AND (last_backup_at IS NULL OR last_backup_at < ?)", true, "error", thresholdTime).Order("last_backup_at asc").Find(&silentNodes)
 
 	var vendorFailures []VendorFailure
 	h.DB.Model(&models.Node{}).Select("vendor, count(*) as count").Where("enabled = ? AND last_status = ?", true, "error").Group("vendor").Order("count desc").Scan(&vendorFailures)
 
-	var sftpUnsyncedCount int64
-	h.DB.Model(&models.NodeBackup{}).Where("status = ? AND exported = ?", "success", false).Select("count(distinct node_id)").Scan(&sftpUnsyncedCount)
+	h.DB.Model(&models.NodeBackup{}).Where("status = ? AND exported = ?", "success", false).Distinct("node_id").Count(&stats.SftpUnsyncedNodes)
+	stats.SilentNodes = int64(len(silentNodes))
+	stats.AttentionNodes = int64(len(failedNodes)) + stats.SilentNodes
+	if stats.TotalBackups > 0 {
+		stats.SuccessRate = (stats.SuccessfulBackups * 100) / stats.TotalBackups
+	}
 
 	var nextBackups []models.Node
-	now := time.Now()
 	h.DB.Where("enabled = ? AND next_backup_at > ?", true, now).Order("next_backup_at asc").Limit(5).Find(&nextBackups)
 
 	var recentLogs []models.SystemLog
@@ -76,7 +92,7 @@ func (h *DashboardHandler) GetDashboard(c *fiber.Ctx) error {
 		"FailedNodes":       failedNodes,
 		"SilentNodes":       silentNodes,
 		"VendorFailures":    vendorFailures,
-		"SftpUnsyncedCount": sftpUnsyncedCount,
+		"SftpUnsyncedCount": stats.SftpUnsyncedNodes,
 		"NextBackups":       nextBackups,
 	}
 
@@ -185,7 +201,7 @@ func (h *NodeHandler) NodeDetails(c *fiber.Ctx) error {
 
 	var hasGoldenConfig bool
 	var gcs []models.GoldenConfig
-	if err := h.DB.Where("(vendor = ? OR vendor = '*') AND (target_group = ? OR target_group = '*')", node.Vendor, node.Group).Find(&gcs).Error; err == nil && len(gcs) > 0 {
+	if err := h.DB.Where("(LOWER(vendor) = LOWER(?) OR vendor = '*') AND (LOWER(target_group) = LOWER(?) OR target_group = '*')", node.Vendor, node.Group).Find(&gcs).Error; err == nil && len(gcs) > 0 {
 		hasGoldenConfig = true
 	}
 
@@ -282,7 +298,7 @@ func (h *NodeHandler) GoldenDiffView(c *fiber.Ctx) error {
 	// Fetch matching Golden Config
 	var gcs []models.GoldenConfig
 	var gc models.GoldenConfig
-	if err := h.DB.Where("(vendor = ? OR vendor = '*') AND (target_group = ? OR target_group = '*')", backup.Node.Vendor, backup.Node.Group).Find(&gcs).Error; err != nil || len(gcs) == 0 {
+	if err := h.DB.Where("(LOWER(vendor) = LOWER(?) OR vendor = '*') AND (LOWER(target_group) = LOWER(?) OR target_group = '*')", backup.Node.Vendor, backup.Node.Group).Find(&gcs).Error; err != nil || len(gcs) == 0 {
 		return c.Status(404).SendString("No matching Golden Config found")
 	}
 
@@ -372,7 +388,7 @@ func (h *NodeHandler) ExportNodesCSV(c *fiber.Ctx) error {
 	// Header
 	writer.Write([]string{
 		"name", "vendor", "ip", "port", "username", "password",
-		"group", "schedule_type", "frequency", "backup_hour", "backup_day",
+		"group", "tags", "schedule_type", "frequency", "backup_hour", "backup_day",
 		"credential_name", "routine_name", "agent_name", "enabled",
 	})
 
@@ -405,6 +421,7 @@ func (h *NodeHandler) ExportNodesCSV(c *fiber.Ctx) error {
 			node.Username,
 			"", // password omitted for security
 			node.Group,
+			node.Tags,
 			node.ScheduleType,
 			node.Frequency,
 			node.BackupHour,
@@ -588,7 +605,7 @@ func (h *SettingsHandler) GetSFTPExplore(c *fiber.Ctx) error {
 
 	files, err := h.Sftp.ListDir(&settings, remotePath)
 	if err != nil {
-		return c.Status(500).SendString(fmt.Sprintf("<div class='alert alert-error' style='color: #ef4444; background: #fee2e2; padding: 12px; border-radius: 6px; margin-top: 16px;'>Failed to list directory: %v</div>", err))
+		return c.Status(500).SendString(fmt.Sprintf("<div class='alert alert-error' style='color: #ef4444; background: #fee2e2; padding: 12px; border-radius: 6px; margin-top: 16px;'>Failed to list directory: %s</div>", html.EscapeString(err.Error())))
 	}
 
 	parentPath := ""

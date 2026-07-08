@@ -29,6 +29,9 @@ func ValidateRule(rule models.SecurityRule) error {
 	if rule.Penalty < 0 || rule.Penalty > 100 {
 		return fmt.Errorf("penalty must be between 0 and 100")
 	}
+	if strings.TrimSpace(rule.RegexPattern) == "" {
+		return fmt.Errorf("regex pattern is required")
+	}
 	if _, err := regexp.Compile(rule.RegexPattern); err != nil {
 		return fmt.Errorf("invalid regex pattern: %w", err)
 	}
@@ -115,13 +118,24 @@ func extractBlock(config string, startIdx int) string {
 		block = append(block, lines[0]) // Include the first line (the context match)
 	}
 
+	menuStyleBlock := strings.HasPrefix(strings.TrimSpace(lines[0]), "/")
+
 	// Read subsequent lines until we hit a blank line or a line without leading whitespace
 	for i := 1; i < len(lines); i++ {
 		line := lines[i]
 		trimmed := strings.TrimRight(line, "\r\t ")
+		trimmedLeft := strings.TrimLeft(line, " \t")
 
 		if trimmed == "" {
 			break // Blank line terminates block
+		}
+
+		if menuStyleBlock {
+			if strings.HasPrefix(trimmedLeft, "/") {
+				break
+			}
+			block = append(block, line)
+			continue
 		}
 
 		if !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "\t") {
@@ -137,13 +151,13 @@ func extractBlock(config string, startIdx int) string {
 // RunAudit evaluates the configuration against all applicable security rules and calculates a security score.
 func RunAudit(db *gorm.DB, node *models.Node, backupVersion int, configText string) []models.SecurityViolation {
 	var rules []models.SecurityRule
-	if err := db.Where("enabled = ? AND (vendor = ? OR vendor = '*') AND (target_group = ? OR target_group = '*')", true, node.Vendor, node.Group).Find(&rules).Error; err != nil {
+	if err := db.Where("enabled = ? AND (LOWER(vendor) = LOWER(?) OR vendor = '*') AND (LOWER(target_group) = LOWER(?) OR target_group = '*')", true, node.Vendor, node.Group).Find(&rules).Error; err != nil {
 		return nil
 	}
 
 	// Fetch old violations to compute diff
 	var oldViolations []models.SecurityViolation
-	db.Unscoped().Where("node_id = ?", node.ID).Find(&oldViolations)
+	db.Where("node_id = ?", node.ID).Find(&oldViolations)
 	oldViolationMap := make(map[uint]bool)
 	for _, v := range oldViolations {
 		oldViolationMap[v.RuleID] = true

@@ -1,61 +1,84 @@
 # Mimic Backup Systems
 
-Mimic is a high-performance platform designed for the automation, versioning, and centralization of configuration backups for network equipment such as switches, routers, OLTs, and firewalls. By establishing secure SSH connections to network devices, Mimic captures their current configurations and maintains a comprehensive history to ensure seamless auditing and disaster recovery.
+**Current interface version:** `0.7.1`
+
+Mimic is a platform for automating, versioning, auditing, and centralizing configuration backups for network equipment such as switches, routers, OLTs, and firewalls. It connects to devices over SSH, captures their configurations, compares versions, and keeps a searchable history for operational visibility, compliance, and disaster recovery.
 
 ## Overview
 
-Modern network infrastructures require strict tracking of configuration changes to maintain stability and security. Mimic addresses this need by providing an automated solution that periodically collects configuration states from devices across the network. It intelligently compares new configurations against previous versions, securely storing only meaningful changes. This minimizes storage overhead while providing a clear audit trail of network modifications over time.
+Modern network environments need reliable configuration history, clear change tracking, and quick visibility into backup failures. Mimic schedules configuration captures, stores meaningful backup versions, highlights drift, and helps teams understand which devices need action.
+
+The interface is designed around operational workflows: dashboard triage, node inventory, CSV import/export, backup history, security rule auditing, and SFTP synchronization.
 
 ## Key Features
 
-- **Automated Backup Routines**: Schedule periodic backups for individual nodes or logical groups, ensuring configuration history is always up to date without manual intervention.
-- **Visual Difference Tracking**: Inspect configuration changes easily through an integrated side-by-side differential viewer, allowing administrators to pinpoint exact modifications between versions.
-- **Secure Credential Management**: Store and reuse SSH credentials securely. All sensitive information is encrypted at rest using industry-standard AES-GCM 256-bit encryption.
-- **Centralized Dashboard**: Monitor the health of your backup routines through a comprehensive dashboard that highlights recent activities, scheduled tasks, and execution failures.
-- **SFTP Synchronization**: Automatically mirror collected configuration backups to external SFTP servers for off-site disaster recovery compliance.
-- **Role-Based Access Control**: Manage system access through distinct user roles, ensuring that only authorized personnel can initiate backups or alter system settings.
-- **Comprehensive Audit Logs**: Maintain a centralized log of all system activities, including backup executions, credential modifications, and synchronization events.
+- **Automated Backup Routines:** Schedule backups per node or through reusable routines.
+- **Node Inventory:** Manage vendors, groups, tags, credentials, access agents, health status, and schedules.
+- **CSV Import/Export:** Import nodes in bulk with validation, delimiter detection, normalized names/groups/tags, and clear row-level feedback.
+- **Visual Diff Viewer:** Compare configuration versions and inspect additions/removals.
+- **Centralized Dashboard:** Monitor active nodes, failed backups, silent nodes, SFTP sync pending items, upcoming executions, and recent configuration changes.
+- **Security Rules Engine:** Audit configurations using vendor-aware rules, severity, regex matching, score penalties, exceptions, and remediation guidance.
+- **Golden Config Checks:** Compare device backups against expected baseline configurations.
+- **Secure Credential Management:** Store SSH credentials encrypted at rest using AES-GCM.
+- **SFTP Synchronization:** Export successful backups to an external SFTP destination.
+- **Role-Based Access Control:** Administrators can manage and execute actions; Viewers have read-oriented access.
+- **Audit Logs:** Track operational activity and backup/export events.
+
+## Supported Vendors
+
+The current UI and backend normalize the following vendor scopes:
+
+- Cisco
+- MikroTik
+- Huawei
+- Juniper
+
+Security rules can also target all vendors using `*`.
 
 ## Prerequisites
 
 - PostgreSQL 15 or higher
+- Go runtime for local builds, or Docker for containerized deployment
 
-## Installation and Configuration
+## Installation
 
-Mimic offers two official installation paths to suit your infrastructure. Choose your preferred method:
+Mimic supports two installation paths:
 
-1. **Bare-Metal Installation (Classic):** Ideal for those who want full control over the server, manually installing native dependencies (Postgres, Nginx).
-   👉 **[View Manual Installation Guide (TUTORIAL.md)](TUTORIAL.md)**
-
-2. **Docker Installation (Recommended):** The fastest and most modern way. Spins up the application and database in isolated containers with a single command.
-   👉 **[View Docker Installation Guide (DOCKER.md)](DOCKER.md)**
+1. **Docker Installation (Recommended):** Fastest path for running the app and database in containers. See [DOCKER.md](DOCKER.md).
+2. **Bare-Metal Installation:** Manual setup for environments that manage PostgreSQL, service files, and reverse proxies directly. See [TUTORIAL.md](TUTORIAL.md).
 
 ## First Setup
 
-Upon the first execution with an empty database, the system will automatically restrict access and redirect to the initial setup wizard. This guided process ensures that the database connection is healthy and allows the creation of the primary Administrator account. Once completed, the system will redirect to the standard authentication screen.
-
-## Extensibility
-
-Mimic is built with extensibility in mind. Support for new hardware vendors can be introduced seamlessly by implementing the standard driver interface. This allows the system to send vendor-specific commands to retrieve configurations and apply custom normalization rules to filter out volatile data (such as uptime or dynamic timestamps) before version comparison.
+On first run with an empty database, Mimic redirects to the setup wizard. The wizard verifies database readiness and creates the initial Administrator account. After setup, users authenticate through the login screen.
 
 ## Security Rules
 
-The Mimic platform includes a Security Rules Engine designed to automatically audit configuration backups for security vulnerabilities and compliance deviations. 
+The Security Rules Engine automatically evaluates successful backups for security vulnerabilities and compliance deviations.
 
-The system comes pre-seeded with a comprehensive catalog of security checks divided into three primary categories:
-- **Authentication / Access**: Checks for plain-text passwords, weak credentials, and exposed or unencrypted management protocols (Telnet, HTTP).
-- **Network / Exposure**: Verifies access controls on VTY lines, legacy SNMP versions, and critical firewall configurations.
-- **Logging / Auditing**: Ensures that devices are properly configured for centralized logging (Syslog) and time synchronization (NTP).
+Rules can target:
 
-These rules use Regular Expressions to parse raw device configurations. Based on the vendor filter and match conditions, non-compliant configurations will reduce a device's overall Security Score. The UI provides visual badges indicating vendor specificity and severity levels.
+- **Authentication / Access:** Plain-text passwords, weak access patterns, Telnet/HTTP exposure.
+- **Network / Exposure:** VTY access controls, SNMP community usage, firewall-related checks.
+- **Logging / Auditing:** Syslog, NTP, and operational audit requirements.
 
-## Recent Updates (v0.7.0)
+Rules support vendor filters, group filters, regex matching, context blocks, severities, penalties, remediation text, and per-node exceptions.
 
-- **Security Rules Seed:** Added an initial catalog of default security rules covering Authentication, Network Exposure, and Logging for multiple vendors.
-- **Security Dashboard UI:** Enhanced the Security Rules listing to display visually distinct badges for Vendor targeting and Rule Severity.
-- **Regex Assistance:** Added dynamic contextual tooltips and inline examples in the Security Rule form to assist with vendor-specific Regex patterns.
+## Recent Updates (v0.7.1)
+
+- **Dashboard Rework:** Rebuilt the main dashboard with clearer health summary, action queue, backup success metrics, change feed, upcoming executions, and vendor failure visibility.
+- **Nodes UI Rework:** Improved node listing, node creation, filters, status cards, schedule presentation, and admin-only action visibility.
+- **CSV Import Rework:** Added a clearer import interface and stronger backend handling for BOM headers, comma/semicolon delimiters, blank rows, optional columns, tags, and row-level errors.
+- **Security Rules Rework:** Improved rule creation UX, validation, vendor/group matching, regex validation, and re-evaluation after rule changes or exceptions.
+- **Backend Hardening:** Removed duplicate backup routes, improved error handling, escaped dynamic SFTP error output, validated user roles and ports, and standardized HTMX notifications.
+- **Naming Normalization:** Normalized node vendor, group, tags, and schedule fields to reduce inconsistent records.
+- **Viewer Experience:** Hidden admin-only controls from Viewer users while keeping read-only visibility intact.
+
+## Extensibility
+
+Mimic is built to support additional network vendors. New drivers can implement vendor-specific SSH commands and configuration normalization while preserving the same backup, diff, audit, and dashboard workflows.
 
 ## License
 
 Developed by Mimic Backup Systems.
-For bug reports and feature requests, please utilize the standard issue tracking system.
+
+For bug reports and feature requests, use the project issue tracker.

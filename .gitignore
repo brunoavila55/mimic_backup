@@ -24,6 +24,7 @@ dist/
 
 # Go Modules and dependencies
 vendor/
+.gocache/
 
 # PostgreSQL data (if mapped locally)
 .docker_data/

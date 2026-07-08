@@ -74,7 +74,14 @@ func (h *SetupHandler) PostCreateSuperuser(c *fiber.Ctx) error {
 		})
 	}
 
-	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return c.Render("setup_superuser", fiber.Map{
+			"Title": "Create Administrator",
+			"Step":  2,
+			"Error": "Error hashing password",
+		})
+	}
 	user := models.User{
 		Username: username,
 		Email:    email,

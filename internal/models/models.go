@@ -72,9 +72,9 @@ type Node struct {
 	VerifyHostKey        bool       `gorm:"default:true"`
 	SSHPublicFingerprint string
 	SSHPrivateKey        string
-	AlertSnoozeUntil     *time.Time `gorm:"index"`
-	SecurityScore        int        `gorm:"default:100;index"`
-	Backups              []NodeBackup `gorm:"foreignKey:NodeID"`
+	AlertSnoozeUntil     *time.Time          `gorm:"index"`
+	SecurityScore        int                 `gorm:"default:100;index"`
+	Backups              []NodeBackup        `gorm:"foreignKey:NodeID"`
 	Violations           []SecurityViolation `gorm:"foreignKey:NodeID"`
 	Exceptions           []NodeRuleException `gorm:"foreignKey:NodeID"`
 }
@@ -85,11 +85,11 @@ func (n *Node) IsSnoozed() bool {
 
 type NodeBackup struct {
 	gorm.Model
-	NodeID    uint
-	Node      Node
-	Version   int
-	Config    string
-	Hash      string
+	NodeID        uint
+	Node          Node
+	Version       int
+	Config        string
+	Hash          string
 	Status        string
 	Error         string
 	Exported      bool `gorm:"default:false;index"`
@@ -122,28 +122,32 @@ type SystemLog struct {
 
 type AlertRule struct {
 	gorm.Model
-	Name           string `json:"name"`
-	TargetGroup    string `json:"target_group" gorm:"default:'Global'"` // 'Global' matches all
-	Enabled        bool   `json:"enabled" gorm:"default:true"`
-	Provider       string `json:"provider"` // "webhook" or "telegram"
-	WebhookURL     string `json:"webhook_url"`
-	TelegramToken  string `json:"telegram_token"`
-	TelegramChatID string `json:"telegram_chat_id"`
-	AlertOnDiff    bool   `json:"alert_on_diff"`
-	AlertOnFailure bool   `json:"alert_on_failure"`
-	AlertOnSecurity bool  `json:"alert_on_security"`
+	Name            string `json:"name"`
+	TargetGroup     string `json:"target_group" gorm:"default:'Global'"` // 'Global' matches all
+	Enabled         bool   `json:"enabled" gorm:"default:true"`
+	Provider        string `json:"provider"` // "webhook" or "telegram"
+	WebhookURL      string `json:"webhook_url"`
+	TelegramToken   string `json:"telegram_token"`
+	TelegramChatID  string `json:"telegram_chat_id"`
+	AlertOnDiff     bool   `json:"alert_on_diff"`
+	AlertOnFailure  bool   `json:"alert_on_failure"`
+	AlertOnSecurity bool   `json:"alert_on_security"`
 }
 
 type SecurityRule struct {
 	gorm.Model
-	Name         string `json:"name"`
+	Name         string `json:"name" gorm:"not null"`
 	Description  string `json:"description"`
+	Category     string `json:"category" gorm:"default:'General';index"`
 	Vendor       string `json:"vendor" gorm:"default:'*'"` // '*' for any vendor
+	TargetGroup  string `json:"target_group" gorm:"default:'*';index"`
+	Enabled      bool   `json:"enabled" gorm:"default:true;index"`
 	RegexPattern string `json:"regex_pattern"`
 	ContextBlock string `json:"context_block"` // Optional regex to scope the search block
 	MatchType    string `json:"match_type" gorm:"default:'contains'"`
 	Penalty      int    `json:"penalty" gorm:"default:10"`
 	Severity     string `json:"severity" gorm:"default:'Warning'"` // Critical, Warning, Info
+	Remediation  string `json:"remediation"`
 }
 
 type GoldenConfig struct {

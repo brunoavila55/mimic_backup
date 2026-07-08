@@ -80,6 +80,7 @@
                                 <td>
                                     <div style="font-weight: 600;">{{ .Rule.Name }}</div>
                                     <div style="font-size: 12px; color: var(--text-muted);">{{ .Rule.Description }}</div>
+                                    {{ if .Rule.Remediation }}<div style="font-size: 12px; color: var(--text-muted); margin-top:6px;"><strong>Remediation:</strong> {{ .Rule.Remediation }}</div>{{ end }}
                                 </td>
                                 <td>
                                     {{ if eq .Rule.Severity "Critical" }}
@@ -90,7 +91,7 @@
                                         <span class="badge badge-info">Info (-{{ .Rule.Penalty }})</span>
                                     {{ end }}
                                 </td>
-                                <td>v{{ .BackupVersion }}</td>
+                                <td>v{{ .BackupVersion }}<div style="font-size:11px;color:var(--text-muted);">Active since {{ .CreatedAt.Format "02/01/2006" }}</div></td>
                                 <td style="text-align: center;">
                                     <button hx-post="/nodes/{{ $.Node.ID }}/exceptions/{{ .RuleID }}" 
                                             hx-swap="none"

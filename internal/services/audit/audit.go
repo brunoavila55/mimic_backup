@@ -1,14 +1,72 @@
 package audit
 
 import (
-	"mimic/internal/models"
+	"fmt"
 	"log"
+	"mimic/internal/models"
 	"regexp"
 	"strings"
 	"sync"
 
 	"gorm.io/gorm"
 )
+
+// Evaluation is the deterministic result of applying one rule to a configuration.
+// Keeping this logic outside RunAudit ensures previews and tests use the same engine.
+type Evaluation struct {
+	Violated       bool
+	PatternMatched bool
+	ContextFound   bool
+}
+
+func ValidateRule(rule models.SecurityRule) error {
+	if strings.TrimSpace(rule.Name) == "" {
+		return fmt.Errorf("rule name is required")
+	}
+	if rule.MatchType != "contains" && rule.MatchType != "not_contains" {
+		return fmt.Errorf("invalid match condition")
+	}
+	if rule.Penalty < 0 || rule.Penalty > 100 {
+		return fmt.Errorf("penalty must be between 0 and 100")
+	}
+	if _, err := regexp.Compile(rule.RegexPattern); err != nil {
+		return fmt.Errorf("invalid regex pattern: %w", err)
+	}
+	if rule.ContextBlock != "" {
+		if _, err := regexp.Compile(rule.ContextBlock); err != nil {
+			return fmt.Errorf("invalid context regex: %w", err)
+		}
+	}
+	return nil
+}
+
+func EvaluateRule(rule models.SecurityRule, configText string) (Evaluation, error) {
+	if err := ValidateRule(rule); err != nil {
+		return Evaluation{}, err
+	}
+
+	result := Evaluation{ContextFound: true}
+	targetText := configText
+	if rule.ContextBlock != "" {
+		ctxRe, _ := getCompiledRegex(rule.ContextBlock)
+		loc := ctxRe.FindStringIndex(configText)
+		if loc == nil {
+			result.ContextFound = false
+			targetText = ""
+		} else {
+			targetText = extractBlock(configText, loc[0])
+		}
+	}
+
+	re, _ := getCompiledRegex(rule.RegexPattern)
+	result.PatternMatched = re.MatchString(targetText)
+	if rule.MatchType == "not_contains" {
+		result.Violated = !result.PatternMatched
+	} else {
+		result.Violated = result.PatternMatched
+	}
+	return result, nil
+}
 
 var (
 	regexCache = make(map[string]*regexp.Regexp)
@@ -79,7 +137,7 @@ func extractBlock(config string, startIdx int) string {
 // RunAudit evaluates the configuration against all applicable security rules and calculates a security score.
 func RunAudit(db *gorm.DB, node *models.Node, backupVersion int, configText string) []models.SecurityViolation {
 	var rules []models.SecurityRule
-	if err := db.Where("vendor = ? OR vendor = '*'", node.Vendor).Find(&rules).Error; err != nil {
+	if err := db.Where("enabled = ? AND (vendor = ? OR vendor = '*') AND (target_group = ? OR target_group = '*')", true, node.Vendor, node.Group).Find(&rules).Error; err != nil {
 		return nil
 	}
 
@@ -90,10 +148,6 @@ func RunAudit(db *gorm.DB, node *models.Node, backupVersion int, configText stri
 	for _, v := range oldViolations {
 		oldViolationMap[v.RuleID] = true
 	}
-
-	// Clear previous violations for this node
-	// Unscoped because we don't want soft-deletes lingering around for violations (or at least, we hard delete them to keep it clean)
-	db.Unscoped().Where("node_id = ?", node.ID).Delete(&models.SecurityViolation{})
 
 	var exceptions []models.NodeRuleException
 	db.Where("node_id = ?", node.ID).Find(&exceptions)
@@ -117,48 +171,13 @@ func RunAudit(db *gorm.DB, node *models.Node, backupVersion int, configText stri
 				return // Skip whitelisted rules entirely for this node
 			}
 
-			re, err := getCompiledRegex(rule.RegexPattern)
-			if err != nil || rule.RegexPattern == "" {
+			result, err := EvaluateRule(rule, configText)
+			if err != nil {
+				log.Printf("[Audit] Skipping invalid rule %d: %v", rule.ID, err)
 				return
 			}
 
-			targetText := configText
-			contextMissing := false
-
-			// If ContextBlock is provided, scope the targetText down to that block
-			if rule.ContextBlock != "" {
-				ctxRe, err := getCompiledRegex(rule.ContextBlock)
-				if err == nil {
-					loc := ctxRe.FindStringIndex(configText)
-					if loc != nil {
-						targetText = extractBlock(configText, loc[0])
-					} else {
-						// Context block is completely missing from the config
-						targetText = ""
-						contextMissing = true
-					}
-				}
-			}
-
-			triggerViolation := false
-
-			if contextMissing {
-				// User confirmation applied: if the block is missing, the pattern is inherently not found.
-				// For 'contains' -> no match -> no violation.
-				// For 'not_contains' -> no match -> IS A VIOLATION (e.g. NTP not configured at all).
-				if rule.MatchType == "not_contains" {
-					triggerViolation = true
-				}
-			} else {
-				matched := re.MatchString(targetText)
-				if rule.MatchType == "not_contains" && !matched {
-					triggerViolation = true
-				} else if (rule.MatchType == "contains" || rule.MatchType == "") && matched {
-					triggerViolation = true
-				}
-			}
-
-			if triggerViolation {
+			if result.Violated {
 				score -= rule.Penalty
 				violations = append(violations, models.SecurityViolation{
 					NodeID:        node.ID,
@@ -169,12 +188,27 @@ func RunAudit(db *gorm.DB, node *models.Node, backupVersion int, configText stri
 		}()
 	}
 
-	if score < 0 {
-		score = 0
+	// Keep continuing violations so CreatedAt remains the first detection time.
+	activeRuleIDs := make([]uint, 0, len(violations))
+	for i := range violations {
+		activeRuleIDs = append(activeRuleIDs, violations[i].RuleID)
+		var existing models.SecurityViolation
+		if err := db.Where("node_id = ? AND rule_id = ?", node.ID, violations[i].RuleID).First(&existing).Error; err == nil {
+			existing.BackupVersion = backupVersion
+			db.Save(&existing)
+			violations[i] = existing
+		} else {
+			db.Create(&violations[i])
+		}
+	}
+	if len(activeRuleIDs) == 0 {
+		db.Unscoped().Where("node_id = ?", node.ID).Delete(&models.SecurityViolation{})
+	} else {
+		db.Unscoped().Where("node_id = ? AND rule_id NOT IN ?", node.ID, activeRuleIDs).Delete(&models.SecurityViolation{})
 	}
 
-	if len(violations) > 0 {
-		db.Create(&violations)
+	if score < 0 {
+		score = 0
 	}
 
 	node.SecurityScore = score

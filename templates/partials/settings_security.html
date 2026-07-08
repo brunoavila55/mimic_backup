@@ -1,92 +1,99 @@
-<div class="card" id="security-tab">
-    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-        <h3 class="card-title">Security & Compliance Rules</h3>
-        <a href="/settings/security/new" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px;">
-            <i class='bx bx-plus'></i> Add Rule
+<section id="security-tab" class="security-rules" x-data="{ search: '', status: 'all', severity: 'all' }">
+    <div class="security-hero">
+        <div>
+            <div class="security-eyebrow"><i class='bx bx-shield-quarter'></i> Compliance engine</div>
+            <h2>Security Rules</h2>
+            <p>Turn raw device configurations into clear, prioritized findings.</p>
+        </div>
+        <a href="/settings/security/new" class="btn btn-primary security-add-rule">
+            <i class='bx bx-plus'></i> New rule
         </a>
     </div>
-    <div class="card-body">
-        <p class="text-secondary" style="margin-bottom: 20px;">
-            Security rules are evaluated against a node's configuration during every backup. If a Regex Pattern matches, the Penalty is subtracted from the node's Security Score.
-        </p>
 
-        <div class="table-container">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Rule Name</th>
-                        <th>Vendor</th>
-                        <th>Severity / Penalty</th>
-                        <th>Pattern</th>
-                        <th style="width: 80px; text-align: center;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{ if .Rules }}
-                        {{ range .Rules }}
-                        <tr>
-                            <td>
-                                <div style="font-weight: 600;">{{ .Name }}</div>
-                                <div style="font-size: 12px; color: var(--text-muted);">{{ .Description }}</div>
-                            </td>
-                            <td>
-                                {{ if eq .Vendor "*" }}
-                                    <span class="badge badge-success">All Vendors (*)</span>
-                                {{ else if eq .Vendor "cisco" }}
-                                    <span class="badge badge-info" style="background-color: #0d6efd;">Cisco</span>
-                                {{ else if eq .Vendor "mikrotik" }}
-                                    <span class="badge badge-info" style="background-color: #6f42c1;">MikroTik</span>
-                                {{ else if eq .Vendor "huawei" }}
-                                    <span class="badge badge-info" style="background-color: #d63384;">Huawei</span>
-                                {{ else if eq .Vendor "juniper" }}
-                                    <span class="badge badge-info" style="background-color: #fd7e14;">Juniper</span>
-                                {{ else }}
-                                    <span class="badge badge-info">{{ .Vendor }}</span>
-                                {{ end }}
-                            </td>
-                            <td>
-                                {{ if eq .Severity "Critical" }}
-                                    <span class="badge badge-danger">Critical (-{{ .Penalty }})</span>
-                                {{ else if eq .Severity "Warning" }}
-                                    <span class="badge badge-warning">Warning (-{{ .Penalty }})</span>
-                                {{ else }}
-                                    <span class="badge badge-info">Info (-{{ .Penalty }})</span>
-                                {{ end }}
-                            </td>
-                            <td>
-                                <div style="margin-bottom: 4px;">
-                                    {{ if eq .MatchType "not_contains" }}
-                                        <span class="badge badge-warning" style="font-size: 10px; padding: 2px 4px;">MUST NOT BE MISSING (Negative Match)</span>
-                                    {{ else }}
-                                        <span class="badge badge-info" style="font-size: 10px; padding: 2px 4px;">MUST NOT BE PRESENT (Positive Match)</span>
-                                    {{ end }}
-                                </div>
-                                <code style="font-size: 11px; background: var(--bg-body); padding: 4px; border-radius: 4px; color: var(--accent);">{{ .RegexPattern }}</code>
-                            </td>
-                            <td style="text-align: center;">
-                                <div class="action-group" style="justify-content: center;">
-                                    <a href="/settings/security/{{ .ID }}/edit" class="action-btn" title="Edit Rule"><i class='bx bx-edit-alt'></i></a>
-                                    <button hx-delete="/settings/security/{{ .ID }}" 
-                                            hx-confirm="Are you sure you want to delete this rule?" 
-                                            hx-target="closest tr" 
-                                            hx-swap="delete" 
-                                            class="action-btn danger" title="Delete Rule">
-                                        <i class='bx bx-trash'></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        {{ end }}
-                    {{ else }}
-                        <tr>
-                            <td colspan="5" class="table-empty">
-                                <i class='bx bx-check-shield' style="font-size: 32px; display: block; margin-bottom: 8px;"></i>
-                                No security rules configured. Add one to start auditing configurations.
-                            </td>
-                        </tr>
-                    {{ end }}
-                </tbody>
-            </table>
+    <div class="security-metrics">
+        <div class="security-metric">
+            <span class="security-metric-icon neutral"><i class='bx bx-list-check'></i></span>
+            <div><strong>{{ len .Rules }}</strong><span>Total rules</span></div>
+        </div>
+        <div class="security-metric">
+            <span class="security-metric-icon success"><i class='bx bx-play-circle'></i></span>
+            <div><strong>{{ .EnabledCount }}</strong><span>Currently active</span></div>
+        </div>
+        <div class="security-metric">
+            <span class="security-metric-icon danger"><i class='bx bx-error-circle'></i></span>
+            <div><strong>{{ .CriticalCount }}</strong><span>Critical policies</span></div>
         </div>
     </div>
-</div>
+
+    <div class="security-toolbar">
+        <div class="search-box security-search">
+            <i class='bx bx-search'></i>
+            <input class="form-input" type="search" x-model.debounce.150ms="search" placeholder="Search by rule, category or vendor">
+        </div>
+        <select class="form-input security-filter" x-model="severity" aria-label="Filter by severity">
+            <option value="all">All severities</option>
+            <option value="Critical">Critical</option>
+            <option value="Warning">Warning</option>
+            <option value="Info">Info</option>
+        </select>
+        <select class="form-input security-filter" x-model="status" aria-label="Filter by status">
+            <option value="all">All statuses</option>
+            <option value="enabled">Enabled</option>
+            <option value="disabled">Disabled</option>
+        </select>
+    </div>
+
+    {{ if .Rules }}
+    <div class="security-rule-list">
+        {{ range .Rules }}
+        <article class="security-rule-card {{ if not .Enabled }}is-disabled{{ end }}"
+                 x-show="('{{ .Name | js }} {{ .Description | js }} {{ .Category | js }} {{ .Vendor | js }}'.toLowerCase().includes(search.toLowerCase())) && (severity === 'all' || severity === '{{ .Severity }}') && (status === 'all' || (status === 'enabled' && {{ .Enabled }}) || (status === 'disabled' && !{{ .Enabled }}))">
+            <div class="security-rule-accent severity-{{ .Severity }}"></div>
+            <div class="security-rule-main">
+                <div class="security-rule-heading">
+                    <div class="security-rule-icon severity-{{ .Severity }}">
+                        {{ if eq .Severity "Critical" }}<i class='bx bx-error-alt'></i>
+                        {{ else if eq .Severity "Warning" }}<i class='bx bx-error'></i>
+                        {{ else }}<i class='bx bx-info-circle'></i>{{ end }}
+                    </div>
+                    <div class="security-rule-copy">
+                        <div class="security-rule-title-line">
+                            <h3>{{ .Name }}</h3>
+                            {{ if .Enabled }}<span class="security-status enabled"><span></span>Enabled</span>
+                            {{ else }}<span class="security-status disabled"><span></span>Disabled</span>{{ end }}
+                        </div>
+                        <p>{{ if .Description }}{{ .Description }}{{ else }}No description provided.{{ end }}</p>
+                    </div>
+                </div>
+
+                <div class="security-rule-tags">
+                    <span class="security-tag"><i class='bx bx-folder'></i>{{ if .Category }}{{ .Category }}{{ else }}General{{ end }}</span>
+                    <span class="security-tag"><i class='bx bx-chip'></i>{{ if eq .Vendor "*" }}All vendors{{ else }}{{ .Vendor }}{{ end }}</span>
+                    <span class="security-tag"><i class='bx bx-group'></i>{{ if eq .TargetGroup "*" }}All groups{{ else }}{{ .TargetGroup }}{{ end }}</span>
+                    <span class="security-tag severity-{{ .Severity }}">{{ .Severity }} · −{{ .Penalty }} pts</span>
+                </div>
+
+                <div class="security-rule-logic">
+                    <div>
+                        <span>Condition</span>
+                        <strong>{{ if eq .MatchType "not_contains" }}Required pattern is missing{{ else }}Forbidden pattern is present{{ end }}</strong>
+                    </div>
+                    <code title="{{ .RegexPattern }}">{{ .RegexPattern }}</code>
+                </div>
+            </div>
+            <div class="security-rule-actions">
+                <a href="/settings/security/{{ .ID }}/edit" class="btn btn-secondary btn-sm"><i class='bx bx-edit-alt'></i> Edit</a>
+                <button hx-delete="/settings/security/{{ .ID }}" hx-confirm="Delete this security rule?" hx-target="closest article" hx-swap="delete" class="action-btn danger" title="Delete rule"><i class='bx bx-trash'></i></button>
+            </div>
+        </article>
+        {{ end }}
+    </div>
+    {{ else }}
+    <div class="security-empty">
+        <div class="security-empty-icon"><i class='bx bx-shield-plus'></i></div>
+        <h3>Create your first security rule</h3>
+        <p>Start auditing device configurations for risky or missing settings.</p>
+        <a href="/settings/security/new" class="btn btn-primary"><i class='bx bx-plus'></i> New rule</a>
+    </div>
+    {{ end }}
+</section>

@@ -220,7 +220,7 @@ func (h *NodeHandler) GetBackupDiff(c *fiber.Ctx) error {
 func (h *NodeHandler) GoldenDiffView(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var backup models.NodeBackup
-	
+
 	// Fetch the latest successful backup for this node
 	if err := h.DB.Preload("Node").Where("node_id = ? AND status = 'success'", id).Order("version desc").First(&backup).Error; err != nil {
 		return c.Status(404).SendString("No successful backups found for this node")
@@ -303,7 +303,6 @@ func (h *NodeHandler) CompareBackups(c *fiber.Ctx) error {
 	})
 }
 
-
 func (h *NodeHandler) ExportNodesCSV(c *fiber.Ctx) error {
 	var nodes []models.Node
 	h.DB.Preload("Credential").Preload("Routine").Preload("AccessAgent").Order("name asc").Find(&nodes)
@@ -334,7 +333,7 @@ func (h *NodeHandler) ExportNodesCSV(c *fiber.Ctx) error {
 		if node.Credential != nil {
 			credName = node.Credential.Name
 		}
-		
+
 		routineName := ""
 		if node.Routine != nil {
 			routineName = node.Routine.Name
@@ -429,10 +428,19 @@ func (h *SettingsHandler) GetUsersTab(c *fiber.Ctx) error {
 
 func (h *SettingsHandler) GetSecurityTab(c *fiber.Ctx) error {
 	var rules []models.SecurityRule
-	h.DB.Order("vendor asc, name asc").Find(&rules)
+	h.DB.Order("enabled desc, severity asc, name asc").Find(&rules)
+	var enabled, critical int
+	for _, rule := range rules {
+		if rule.Enabled {
+			enabled++
+		}
+		if rule.Enabled && rule.Severity == "Critical" {
+			critical++
+		}
+	}
 
 	return h.renderTab(c, "security", fiber.Map{
-		"Rules": rules,
+		"Rules": rules, "EnabledCount": enabled, "CriticalCount": critical,
 	})
 }
 

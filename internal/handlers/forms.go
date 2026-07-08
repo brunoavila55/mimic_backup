@@ -9,7 +9,6 @@ import (
 	"mimic/internal/services/audit"
 	"mimic/internal/services/sftp"
 	"mimic/pkg/crypto"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -868,7 +867,7 @@ func (h *FormHandler) TestAlertRule(c *fiber.Ctx) error {
 			c.Set("HX-Trigger", `{"showNotification": {"message": "Webhook URL is required.", "type": "error"}}`)
 			return c.SendStatus(400)
 		}
-		
+
 		err := alert.SendWebhook(whURL, msg)
 		if err != nil {
 			c.Set("HX-Trigger", fmt.Sprintf(`{"showNotification": {"message": "Webhook test failed: %v", "type": "error"}}`, err))
@@ -877,7 +876,7 @@ func (h *FormHandler) TestAlertRule(c *fiber.Ctx) error {
 	} else if provider == "telegram" {
 		token := c.FormValue("telegram_token")
 		chatID := c.FormValue("telegram_chat_id")
-		
+
 		if (token == "" || chatID == "") && id != "" && id != "0" {
 			var rule models.AlertRule
 			if h.DB.Where("id = ?", id).First(&rule).Error == nil {
@@ -889,12 +888,12 @@ func (h *FormHandler) TestAlertRule(c *fiber.Ctx) error {
 				}
 			}
 		}
-		
+
 		if token == "" || chatID == "" {
 			c.Set("HX-Trigger", `{"showNotification": {"message": "Telegram Token and Chat ID are required.", "type": "error"}}`)
 			return c.SendStatus(400)
 		}
-		
+
 		err := alert.SendTelegram(token, chatID, msg)
 		if err != nil {
 			c.Set("HX-Trigger", fmt.Sprintf(`{"showNotification": {"message": "Telegram test failed: %v", "type": "error"}}`, err))
@@ -961,22 +960,32 @@ func (h *FormHandler) SaveSecurityRule(c *fiber.Ctx) error {
 
 	rule.Name = c.FormValue("name")
 	rule.Description = c.FormValue("description")
+	rule.Category = c.FormValue("category")
+	if rule.Category == "" {
+		rule.Category = "General"
+	}
 	rule.Vendor = c.FormValue("vendor")
 	if rule.Vendor == "" {
 		rule.Vendor = "*"
 	}
-	rule.RegexPattern = c.FormValue("regex_pattern")
-	rule.MatchType = c.FormValue("match_type")
-	
-	if _, err := regexp.Compile(rule.RegexPattern); err != nil {
-		c.Set("HX-Trigger", fmt.Sprintf(`{"showNotification": {"message": "Invalid regex pattern: %v", "type": "error"}}`, err))
-		return c.SendStatus(400)
+	rule.TargetGroup = strings.TrimSpace(c.FormValue("target_group"))
+	if rule.TargetGroup == "" {
+		rule.TargetGroup = "*"
 	}
+	rule.Enabled = c.FormValue("enabled") == "on"
+	rule.RegexPattern = c.FormValue("regex_pattern")
+	rule.ContextBlock = c.FormValue("context_block")
+	rule.MatchType = c.FormValue("match_type")
 
 	rule.Severity = c.FormValue("severity")
-	
+
 	penalty, _ := strconv.Atoi(c.FormValue("penalty"))
 	rule.Penalty = penalty
+	rule.Remediation = c.FormValue("remediation")
+
+	if err := audit.ValidateRule(rule); err != nil {
+		return c.Status(400).SendString(err.Error())
+	}
 
 	if err := h.DB.Save(&rule).Error; err != nil {
 		c.Set("HX-Trigger", fmt.Sprintf(`{"showNotification": {"message": "Failed to save security rule: %v", "type": "error"}}`, err))
@@ -984,14 +993,12 @@ func (h *FormHandler) SaveSecurityRule(c *fiber.Ctx) error {
 	}
 
 	// Re-evaluate affected nodes asynchronously
-	go func(vendor string) {
+	go func() {
 		var nodes []models.Node
-		if vendor == "*" || vendor == "" {
-			h.DB.Find(&nodes)
-		} else {
-			h.DB.Where("vendor = ?", vendor).Find(&nodes)
-		}
-		
+		// Scope, vendor, enabled state, and match logic may all have changed.
+		// Re-evaluate every node to ensure stale findings are removed too.
+		h.DB.Find(&nodes)
+
 		for _, node := range nodes {
 			var lastBackup models.NodeBackup
 			if err := h.DB.Where("node_id = ? AND status = 'success'", node.ID).Order("version desc").First(&lastBackup).Error; err == nil {
@@ -999,7 +1006,7 @@ func (h *FormHandler) SaveSecurityRule(c *fiber.Ctx) error {
 			}
 			time.Sleep(100 * time.Millisecond) // Throttle DB load
 		}
-	}(rule.Vendor)
+	}()
 
 	c.Set("HX-Trigger", `{"showNotification": {"message": "Security rule saved. Nodes are being re-evaluated in the background.", "type": "success"}}`)
 	return c.Redirect("/settings/security")

@@ -1,4 +1,4 @@
-<div class="page-enter" style="max-width: 1200px; margin: 0 auto;" x-data="{
+<div class="page-enter security-editor" x-data="{
     vendor: '{{ if .Rule }}{{ .Rule.Vendor }}{{ else }}*{{ end }}',
     matchType: '{{ if .Rule }}{{ .Rule.MatchType }}{{ else }}contains{{ end }}',
     regexPattern: '{{ if .Rule }}{{ .Rule.RegexPattern | js }}{{ else }}{{ end }}',
@@ -99,30 +99,26 @@
     }
 }" x-init="$watch('regexPattern', () => evaluateRegex()); $watch('contextBlock', () => evaluateRegex()); $watch('matchType', () => evaluateRegex()); $watch('testConfig', () => evaluateRegex());">
     
-    <div class="page-header">
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-            <div style="display: flex; align-items: center; gap: 16px;">
-                <a href="/settings/security" class="action-btn" title="Back to Settings">
-                    <i class="bx bx-arrow-back" style="font-size: 20px;"></i>
-                </a>
-                <h1 class="page-title">{{ .Title }}</h1>
-                
-                {{ if .Rule }}
-                <div class="badge badge-warning" style="margin-left: 12px; font-size: 12px;">
-                    <i class='bx bx-edit'></i> Editing Existing Rule: {{ .Rule.Name }}
-                </div>
-                {{ end }}
+    <div class="security-editor-header">
+        <div class="security-editor-title">
+            <a href="/settings/security" class="btn btn-ghost btn-icon" title="Back to security rules"><i class="bx bx-arrow-back"></i></a>
+            <div>
+                <h1>{{ if .Rule }}Edit security rule{{ else }}Create security rule{{ end }}</h1>
+                <p>{{ if .Rule }}Update how this policy evaluates device configurations.{{ else }}Define a policy, scope it to the right devices and validate it before saving.{{ end }}</p>
             </div>
         </div>
+        {{ if .Rule }}<span class="badge badge-accent"><i class='bx bx-edit'></i> Editing {{ .Rule.Name }}</span>{{ end }}
     </div>
 
-    <form id="ruleForm" action="{{ if .Rule }}{{ if .Rule.ID }}/settings/security/save/{{ .Rule.ID }}{{ else }}/settings/security/save{{ end }}{{ else }}/settings/security/save{{ end }}" method="POST" @submit="if(!hasTested) { if(!confirm('You have not tested this rule against any configuration. Are you sure you want to save?')) { $event.preventDefault(); } }">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start;">
+    <form id="ruleForm" action="{{ if .Rule }}/settings/security/save/{{ .Rule.ID }}{{ else }}/settings/security/save{{ end }}" method="POST" @submit="if(!hasTested) { if(!confirm('You have not tested this rule against any configuration. Are you sure you want to save?')) { $event.preventDefault(); } }">
+        <div class="security-editor-grid">
             
             <!-- Left Column: Rule Definition -->
-            <div class="card">
-                <div class="card-body flex flex-col" style="gap: 16px;">
-                    <h3 style="font-size: 14px; font-weight: 600; color: var(--text); padding-bottom: 8px; border-bottom: 1px solid var(--border-light);">Rule Definition</h3>
+            <div class="security-editor-section">
+                    <div class="security-editor-section-head">
+                        <i class='bx bx-slider-alt'></i>
+                        <div><h2>Policy definition</h2><p>Name the rule and choose where it applies.</p></div>
+                    </div>
                     
                     <div class="form-group">
                         <label class="form-label">Rule Name</label>
@@ -132,6 +128,25 @@
                     <div class="form-group">
                         <label class="form-label">Description</label>
                         <input type="text" name="description" class="form-input" value="{{ if .Rule }}{{ .Rule.Description }}{{ end }}" placeholder="e.g. Detects if SNMP community is set to public">
+                    </div>
+
+                    <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group">
+                            <label class="form-label">Category</label>
+                            <select name="category" class="form-input">
+                                {{ $category := "General" }}{{ if .Rule }}{{ $category = .Rule.Category }}{{ end }}
+                                <option value="Authentication" {{ if eq $category "Authentication" }}selected{{ end }}>Authentication</option>
+                                <option value="Exposure" {{ if eq $category "Exposure" }}selected{{ end }}>Network Exposure</option>
+                                <option value="Logging" {{ if eq $category "Logging" }}selected{{ end }}>Logging & Monitoring</option>
+                                <option value="Hardening" {{ if eq $category "Hardening" }}selected{{ end }}>Hardening</option>
+                                <option value="General" {{ if eq $category "General" }}selected{{ end }}>General</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Target Group</label>
+                            <input type="text" name="target_group" class="form-input" value="{{ if .Rule }}{{ .Rule.TargetGroup }}{{ else }}*{{ end }}" placeholder="* for every group">
+                            <div class="form-help">Use * or the exact node group name.</div>
+                        </div>
                     </div>
 
                     <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
@@ -156,9 +171,14 @@
                         </div>
                     </div>
 
+                    <div class="security-editor-section-head" style="margin-top:20px;">
+                        <i class='bx bx-code-curly'></i>
+                        <div><h2>Detection logic</h2><p>Describe the configuration state that should create a finding.</p></div>
+                    </div>
+
                     <div class="form-group">
                         <label class="form-label">Context Scope (Optional Block)</label>
-                        <input type="text" name="context_block" class="form-input" x-model="contextBlock" placeholder="e.g. /system ntp client" style="font-family: monospace;">
+                        <input type="text" name="context_block" class="form-input security-code-input" x-model="contextBlock" placeholder="e.g. /system ntp client">
                         <div class="form-help">If provided, the Regex Pattern below will only run inside this block (until the next blank line or unindented line).</div>
                     </div>
 
@@ -172,7 +192,7 @@
 
                     <div class="form-group">
                         <label class="form-label">Regex Pattern</label>
-                        <input type="text" name="regex_pattern" class="form-input" x-model="regexPattern" required placeholder="e.g. enabled=yes" style="font-family: monospace;">
+                        <input type="text" name="regex_pattern" class="form-input security-code-input" x-model="regexPattern" required placeholder="e.g. enabled=yes">
                     </div>
 
                     <div class="form-group">
@@ -181,9 +201,24 @@
                         <div class="form-help">Amount to deduct from the node's Security Score (0-100) if matched.</div>
                     </div>
 
-                    <div style="margin-top: 16px; display: flex; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">Remediation Guidance</label>
+                        <textarea name="remediation" class="form-input" rows="3" placeholder="Explain how an administrator can fix this finding.">{{ if .Rule }}{{ .Rule.Remediation }}{{ end }}</textarea>
+                    </div>
+
+                    <div class="security-toggle-row">
+                        <div><strong>Rule enabled</strong><span>Evaluate this rule on every successful backup.</span></div>
+                        <label class="security-toggle">
+                            <input type="checkbox" name="enabled" {{ if .Rule }}{{ if .Rule.Enabled }}checked{{ end }}{{ else }}checked{{ end }}>
+                            <span class="security-toggle-track"></span>
+                        </label>
+                    </div>
+
+                    <div class="security-editor-actions">
+                        <a href="/settings/security" class="btn btn-ghost">Cancel</a>
+                        <div class="flex gap-2">
                         <button type="submit" class="btn btn-primary">
-                            Save Security Rule
+                            <i class='bx bx-save'></i> Save rule
                         </button>
                         
                         {{ if .Rule }}
@@ -192,17 +227,19 @@
                             document.getElementById('ruleNameInput').value = document.getElementById('ruleNameInput').value + ' (Copy)';
                             document.getElementById('ruleForm').submit();
                         ">
-                            <i class='bx bx-duplicate'></i> Save as New Rule (Duplicate)
+                            <i class='bx bx-duplicate'></i> Save copy
                         </button>
                         {{ end }}
+                        </div>
                     </div>
-                </div>
             </div>
 
             <!-- Right Column: Live Tester -->
-            <div class="card" style="background: var(--bg-body); border: 1px dashed var(--accent);">
-                <div class="card-body">
-                    <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text);"><i class='bx bx-test-tube text-accent'></i> Live Sandbox Tester</h3>
+            <div class="security-editor-section security-sandbox">
+                    <div class="security-editor-section-head">
+                        <i class='bx bx-test-tube'></i>
+                        <div><h2>Test sandbox</h2><p>Paste a real configuration and preview the outcome instantly.</p></div>
+                    </div>
                     
                     <div class="flex gap-2 mb-3">
                         <button type="button" class="btn btn-sm btn-secondary" @click="loadExample('configured')" :disabled="vendor === '*'">
@@ -214,12 +251,12 @@
                         <span x-show="vendor === '*'" class="text-muted" style="font-size: 11px; align-self: center; margin-left: 8px;">Select a vendor first</span>
                     </div>
 
-                    <textarea class="form-input font-mono" rows="12" x-model="testConfig" placeholder="Paste device configuration here to test your rules before saving..." style="font-size: 12px; resize: vertical; line-height: 1.4; padding: 12px;"></textarea>
+                    <textarea class="form-input security-code-input" rows="12" x-model="testConfig" placeholder="Paste a device configuration here..."></textarea>
 
-                    <div class="mt-4 p-4 rounded" style="background: var(--bg-surface); border: 1px solid var(--border-light);">
+                    <div class="security-test-result">
                         <div style="font-size: 11px; text-transform: uppercase; font-weight: 600; color: var(--text-muted); margin-bottom: 12px;">Evaluation Result</div>
                         
-                        <div class="flex items-center gap-3">
+                        <div class="security-result-line">
                             <span class="badge" :class="{
                                 'badge-success': testResult === 'match',
                                 'badge-danger': testResult === 'no_match',
@@ -247,7 +284,6 @@
                             <i class='bx bx-info-circle'></i> This configuration would trigger a penalty of <strong x-text="document.getElementById('penaltyInput').value || 10"></strong> points on the Security Score.
                         </div>
                     </div>
-                </div>
             </div>
 
         </div>

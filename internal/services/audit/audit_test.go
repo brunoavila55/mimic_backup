@@ -15,7 +15,7 @@ interface GigabitEthernet0/2
 
 	ctxRe, _ := getCompiledRegex("interface GigabitEthernet0/1")
 	loc := ctxRe.FindStringIndex(config)
-	
+
 	extracted := extractBlock(config, loc[0])
 	expected := `interface GigabitEthernet0/1
  description WAN
@@ -32,7 +32,7 @@ func TestContextBlockMissing(t *testing.T) {
 /ip address
 add address=10.0.0.1/24 interface=ether1
 `
-	
+
 	// Case 1: MatchType = "contains" (e.g. searching for a vulnerability inside NTP)
 	ruleContains := models.SecurityRule{
 		ContextBlock: `/system ntp client`,
@@ -48,7 +48,7 @@ add address=10.0.0.1/24 interface=ether1
 	}
 
 	// We simulate the RunAudit loop for just these rules without DB
-	
+
 	evaluate := func(rule models.SecurityRule) bool {
 		targetText := configText
 		contextMissing := false
@@ -89,5 +89,37 @@ add address=10.0.0.1/24 interface=ether1
 
 	if evaluate(ruleNotContains) == false {
 		t.Errorf("Expected ruleNotContains to trigger a violation when context block is missing")
+	}
+}
+
+func TestEvaluateRule(t *testing.T) {
+	tests := []struct {
+		name   string
+		rule   models.SecurityRule
+		config string
+		want   bool
+	}{
+		{"forbidden pattern found", models.SecurityRule{Name: "telnet", MatchType: "contains", RegexPattern: `(?m)^telnet server enable$`, Penalty: 10}, "telnet server enable", true},
+		{"required pattern present", models.SecurityRule{Name: "ntp", MatchType: "not_contains", RegexPattern: `(?m)^ntp server`, Penalty: 10}, "ntp server 1.1.1.1", false},
+		{"required context missing", models.SecurityRule{Name: "ssh", MatchType: "not_contains", ContextBlock: `^system services`, RegexPattern: `ssh`, Penalty: 10}, "interfaces {}", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := EvaluateRule(tt.rule, tt.config)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.Violated != tt.want {
+				t.Fatalf("Violated = %v, want %v", got.Violated, tt.want)
+			}
+		})
+	}
+}
+
+func TestValidateRuleRejectsInvalidInput(t *testing.T) {
+	rule := models.SecurityRule{Name: "bad", MatchType: "contains", RegexPattern: "[", Penalty: 10}
+	if err := ValidateRule(rule); err == nil {
+		t.Fatal("expected invalid regex to be rejected")
 	}
 }

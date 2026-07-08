@@ -1,20 +1,30 @@
-<div class="table-wrap">
-    <table>
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>IP</th>
-                <th>Vendor</th>
-                <th>Group / Tags</th>
-                <th>Status</th>
-                <th>Score</th>
-                <th>Last Backup</th>
-                <th>Active</th>
-                <th style="width: 120px;">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {{ template "partials/node_table_body" . }}
-        </tbody>
-    </table>
+<div class="nodes-table-card">
+    <div class="nodes-table-meta">
+        <div>
+            <strong>{{ len .Nodes }}</strong>
+            <span>node(s) shown</span>
+        </div>
+        {{ if or .Search .FilterStatus .FilterVendor .FilterGroup }}
+        <a href="/nodes" class="btn btn-ghost btn-sm">Clear filters</a>
+        {{ end }}
+    </div>
+
+    <div class="table-wrap nodes-table-wrap">
+        <table class="nodes-table">
+            <thead>
+                <tr>
+                    <th>Node</th>
+                    <th>Connection</th>
+                    <th>Schedule</th>
+                    <th>Health</th>
+                    <th>Backups</th>
+                    <th>Active</th>
+                    <th class="nodes-actions-col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ template "partials/node_table_body" . }}
+            </tbody>
+        </table>
+    </div>
 </div>

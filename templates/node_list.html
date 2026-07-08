@@ -1,10 +1,14 @@
-<div class="page-enter">
-    <div class="page-header">
-        <div>
+<div class="page-enter nodes-page">
+    <div class="nodes-hero">
+        <div class="nodes-hero-copy">
+            <div class="nodes-eyebrow">
+                <i class="bx bx-server"></i>
+                Network inventory
+            </div>
             <h1 class="page-title">Nodes</h1>
-            <p class="page-desc">Management of all network equipment.</p>
+            <p class="page-desc">Manage devices, backup health, schedules and maintenance actions in one place.</p>
         </div>
-        <div class="flex gap-2">
+        <div class="nodes-hero-actions">
             <a href="/nodes/export" class="btn btn-secondary">
                 <i class="bx bx-download"></i>
                 Export CSV
@@ -24,23 +28,102 @@
         </div>
     </div>
 
-    <div class="card mb-4">
-        <div class="card-body" style="padding: 12px 16px;">
-            <div class="search-box">
-                <i class="bx bx-search"></i>
-                <input type="text"
-                       name="search"
-                       value="{{ .Search }}"
-                       placeholder="Search by name, IP or vendor..."
-                       class="form-input"
-                       style="background: transparent; border-color: transparent;"
-                       hx-get="/nodes"
-                       hx-trigger="keyup changed delay:400ms, search"
-                       hx-target="#node-table-container"
-                       hx-push-url="true" />
+    <div class="nodes-overview">
+        <div class="nodes-kpi">
+            <div>
+                <span>Total nodes</span>
+                <strong>{{ .NodeStats.Total }}</strong>
             </div>
+            <i class="bx bx-server"></i>
+        </div>
+        <div class="nodes-kpi accent">
+            <div>
+                <span>Active</span>
+                <strong>{{ .NodeStats.Active }}</strong>
+            </div>
+            <i class="bx bx-check-circle"></i>
+        </div>
+        <div class="nodes-kpi danger">
+            <div>
+                <span>Needs attention</span>
+                <strong>{{ .NodeStats.Attention }}</strong>
+            </div>
+            <i class="bx bx-error-circle"></i>
+        </div>
+        <div class="nodes-kpi muted">
+            <div>
+                <span>Muted alerts</span>
+                <strong>{{ .NodeStats.Muted }}</strong>
+            </div>
+            <i class="bx bx-bell-off"></i>
         </div>
     </div>
+
+    <form id="node-filters" class="nodes-toolbar">
+        <div class="search-box nodes-search">
+            <i class="bx bx-search"></i>
+            <input type="search"
+                   id="node-search"
+                   name="search"
+                   value="{{ .Search }}"
+                   placeholder="Search by name, IP, vendor, group or tag..."
+                   class="form-input"
+                   hx-get="/nodes"
+                   hx-trigger="keyup changed delay:350ms, search"
+                   hx-target="#node-table-container"
+                   hx-include="#node-filters"
+                   hx-push-url="true" />
+        </div>
+
+        <div class="nodes-filter-group">
+            <select name="status"
+                    class="form-input nodes-filter-select"
+                    hx-get="/nodes"
+                    hx-trigger="change"
+                    hx-target="#node-table-container"
+                    hx-include="#node-filters"
+                    hx-push-url="true">
+                <option value="" {{ if not .FilterStatus }}selected{{ end }}>All status</option>
+                <option value="active" {{ if eq .FilterStatus "active" }}selected{{ end }}>Active only</option>
+                <option value="inactive" {{ if eq .FilterStatus "inactive" }}selected{{ end }}>Inactive</option>
+                <option value="success" {{ if eq .FilterStatus "success" }}selected{{ end }}>Healthy</option>
+                <option value="error" {{ if eq .FilterStatus "error" }}selected{{ end }}>With errors</option>
+                <option value="pending" {{ if eq .FilterStatus "pending" }}selected{{ end }}>Pending</option>
+                <option value="muted" {{ if eq .FilterStatus "muted" }}selected{{ end }}>Muted alerts</option>
+            </select>
+
+            <select name="vendor"
+                    class="form-input nodes-filter-select"
+                    hx-get="/nodes"
+                    hx-trigger="change"
+                    hx-target="#node-table-container"
+                    hx-include="#node-filters"
+                    hx-push-url="true">
+                <option value="" {{ if not .FilterVendor }}selected{{ end }}>All vendors</option>
+                <option value="cisco" {{ if eq .FilterVendor "cisco" }}selected{{ end }}>Cisco</option>
+                <option value="mikrotik" {{ if eq .FilterVendor "mikrotik" }}selected{{ end }}>MikroTik</option>
+                <option value="huawei" {{ if eq .FilterVendor "huawei" }}selected{{ end }}>Huawei</option>
+                <option value="juniper" {{ if eq .FilterVendor "juniper" }}selected{{ end }}>Juniper</option>
+            </select>
+
+            <select name="group"
+                    class="form-input nodes-filter-select"
+                    hx-get="/nodes"
+                    hx-trigger="change"
+                    hx-target="#node-table-container"
+                    hx-include="#node-filters"
+                    hx-push-url="true">
+                <option value="" {{ if not .FilterGroup }}selected{{ end }}>All groups</option>
+                {{ range .Groups }}
+                <option value="{{ . }}" {{ if eq $.FilterGroup . }}selected{{ end }}>{{ . }}</option>
+                {{ end }}
+            </select>
+
+            {{ if or .Search .FilterStatus .FilterVendor .FilterGroup }}
+            <a href="/nodes" class="btn btn-ghost btn-sm">Clear</a>
+            {{ end }}
+        </div>
+    </form>
 
     <div id="node-table-container">
         {{ template "partials/node_table" . }}

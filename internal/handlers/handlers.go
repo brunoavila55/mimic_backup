@@ -93,16 +93,64 @@ type NodeHandler struct {
 	DB *gorm.DB
 }
 
+type NodeListStats struct {
+	Total     int64
+	Active    int64
+	Attention int64
+	Muted     int64
+}
+
 func (h *NodeHandler) ListNodes(c *fiber.Ctx) error {
 	var nodes []models.Node
 	query := h.DB.Preload("Routine").Preload("Credential")
 
 	search := c.Query("search")
+	status := c.Query("status")
+	vendor := c.Query("vendor")
+	group := c.Query("group")
+
 	if search != "" {
 		query = query.Where("name ILIKE ? OR ip ILIKE ? OR vendor ILIKE ? OR \"group\" ILIKE ? OR tags ILIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 
+	if vendor != "" {
+		query = query.Where("vendor = ?", vendor)
+	}
+
+	if group != "" {
+		query = query.Where("\"group\" = ?", group)
+	}
+
+	now := time.Now()
+	switch status {
+	case "active":
+		query = query.Where("enabled = ?", true)
+	case "inactive":
+		query = query.Where("enabled = ?", false)
+	case "success":
+		query = query.Where("last_status = ?", "success")
+	case "error":
+		query = query.Where("last_status = ?", "error")
+	case "pending":
+		query = query.Where("(last_status IS NULL OR last_status = '' OR last_status = ? OR last_status = ?)", "never", "pending")
+	case "muted":
+		query = query.Where("alert_snooze_until IS NOT NULL AND alert_snooze_until > ?", now)
+	}
+
 	query.Order("name asc").Find(&nodes)
+
+	var stats NodeListStats
+	h.DB.Model(&models.Node{}).Count(&stats.Total)
+	h.DB.Model(&models.Node{}).Where("enabled = ?", true).Count(&stats.Active)
+	h.DB.Model(&models.Node{}).Where("enabled = ? AND last_status = ?", true, "error").Count(&stats.Attention)
+	h.DB.Model(&models.Node{}).Where("alert_snooze_until IS NOT NULL AND alert_snooze_until > ?", now).Count(&stats.Muted)
+
+	var groups []string
+	h.DB.Model(&models.Node{}).
+		Where("\"group\" IS NOT NULL AND \"group\" != ''").
+		Distinct().
+		Order("\"group\" asc").
+		Pluck("group", &groups)
 
 	data := fiber.Map{
 		"Title":        "Nodes",
@@ -112,6 +160,11 @@ func (h *NodeHandler) ListNodes(c *fiber.Ctx) error {
 		"CurrentRoute": "nodes",
 		"Nodes":        nodes,
 		"Search":       search,
+		"FilterStatus": status,
+		"FilterVendor": vendor,
+		"FilterGroup":  group,
+		"NodeStats":    stats,
+		"Groups":       groups,
 	}
 
 	if c.Get("HX-Request") == "true" && c.Get("HX-Target") == "node-table-container" {

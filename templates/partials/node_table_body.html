@@ -1,86 +1,140 @@
 {{ if .Nodes }}
     {{ range .Nodes }}
-    <tr>
+    <tr class="node-row {{ if eq .LastStatus "error" }}is-error{{ end }}">
         <td>
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <a href="/nodes/{{ .ID }}" style="font-weight: 600; color: var(--text);">{{ .Name }}</a>
-                {{ if .IsSnoozed }}
-                    <span title="Alerts muted until {{ .AlertSnoozeUntil.Format "Jan 02, 15:04" }}" style="font-size: 14px; cursor: help;">🔕</span>
-                {{ end }}
-            </div>
-        </td>
-        <td><span class="font-mono">{{ .IP }}</span></td>
-        <td>{{ .Vendor }}</td>
-        <td>
-            <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 2px;">{{ .Group }}</div>
-            {{ if .Tags }}
-            <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px;">
-                <span class="badge badge-info" style="font-size: 10px; padding: 1px 6px;">{{ .Tags }}</span>
-            </div>
-            {{ end }}
-        </td>
-        <td>
-            {{ if eq .LastStatus "success" }}
-                <span class="badge badge-success">OK</span>
-            {{ else if eq .LastStatus "error" }}
-                <span class="badge badge-danger">Error</span>
-            {{ else }}
-                <span class="badge badge-muted">Pending</span>
-            {{ end }}
-        </td>
-        <td>
-            {{ if eq .SecurityScore 100 }}
-                <span class="badge badge-success" style="font-weight: 600;"><i class='bx bx-shield-quarter'></i> 100</span>
-            {{ else if gt .SecurityScore 70 }}
-                <span class="badge badge-warning" style="font-weight: 600;"><i class='bx bx-shield-quarter'></i> {{ .SecurityScore }}</span>
-            {{ else }}
-                <span class="badge badge-danger" style="font-weight: 600;"><i class='bx bxs-shield-x'></i> {{ .SecurityScore }}</span>
-            {{ end }}
-        </td>
-        <td>
-            {{ if .LastBackupAt }}
-                <span class="text-secondary">{{ .LastBackupAt.Format "02/01/2006 15:04" }}</span>
-            {{ else }}
-                <span class="text-muted">-</span>
-            {{ end }}
-        </td>
-        <td>
-            {{ if .Enabled }}
-                <span class="text-success"><i class="bx bx-check-circle"></i></span>
-            {{ else }}
-                <span class="text-muted"><i class="bx bx-minus-circle"></i></span>
-            {{ end }}
-        </td>
-        <td>
-            <div class="action-group">
-                <div x-data="{ open: false }" style="position: relative;">
-                    <button @click="open = !open" @click.outside="open = false" type="button" class="action-btn" title="Maintenance Mode">
+            <div class="node-title-cell">
+                <div class="node-icon">
+                    <i class="bx bx-server"></i>
+                </div>
+                <div class="node-title-copy">
+                    <div class="node-title-line">
+                        <a href="/nodes/{{ .ID }}">{{ .Name }}</a>
                         {{ if .IsSnoozed }}
-                        <i class="bx bxs-bell-off" style="color: var(--accent);"></i>
-                        {{ else }}
-                        <i class="bx bx-bell"></i>
+                            <span class="badge badge-accent" title="Alerts muted until {{ .AlertSnoozeUntil.Format "Jan 02, 15:04" }}">
+                                <i class="bx bx-bell-off"></i>
+                                Muted
+                            </span>
                         {{ end }}
-                    </button>
-                    <div x-show="open" style="display: none; position: absolute; right: 0; bottom: 100%; margin-bottom: 4px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 50; width: 140px;" x-transition>
-                        {{ if .IsSnoozed }}
-                        <button hx-post="/nodes/{{ .ID }}/snooze?hours=0" hx-swap="none" style="width: 100%; text-align: left; padding: 6px 12px; font-size: 13px; color: var(--text); border: none; background: transparent; cursor: pointer; border-radius: 4px;"><i class="bx bx-bell" style="margin-right: 4px;"></i> Unmute</button>
-                        {{ else }}
-                        <button hx-post="/nodes/{{ .ID }}/snooze?hours=1" hx-swap="none" style="width: 100%; text-align: left; padding: 6px 12px; font-size: 13px; color: var(--text); border: none; background: transparent; cursor: pointer; border-radius: 4px;"><i class="bx bx-time" style="margin-right: 4px;"></i> Mute 1 hour</button>
-                        <button hx-post="/nodes/{{ .ID }}/snooze?hours=4" hx-swap="none" style="width: 100%; text-align: left; padding: 6px 12px; font-size: 13px; color: var(--text); border: none; background: transparent; cursor: pointer; border-radius: 4px;"><i class="bx bx-time" style="margin-right: 4px;"></i> Mute 4 hours</button>
-                        <button hx-post="/nodes/{{ .ID }}/snooze?hours=24" hx-swap="none" style="width: 100%; text-align: left; padding: 6px 12px; font-size: 13px; color: var(--text); border: none; background: transparent; cursor: pointer; border-radius: 4px;"><i class="bx bx-moon" style="margin-right: 4px;"></i> Mute 24 hours</button>
+                    </div>
+                    <div class="node-subline">
+                        {{ if .Group }}{{ .Group }}{{ else }}Ungrouped{{ end }}
+                        {{ if .Tags }}
+                            <span class="node-dot"></span>
+                            <span>{{ .Tags }}</span>
                         {{ end }}
                     </div>
                 </div>
+            </div>
+        </td>
+        <td>
+            <div class="node-connection">
+                <span class="font-mono">{{ .IP }}:{{ .Port }}</span>
+                <span class="badge badge-muted">{{ .Vendor }}</span>
+            </div>
+        </td>
+        <td>
+            <div class="node-schedule">
+                {{ if eq .ScheduleType "routine" }}
+                    <span class="node-schedule-title">
+                        <i class="bx bx-time-five"></i>
+                        Routine
+                    </span>
+                    <span class="node-schedule-detail">{{ if .Routine }}{{ .Routine.Name }}{{ else }}No routine selected{{ end }}</span>
+                {{ else }}
+                    <span class="node-schedule-title">
+                        <i class="bx bx-calendar"></i>
+                        Individual
+                    </span>
+                    <span class="node-schedule-detail">
+                        Every {{ if .Frequency }}{{ .Frequency }}{{ else }}24{{ end }}h
+                        {{ if .BackupHour }}at {{ .BackupHour }}{{ end }}
+                    </span>
+                {{ end }}
+            </div>
+        </td>
+        <td>
+            <div class="node-health">
+                {{ if eq .LastStatus "success" }}
+                    <span class="badge badge-success"><i class="bx bx-check-circle"></i> Healthy</span>
+                {{ else if eq .LastStatus "error" }}
+                    <span class="badge badge-danger"><i class="bx bx-error-circle"></i> Error</span>
+                {{ else }}
+                    <span class="badge badge-muted"><i class="bx bx-time"></i> Pending</span>
+                {{ end }}
+
+                {{ if eq .SecurityScore 100 }}
+                    <span class="node-score success"><i class="bx bx-shield-quarter"></i> 100</span>
+                {{ else if gt .SecurityScore 70 }}
+                    <span class="node-score warning"><i class="bx bx-shield-quarter"></i> {{ .SecurityScore }}</span>
+                {{ else }}
+                    <span class="node-score danger"><i class="bx bxs-shield-x"></i> {{ .SecurityScore }}</span>
+                {{ end }}
+            </div>
+        </td>
+        <td>
+            <div class="node-date-stack">
+                {{ if .LastBackupAt }}
+                    <span>{{ .LastBackupAt.Format "02/01/2006 15:04" }}</span>
+                {{ else }}
+                    <span class="text-muted">No backup yet</span>
+                {{ end }}
+                {{ if .NextBackupAt }}
+                    <small>Next {{ .NextBackupAt.Format "02/01 15:04" }}</small>
+                {{ end }}
+            </div>
+        </td>
+        <td>
+            {{ if .Enabled }}
+                <span class="badge badge-success">Enabled</span>
+            {{ else }}
+                <span class="badge badge-muted">Paused</span>
+            {{ end }}
+        </td>
+        <td>
+            <div class="action-group nodes-row-actions">
                 <a href="/nodes/{{ .ID }}" class="action-btn" title="Details">
                     <i class="bx bx-show"></i>
                 </a>
                 <a href="/nodes/{{ .ID }}/edit" class="action-btn" title="Edit">
                     <i class="bx bx-edit-alt"></i>
                 </a>
-                <button hx-post="/nodes/{{ .ID }}/trigger" hx-swap="none" class="action-btn" title="Manual Backup">
+                <button type="button" hx-post="/nodes/{{ .ID }}/trigger" hx-swap="none" class="action-btn" title="Manual backup">
                     <i class="bx bx-play-circle"></i>
                 </button>
-                <button hx-delete="/nodes/{{ .ID }}"
+
+                <div x-data="{ open: false }" class="action-menu">
+                    <button @click="open = !open" @click.outside="open = false" type="button" class="action-btn" title="Maintenance mode">
+                        {{ if .IsSnoozed }}
+                        <i class="bx bxs-bell-off text-accent"></i>
+                        {{ else }}
+                        <i class="bx bx-bell"></i>
+                        {{ end }}
+                    </button>
+                    <div x-show="open" x-cloak class="action-menu-panel" x-transition>
+                        {{ if .IsSnoozed }}
+                        <button type="button" hx-post="/nodes/{{ .ID }}/snooze?hours=0" hx-swap="none" class="action-menu-item">
+                            <i class="bx bx-bell"></i>
+                            Unmute
+                        </button>
+                        {{ else }}
+                        <button type="button" hx-post="/nodes/{{ .ID }}/snooze?hours=1" hx-swap="none" class="action-menu-item">
+                            <i class="bx bx-time"></i>
+                            Mute 1 hour
+                        </button>
+                        <button type="button" hx-post="/nodes/{{ .ID }}/snooze?hours=4" hx-swap="none" class="action-menu-item">
+                            <i class="bx bx-time"></i>
+                            Mute 4 hours
+                        </button>
+                        <button type="button" hx-post="/nodes/{{ .ID }}/snooze?hours=24" hx-swap="none" class="action-menu-item">
+                            <i class="bx bx-moon"></i>
+                            Mute 24 hours
+                        </button>
+                        {{ end }}
+                    </div>
+                </div>
+
+                <button type="button"
+                        hx-delete="/nodes/{{ .ID }}"
                         hx-confirm="Delete this node?"
                         hx-target="closest tr"
                         hx-swap="delete"
@@ -94,10 +148,14 @@
     {{ end }}
 {{ else }}
     <tr>
-        <td colspan="8" class="table-empty">
-            <i class="bx bx-server" style="font-size: 28px; margin-bottom: 8px; display: block;"></i>
-            No nodes registered.
-            <a href="/nodes/new" style="color: var(--accent); font-weight: 600; margin-left: 4px;">Add one now</a>
+        <td colspan="7" class="table-empty nodes-empty">
+            <i class="bx bx-server"></i>
+            <strong>No nodes found</strong>
+            <span>Adjust the filters or create the first node in this inventory.</span>
+            <a href="/nodes/new" class="btn btn-primary btn-sm">
+                <i class="bx bx-plus"></i>
+                New Node
+            </a>
         </td>
     </tr>
 {{ end }}

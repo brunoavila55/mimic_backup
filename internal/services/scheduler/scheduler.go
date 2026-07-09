@@ -20,9 +20,9 @@ import (
 )
 
 type SchedulerService struct {
-	db   *gorm.DB
-	ssh  *ssh.SSHService
-	sftp *sftp.SftpService
+	db        *gorm.DB
+	ssh       *ssh.SSHService
+	sftp      *sftp.SftpService
 	isRunning int32
 }
 
@@ -54,7 +54,12 @@ func (s *SchedulerService) CheckBackups() {
 	var nodes []models.Node
 	now := time.Now()
 	// Find nodes that need backup
-	s.db.Preload("Credential").Preload("AccessAgent").Preload("Routine").Where("enabled = ? AND (next_backup_at IS NULL OR next_backup_at <= ?)", true, now).Find(&nodes)
+	s.db.Preload("Credential").
+		Preload("AccessAgent").
+		Preload("Routine").
+		Joins("LEFT JOIN backup_routines ON backup_routines.id = nodes.routine_id AND backup_routines.deleted_at IS NULL").
+		Where("nodes.enabled = ? AND (nodes.next_backup_at IS NULL OR nodes.next_backup_at <= ?) AND (nodes.schedule_type <> ? OR backup_routines.enabled = ?)", true, now, "routine", true).
+		Find(&nodes)
 
 	if len(nodes) == 0 {
 		return
@@ -84,7 +89,7 @@ func (s *SchedulerService) CheckBackups() {
 func (s *SchedulerService) RunBackup(node *models.Node) {
 	log.Printf("Starting backup for node: %s", node.Name)
 	config, err := s.ssh.PerformBackup(node)
-	
+
 	status := "success"
 	errorMessage := ""
 	configHash := ""
@@ -106,9 +111,9 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 			version = lastBackup.Version
 			if lastBackup.Hash != configHash {
 				version++
-				
+
 				diffRes := diff.GenerateDiff(lastBackup.Config, config)
-				
+
 				backup := models.NodeBackup{
 					NodeID:        node.ID,
 					Config:        config,
@@ -128,7 +133,7 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 					s.db.Where("target_group = ? OR target_group = '*' OR target_group = 'Global'", node.Group).Find(&rules)
 					for _, rule := range rules {
 						if rule.Enabled && rule.AlertOnDiff {
-							msg := fmt.Sprintf("⚠️ *Configuration Drift Detected*\n\n*Node:* %s\n*IP:* %s\n*Vendor:* %s\n\n*Changes:* +%d additions, -%d deletions\n*New Version:* v%d", node.Name, node.IP, node.Vendor, diffRes.Additions, diffRes.Deletions, version)
+							msg := fmt.Sprintf("*Configuration Drift Detected*\n\n*Node:* %s\n*IP:* %s\n*Vendor:* %s\n\n*Changes:* +%d additions, -%d deletions\n*New Version:* v%d", node.Name, node.IP, node.Vendor, diffRes.Additions, diffRes.Deletions, version)
 							alert.Dispatch(s.db, rule, msg)
 						}
 					}
@@ -150,7 +155,7 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 
 		// Calculate Security & Compliance Score
 		newViolations := audit.RunAudit(s.db, node, version, config)
-		
+
 		// Alerta de Compliance (Security Violation)
 		if len(newViolations) > 0 {
 			isSnoozed := node.AlertSnoozeUntil != nil && time.Now().Before(*node.AlertSnoozeUntil)
@@ -163,8 +168,8 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 						for _, v := range newViolations {
 							viols = append(viols, fmt.Sprintf("- %s (Penalty: %d)", v.Rule.Name, v.Rule.Penalty))
 						}
-						
-						msg := fmt.Sprintf("🛡️ *Security Violation Detected*\n\n*Node:* %s\n*IP:* %s\n*Current Score:* %d/100\n\n*New Violations:*\n%s", 
+
+						msg := fmt.Sprintf("*Security Violation Detected*\n\n*Node:* %s\n*IP:* %s\n*Current Score:* %d/100\n\n*New Violations:*\n%s",
 							node.Name, node.IP, node.SecurityScore, strings.Join(viols, "\n"))
 						alert.Dispatch(s.db, rule, msg)
 					}
@@ -182,7 +187,7 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 				s.db.Where("target_group = ? OR target_group = '*' OR target_group = 'Global'", node.Group).Find(&rules)
 				for _, rule := range rules {
 					if rule.Enabled && rule.AlertOnFailure {
-						msg := fmt.Sprintf("✅ *Backup Recovered*\n\n*Node:* %s\n*IP:* %s\n\nBackup is now succeeding again.", node.Name, node.IP)
+						msg := fmt.Sprintf("*Backup Recovered*\n\n*Node:* %s\n*IP:* %s\n\nBackup is now succeeding again.", node.Name, node.IP)
 						alert.Dispatch(s.db, rule, msg)
 					}
 				}
@@ -198,7 +203,7 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 				s.db.Where("target_group = ? OR target_group = '*' OR target_group = 'Global'", node.Group).Find(&rules)
 				for _, rule := range rules {
 					if rule.Enabled && rule.AlertOnFailure {
-						msg := fmt.Sprintf("❌ *Backup Failed*\n\n*Node:* %s\n*IP:* %s\n*Error:* %s", node.Name, node.IP, errorMessage)
+						msg := fmt.Sprintf("*Backup Failed*\n\n*Node:* %s\n*IP:* %s\n*Error:* %s", node.Name, node.IP, errorMessage)
 						alert.Dispatch(s.db, rule, msg)
 					}
 				}
@@ -215,7 +220,7 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 	node.LastError = errorMessage
 	now := time.Now()
 	node.LastBackupAt = &now
-	
+
 	// Calculate next backup time based on frequency
 	freqHours := 24
 	if node.ScheduleType == "routine" && node.RoutineID != nil {
@@ -225,11 +230,13 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 	} else {
 		freqHours, _ = strconv.Atoi(node.Frequency)
 	}
-	if freqHours == 0 { freqHours = 24 }
-	
+	if freqHours == 0 {
+		freqHours = 24
+	}
+
 	next := now.Add(time.Duration(freqHours) * time.Hour)
 	node.NextBackupAt = &next
-	
+
 	s.db.Save(node)
 }
 
@@ -240,6 +247,13 @@ func (s *SchedulerService) CheckExports() {
 	}
 
 	if !settings.Enabled {
+		return
+	}
+
+	if strings.TrimSpace(settings.Host) == "" || strings.TrimSpace(settings.Username) == "" || strings.TrimSpace(settings.Password) == "" {
+		settings.LastExportStatus = "error"
+		settings.LastExportError = "SFTP settings are incomplete"
+		s.db.Save(&settings)
 		return
 	}
 
@@ -259,17 +273,30 @@ func (s *SchedulerService) CheckExports() {
 
 	log.Printf("[Scheduler] Found %d pending SFTP exports.", len(backups))
 
+	successCount := 0
+	var lastErr string
 	for _, backup := range backups {
 		if err := s.sftp.Export(&backup, &settings); err == nil {
 			backup.Exported = true
 			s.db.Save(&backup)
+			successCount++
 			log.Printf("[Scheduler] Successfully exported backup ID %d to SFTP.", backup.ID)
 		} else {
+			lastErr = err.Error()
 			log.Printf("[Scheduler] Failed to export backup ID %d: %v", backup.ID, err)
 		}
 	}
 
 	settings.LastExportAt = &now
-	settings.LastExportStatus = "success"
+	if successCount == len(backups) {
+		settings.LastExportStatus = "success"
+		settings.LastExportError = ""
+	} else if successCount > 0 {
+		settings.LastExportStatus = "partial"
+		settings.LastExportError = lastErr
+	} else {
+		settings.LastExportStatus = "error"
+		settings.LastExportError = lastErr
+	}
 	s.db.Save(&settings)
 }

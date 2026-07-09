@@ -1,86 +1,191 @@
-<div>
-    <div class="flex items-center justify-between mb-4">
+<div class="routines-page"
+     x-data="{
+        query: '',
+        status: 'all',
+        matches(el) {
+            const q = this.query.trim().toLowerCase();
+            const statusOk = this.status === 'all' || el.dataset.status === this.status || el.dataset.usage === this.status;
+            const searchOk = !q || el.dataset.search.toLowerCase().includes(q);
+            return statusOk && searchOk;
+        },
+        countVisible() {
+            if (!this.$refs.list) return 0;
+            return Array.from(this.$refs.list.querySelectorAll('[data-routine-card]')).filter((el) => this.matches(el)).length;
+        }
+     }">
+    <div class="routines-hero">
         <div>
-            <h2 class="settings-section-title">Backup Routines</h2>
-            <p class="settings-section-desc">Automatic backup schedules for groups of nodes.</p>
+            <div class="nodes-eyebrow">
+                <i class="bx bx-time-five"></i>
+                Schedule control
+            </div>
+            <h1 class="page-title">Backup Routines</h1>
+            <p class="page-desc">Group shared backup schedules, pause them safely and see which nodes depend on each routine.</p>
         </div>
-        <a href="/settings/routines/new" class="btn btn-primary btn-sm">
-            <i class="bx bx-plus"></i> New Routine
+        <a href="/settings/routines/new" class="btn btn-primary">
+            <i class="bx bx-plus"></i>
+            New Routine
         </a>
     </div>
 
-    <div class="table-wrap">
-        <table>
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Description</th>
-                    <th>Frequency</th>
-                    <th>Time</th>
-                    <th>Status</th>
-                    <th style="width: 80px;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{ if .Routines }}
-                {{ range .Routines }}
-                <tr>
-                    <td style="font-weight: 600;">{{ .Name }}</td>
-                    <td class="text-secondary truncate" style="max-width: 200px;">{{ .Description }}</td>
-                    <td>
-                        {{ if eq .Frequency "1" }}1 hour
-                        {{ else if eq .Frequency "6" }}6 hours
-                        {{ else if eq .Frequency "12" }}12 hours
-                        {{ else if eq .Frequency "24" }}24 hours
-                        {{ else if eq .Frequency "168" }}7 days
-                        {{ else }}{{ .Frequency }}h{{ end }}
-                    </td>
-                    <td>
-                        {{ if .BackupHour }}
-                            <span class="font-mono">{{ .BackupHour }}</span>
-                            {{ if .BackupDay }}
-                                <span class="text-secondary" style="margin-left: 4px;">
-                                    {{ if eq .BackupDay "0" }}Mon
-                                    {{ else if eq .BackupDay "1" }}Tue
-                                    {{ else if eq .BackupDay "2" }}Wed
-                                    {{ else if eq .BackupDay "3" }}Thu
-                                    {{ else if eq .BackupDay "4" }}Fri
-                                    {{ else if eq .BackupDay "5" }}Sat
-                                    {{ else if eq .BackupDay "6" }}Sun
-                                    {{ end }}
-                                </span>
-                            {{ end }}
-                        {{ else }}
-                            <span class="text-muted">-</span>
-                        {{ end }}
-                    </td>
-                    <td>
-                        {{ if .Enabled }}
-                            <span class="badge badge-success">Active</span>
-                        {{ else }}
-                            <span class="badge badge-muted">Inactive</span>
-                        {{ end }}
-                    </td>
-                    <td>
-                        <div class="action-group">
-                            <a href="/settings/routines/{{ .ID }}/edit" class="action-btn" title="Edit">
-                                <i class="bx bx-edit-alt"></i>
-                            </a>
-                            <button hx-delete="/settings/routines/{{ .ID }}"
-                                    hx-confirm="Delete this routine?"
-                                    hx-target="closest tr"
-                                    hx-swap="outerHTML"
-                                    class="action-btn danger" title="Delete">
-                                <i class="bx bx-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                {{ end }}
-                {{ else }}
-                <tr><td colspan="6" class="table-empty">No routines registered.</td></tr>
-                {{ end }}
-            </tbody>
-        </table>
+    <div class="routines-metrics">
+        <div class="routines-metric">
+            <i class="bx bx-time-five"></i>
+            <div>
+                <strong>{{ .RoutineStats.Total }}</strong>
+                <span>Total routines</span>
+            </div>
+        </div>
+        <div class="routines-metric success">
+            <i class="bx bx-check-circle"></i>
+            <div>
+                <strong>{{ .RoutineStats.Active }}</strong>
+                <span>Active</span>
+            </div>
+        </div>
+        <div class="routines-metric warning">
+            <i class="bx bx-pause-circle"></i>
+            <div>
+                <strong>{{ .RoutineStats.Paused }}</strong>
+                <span>Paused</span>
+            </div>
+        </div>
+        <div class="routines-metric accent">
+            <i class="bx bx-server"></i>
+            <div>
+                <strong>{{ .RoutineStats.LinkedNodes }}</strong>
+                <span>Linked nodes</span>
+            </div>
+        </div>
     </div>
+
+    <div class="routines-toolbar">
+        <div class="search-box routines-search">
+            <i class="bx bx-search"></i>
+            <input type="search"
+                   class="form-input"
+                   placeholder="Search by routine, cadence, time or linked node..."
+                   x-model.debounce.150ms="query" />
+        </div>
+        <div class="routines-filter-group" role="group" aria-label="Routine filter">
+            <button type="button" class="routines-filter-btn" :class="{ 'active': status === 'all' }" @click="status = 'all'">All</button>
+            <button type="button" class="routines-filter-btn" :class="{ 'active': status === 'active' }" @click="status = 'active'">Active</button>
+            <button type="button" class="routines-filter-btn" :class="{ 'active': status === 'paused' }" @click="status = 'paused'">Paused</button>
+            <button type="button" class="routines-filter-btn" :class="{ 'active': status === 'unused' }" @click="status = 'unused'">Unused</button>
+        </div>
+    </div>
+
+    {{ if .Routines }}
+    <div class="routines-list" x-ref="list">
+        {{ range .Routines }}
+        {{ $usage := len .Nodes }}
+        <article class="routine-card {{ if not .Enabled }}is-paused{{ end }}"
+                 data-routine-card
+                 data-status="{{ if .Enabled }}active{{ else }}paused{{ end }}"
+                 data-usage="{{ if gt $usage 0 }}used{{ else }}unused{{ end }}"
+                 data-search="{{ .Name }} {{ .Description }} {{ .Frequency }} {{ .BackupHour }} {{ .BackupDay }} {{ range .Nodes }}{{ .Name }} {{ end }}"
+                 x-show="matches($el)"
+                 x-transition>
+            <div class="routine-card-main">
+                <div class="routine-icon">
+                    <i class="bx {{ if .Enabled }}bx-time-five{{ else }}bx-pause{{ end }}"></i>
+                </div>
+                <div class="routine-copy">
+                    <div class="routine-title-line">
+                        <h3>{{ .Name }}</h3>
+                        {{ if .Enabled }}
+                        <span class="badge badge-success"><i class="bx bx-check-circle"></i> Active</span>
+                        {{ else }}
+                        <span class="badge badge-warning"><i class="bx bx-pause-circle"></i> Paused</span>
+                        {{ end }}
+                        {{ if eq .Frequency "168" }}
+                        <span class="badge badge-accent">Weekly</span>
+                        {{ end }}
+                    </div>
+                    <p>{{ if .Description }}{{ .Description }}{{ else }}No description provided.{{ end }}</p>
+                    <div class="routine-meta">
+                        <span>
+                            <i class="bx bx-repeat"></i>
+                            {{ if eq .Frequency "1" }}Every hour
+                            {{ else if eq .Frequency "6" }}Every 6 hours
+                            {{ else if eq .Frequency "12" }}Every 12 hours
+                            {{ else if eq .Frequency "24" }}Daily
+                            {{ else if eq .Frequency "168" }}Every 7 days
+                            {{ else }}Every {{ .Frequency }}h{{ end }}
+                        </span>
+                        <span><i class="bx bx-time"></i>{{ if .BackupHour }}{{ .BackupHour }}{{ else }}Any time{{ end }}</span>
+                        {{ if .BackupDay }}
+                        <span>
+                            <i class="bx bx-calendar"></i>
+                            {{ if eq .BackupDay "0" }}Monday
+                            {{ else if eq .BackupDay "1" }}Tuesday
+                            {{ else if eq .BackupDay "2" }}Wednesday
+                            {{ else if eq .BackupDay "3" }}Thursday
+                            {{ else if eq .BackupDay "4" }}Friday
+                            {{ else if eq .BackupDay "5" }}Saturday
+                            {{ else if eq .BackupDay "6" }}Sunday
+                            {{ end }}
+                        </span>
+                        {{ end }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="routine-usage">
+                <span>Linked nodes</span>
+                <strong>{{ $usage }}</strong>
+                {{ if gt $usage 0 }}
+                <small>
+                    {{ range $idx, $node := .Nodes }}{{ if lt $idx 3 }}{{ if $idx }}, {{ end }}{{ $node.Name }}{{ end }}{{ end }}{{ if gt $usage 3 }} and more{{ end }}
+                </small>
+                {{ else }}
+                <small>Ready to assign from the node form.</small>
+                {{ end }}
+            </div>
+
+            <div class="routine-actions">
+                <a href="/settings/routines/{{ .ID }}/edit" class="action-btn" title="Edit routine" aria-label="Edit routine">
+                    <i class="bx bx-edit-alt"></i>
+                </a>
+                {{ if gt $usage 0 }}
+                <button type="button"
+                        class="action-btn danger is-disabled"
+                        title="Move linked nodes before deleting this routine."
+                        aria-label="Delete unavailable while routine is in use"
+                        disabled>
+                    <i class="bx bx-trash"></i>
+                </button>
+                {{ else }}
+                <button type="button"
+                        hx-delete="/settings/routines/{{ .ID }}"
+                        hx-confirm="Delete this unused routine?"
+                        hx-target="closest .routine-card"
+                        hx-swap="delete"
+                        class="action-btn danger"
+                        title="Delete routine"
+                        aria-label="Delete routine">
+                    <i class="bx bx-trash"></i>
+                </button>
+                {{ end }}
+            </div>
+        </article>
+        {{ end }}
+    </div>
+
+    <div class="routines-empty" x-show="countVisible() === 0" x-cloak>
+        <i class="bx bx-search"></i>
+        <strong>No matching routines</strong>
+        <span>Adjust the search or filter to widen the list.</span>
+    </div>
+    {{ else }}
+    <div class="routines-empty">
+        <i class="bx bx-time-five"></i>
+        <strong>No routines yet</strong>
+        <span>Create a shared schedule, then assign it from the node form.</span>
+        <a href="/settings/routines/new" class="btn btn-primary btn-sm">
+            <i class="bx bx-plus"></i>
+            New Routine
+        </a>
+    </div>
+    {{ end }}
 </div>

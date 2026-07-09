@@ -10,7 +10,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
         rel="stylesheet" />
     <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico" />
-    <link rel="stylesheet" href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" />
     <link rel="stylesheet" href="/static/css/style.css" />
     <link rel="stylesheet" href="/static/css/login.css" />
 </head>
@@ -96,7 +95,7 @@
                             <input id="login-pass" type="password" name="password" placeholder="Enter your password"
                                 required autocomplete="current-password" />
                             <button type="button" class="login-eye" onclick="togglePassword()" tabindex="-1">
-                                <i class="bx bx-hide" id="eye-icon"></i>
+                                <span id="password-toggle-label">Show</span>
                             </button>
                         </div>
                     </div>
@@ -206,13 +205,13 @@
 
         function togglePassword() {
             const input = document.getElementById('login-pass');
-            const icon = document.getElementById('eye-icon');
+            const label = document.getElementById('password-toggle-label');
             if (input.type === 'password') {
                 input.type = 'text';
-                icon.classList.replace('bx-hide', 'bx-show');
+                label.textContent = 'Hide';
             } else {
                 input.type = 'password';
-                icon.classList.replace('bx-show', 'bx-hide');
+                label.textContent = 'Show';
             }
         }
     </script>

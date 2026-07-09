@@ -11,6 +11,9 @@ import (
 	"mimic/internal/services/audit"
 	"mimic/internal/services/sftp"
 	"mimic/pkg/crypto"
+	"net/mail"
+	"net/url"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -626,14 +629,36 @@ func (h *FormHandler) ImportNodesCSV(c *fiber.Ctx) error {
 
 // ── User Forms ─────────────────────────────────────────
 
-func (h *FormHandler) NewUser(c *fiber.Ctx) error {
+func (h *FormHandler) renderUserForm(c *fiber.Ctx, user models.User, errMsg string, status int) error {
+	if status != 0 {
+		c.Status(status)
+	}
+
+	title := "New User"
+	if user.ID != 0 {
+		title = "Edit " + user.Username
+	}
+
+	var adminCount int64
+	h.DB.Model(&models.User{}).Where("role = ?", "Administrator").Count(&adminCount)
+
 	return c.Render("user_form", fiber.Map{
-		"Title":        "New User",
+		"Title":        title,
 		"Username":     c.Locals("username"),
 		"Avatar":       c.Locals("avatar"),
 		"Role":         c.Locals("role"),
-		"CurrentRoute": "settings",
+		"CurrentRoute": "users",
+		"ActiveTab":    "users",
+		"EditUser":     user,
+		"IsEdit":       user.ID != 0,
+		"IsSelf":       fmt.Sprintf("%v", user.ID) == fmt.Sprintf("%v", c.Locals("user_id")),
+		"AdminCount":   adminCount,
+		"Error":        errMsg,
 	}, "base")
+}
+
+func (h *FormHandler) NewUser(c *fiber.Ctx) error {
+	return h.renderUserForm(c, models.User{Role: "Viewer"}, "", 0)
 }
 
 func (h *FormHandler) EditUser(c *fiber.Ctx) error {
@@ -643,14 +668,7 @@ func (h *FormHandler) EditUser(c *fiber.Ctx) error {
 		return c.Status(404).SendString("User not found")
 	}
 
-	return c.Render("user_form", fiber.Map{
-		"Title":        "Edit " + user.Username,
-		"Username":     c.Locals("username"),
-		"Avatar":       c.Locals("avatar"),
-		"Role":         c.Locals("role"),
-		"CurrentRoute": "settings",
-		"EditUser":     user,
-	}, "base")
+	return h.renderUserForm(c, user, "", 0)
 }
 
 func (h *FormHandler) SaveUser(c *fiber.Ctx) error {
@@ -666,24 +684,80 @@ func (h *FormHandler) SaveUser(c *fiber.Ctx) error {
 	user.Username = strings.TrimSpace(c.FormValue("username"))
 	user.Email = strings.TrimSpace(c.FormValue("email"))
 	user.Role = strings.TrimSpace(c.FormValue("role"))
+	if user.Role == "" {
+		user.Role = "Viewer"
+	}
+
 	if user.Username == "" {
-		return c.Status(400).SendString("Username is required")
+		return h.renderUserForm(c, user, "Username is required.", fiber.StatusBadRequest)
 	}
 	if user.Role != "Administrator" && user.Role != "Viewer" {
-		return c.Status(400).SendString("Invalid user role")
+		return h.renderUserForm(c, user, "Invalid user role.", fiber.StatusBadRequest)
+	}
+	if strings.ContainsAny(user.Username, " \t\r\n") {
+		return h.renderUserForm(c, user, "Username cannot contain spaces.", fiber.StatusBadRequest)
+	}
+	if user.Email != "" {
+		if _, err := mail.ParseAddress(user.Email); err != nil {
+			return h.renderUserForm(c, user, "Enter a valid email address.", fiber.StatusBadRequest)
+		}
+	}
+
+	var duplicateCount int64
+	duplicateQuery := h.DB.Model(&models.User{}).Where("LOWER(username) = ?", strings.ToLower(user.Username))
+	if user.ID != 0 {
+		duplicateQuery = duplicateQuery.Where("id <> ?", user.ID)
+	}
+	duplicateQuery.Count(&duplicateCount)
+	if duplicateCount > 0 {
+		return h.renderUserForm(c, user, "A user with this username already exists.", fiber.StatusBadRequest)
 	}
 
 	rawPass := c.FormValue("password")
+	if rawPass == "" && user.Password == "" {
+		return h.renderUserForm(c, user, "Password is required for new users.", fiber.StatusBadRequest)
+	}
 	if rawPass != "" {
+		if len(rawPass) < 6 {
+			return h.renderUserForm(c, user, "Password must be at least 6 characters long.", fiber.StatusBadRequest)
+		}
 		hash, err := bcrypt.GenerateFromPassword([]byte(rawPass), bcrypt.DefaultCost)
 		if err != nil {
-			return c.Status(500).SendString("Error hashing password")
+			return h.renderUserForm(c, user, "Error hashing password.", fiber.StatusInternalServerError)
 		}
 		user.Password = string(hash)
 	}
 
+	isSelf := fmt.Sprintf("%v", user.ID) == fmt.Sprintf("%v", c.Locals("user_id"))
+	if isSelf && user.Role != "Administrator" {
+		return h.renderUserForm(c, user, "You cannot remove your own administrator access.", fiber.StatusBadRequest)
+	}
+
+	if user.ID != 0 && user.Role != "Administrator" {
+		var existing models.User
+		if err := h.DB.Select("id", "role").First(&existing, user.ID).Error; err == nil && existing.Role == "Administrator" {
+			var otherAdmins int64
+			h.DB.Model(&models.User{}).Where("role = ? AND id <> ?", "Administrator", user.ID).Count(&otherAdmins)
+			if otherAdmins == 0 {
+				return h.renderUserForm(c, user, "At least one administrator must remain.", fiber.StatusBadRequest)
+			}
+		}
+	}
+
 	if err := h.DB.Save(&user).Error; err != nil {
-		return c.Status(500).SendString(err.Error())
+		return h.renderUserForm(c, user, "Failed to save user: "+err.Error(), fiber.StatusInternalServerError)
+	}
+
+	if isSelf {
+		sess, err := h.Store.Get(c)
+		if err == nil {
+			sess.Set("username", user.Username)
+			sess.Set("role", user.Role)
+			sess.Set("avatar", user.Avatar)
+			if err := sess.Save(); err != nil {
+				return h.renderUserForm(c, user, "User saved, but the session could not be updated.", fiber.StatusInternalServerError)
+			}
+		}
 	}
 
 	setNotification(c, "User saved successfully", "success")
@@ -695,15 +769,50 @@ func (h *FormHandler) DeleteUser(c *fiber.Ctx) error {
 	if c.Locals("user_id") != nil {
 		localId := fmt.Sprintf("%v", c.Locals("user_id"))
 		if id == localId {
+			if c.Get("HX-Request") == "true" {
+				setNotification(c, "You cannot delete your own user.", "error")
+				c.Set("HX-Reswap", "none")
+				return c.SendString("")
+			}
 			return c.Status(400).SendString("Cannot delete your own user")
 		}
 	}
 
-	h.DB.Where("id = ?", id).Delete(&models.User{})
+	var user models.User
+	if err := h.DB.Where("id = ?", id).First(&user).Error; err != nil {
+		if c.Get("HX-Request") == "true" {
+			setNotification(c, "User not found", "error")
+			c.Set("HX-Reswap", "none")
+			return c.SendString("")
+		}
+		return c.Status(404).SendString("User not found")
+	}
+
+	if user.Role == "Administrator" {
+		var adminCount int64
+		h.DB.Model(&models.User{}).Where("role = ?", "Administrator").Count(&adminCount)
+		if adminCount <= 1 {
+			if c.Get("HX-Request") == "true" {
+				setNotification(c, "At least one administrator must remain.", "error")
+				c.Set("HX-Reswap", "none")
+				return c.SendString("")
+			}
+			return c.Status(fiber.StatusConflict).SendString("At least one administrator must remain")
+		}
+	}
+
+	if err := h.DB.Delete(&user).Error; err != nil {
+		if c.Get("HX-Request") == "true" {
+			setNotification(c, "Failed to delete user: "+err.Error(), "error")
+			c.Set("HX-Reswap", "none")
+			return c.SendString("")
+		}
+		return c.Status(500).SendString(err.Error())
+	}
 
 	if c.Get("HX-Request") == "true" {
 		setNotification(c, "User deleted", "success")
-		return c.SendStatus(200)
+		return c.SendString("")
 	}
 
 	return c.Redirect("/settings/users")
@@ -711,31 +820,47 @@ func (h *FormHandler) DeleteUser(c *fiber.Ctx) error {
 
 // ── Credential Forms ───────────────────────────────────
 
-func (h *FormHandler) NewCredential(c *fiber.Ctx) error {
+func (h *FormHandler) renderCredentialForm(c *fiber.Ctx, credential models.Credential, errMsg string, status int) error {
+	if status != 0 {
+		c.Status(status)
+	}
+
+	if credential.ID != 0 {
+		h.DB.Where("credential_id = ?", credential.ID).Order("name asc").Find(&credential.Nodes)
+	}
+
+	title := "New Credential"
+	if credential.ID != 0 {
+		title = "Edit " + credential.Name
+	}
+
 	return c.Render("credential_form", fiber.Map{
-		"Title":        "New Credential",
+		"Title":        title,
 		"Username":     c.Locals("username"),
 		"Avatar":       c.Locals("avatar"),
 		"Role":         c.Locals("role"),
-		"CurrentRoute": "settings",
+		"CurrentRoute": "credentials",
+		"ActiveTab":    "credentials",
+		"Credential":   credential,
+		"IsEdit":       credential.ID != 0,
+		"Error":        errMsg,
 	}, "base")
+}
+
+func (h *FormHandler) NewCredential(c *fiber.Ctx) error {
+	return h.renderCredentialForm(c, models.Credential{Port: 22}, "", 0)
 }
 
 func (h *FormHandler) EditCredential(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var credential models.Credential
-	if err := h.DB.Where("id = ?", id).First(&credential).Error; err != nil {
+	if err := h.DB.Preload("Nodes", func(db *gorm.DB) *gorm.DB {
+		return db.Order("name asc")
+	}).Where("id = ?", id).First(&credential).Error; err != nil {
 		return c.Status(404).SendString("Credential not found")
 	}
 
-	return c.Render("credential_form", fiber.Map{
-		"Title":        "Edit " + credential.Name,
-		"Username":     c.Locals("username"),
-		"Avatar":       c.Locals("avatar"),
-		"Role":         c.Locals("role"),
-		"CurrentRoute": "settings",
-		"Credential":   credential,
-	}, "base")
+	return h.renderCredentialForm(c, credential, "", 0)
 }
 
 func (h *FormHandler) SaveCredential(c *fiber.Ctx) error {
@@ -743,29 +868,56 @@ func (h *FormHandler) SaveCredential(c *fiber.Ctx) error {
 	var credential models.Credential
 
 	if id != "" {
-		h.DB.Where("id = ?", id).First(&credential)
+		if err := h.DB.Where("id = ?", id).First(&credential).Error; err != nil {
+			return c.Status(404).SendString("Credential not found")
+		}
 	}
 
-	credential.Name = c.FormValue("name")
-	credential.Username = c.FormValue("username")
+	credential.Name = strings.TrimSpace(c.FormValue("name"))
+	credential.Username = strings.TrimSpace(c.FormValue("username"))
+
+	if credential.Name == "" {
+		return h.renderCredentialForm(c, credential, "Credential name is required.", fiber.StatusBadRequest)
+	}
+	if credential.Username == "" {
+		return h.renderCredentialForm(c, credential, "Username is required.", fiber.StatusBadRequest)
+	}
+
+	var duplicateCount int64
+	duplicateQuery := h.DB.Model(&models.Credential{}).Where("LOWER(name) = ?", strings.ToLower(credential.Name))
+	if credential.ID != 0 {
+		duplicateQuery = duplicateQuery.Where("id <> ?", credential.ID)
+	}
+	duplicateQuery.Count(&duplicateCount)
+	if duplicateCount > 0 {
+		return h.renderCredentialForm(c, credential, "A credential with this name already exists.", fiber.StatusBadRequest)
+	}
 
 	rawPass := c.FormValue("password")
+	if rawPass == "" && credential.Password == "" {
+		return h.renderCredentialForm(c, credential, "Password is required for new credentials.", fiber.StatusBadRequest)
+	}
 	if rawPass != "" {
 		encPass, err := crypto.Encrypt(rawPass)
 		if err != nil {
-			return c.Status(500).SendString("Error encrypting password: " + err.Error())
+			return h.renderCredentialForm(c, credential, "Error encrypting password: "+err.Error(), fiber.StatusInternalServerError)
 		}
 		credential.Password = encPass
 	}
 
-	port, _ := strconv.Atoi(c.FormValue("port"))
-	if port == 0 {
-		port = 22
+	port := 22
+	rawPort := strings.TrimSpace(c.FormValue("port"))
+	if rawPort != "" {
+		parsedPort, err := strconv.Atoi(rawPort)
+		if err != nil || parsedPort < 1 || parsedPort > 65535 {
+			return h.renderCredentialForm(c, credential, "SSH port must be a number between 1 and 65535.", fiber.StatusBadRequest)
+		}
+		port = parsedPort
 	}
 	credential.Port = port
 
 	if err := h.DB.Save(&credential).Error; err != nil {
-		return c.Status(500).SendString(err.Error())
+		return h.renderCredentialForm(c, credential, "Failed to save credential: "+err.Error(), fiber.StatusInternalServerError)
 	}
 
 	setNotification(c, "Credential saved successfully", "success")
@@ -774,11 +926,40 @@ func (h *FormHandler) SaveCredential(c *fiber.Ctx) error {
 
 func (h *FormHandler) DeleteCredential(c *fiber.Ctx) error {
 	id := c.Params("id")
-	h.DB.Where("id = ?", id).Delete(&models.Credential{})
+	var credential models.Credential
+	if err := h.DB.Where("id = ?", id).First(&credential).Error; err != nil {
+		if c.Get("HX-Request") == "true" {
+			setNotification(c, "Credential not found", "error")
+			c.Set("HX-Reswap", "none")
+			return c.SendString("")
+		}
+		return c.Status(404).SendString("Credential not found")
+	}
+
+	var linkedNodes int64
+	h.DB.Model(&models.Node{}).Where("credential_id = ?", credential.ID).Count(&linkedNodes)
+	if linkedNodes > 0 {
+		message := fmt.Sprintf("Credential is linked to %d node(s). Remove it from nodes before deleting.", linkedNodes)
+		if c.Get("HX-Request") == "true" {
+			setNotification(c, message, "error")
+			c.Set("HX-Reswap", "none")
+			return c.SendString("")
+		}
+		return c.Status(fiber.StatusConflict).SendString(message)
+	}
+
+	if err := h.DB.Delete(&credential).Error; err != nil {
+		if c.Get("HX-Request") == "true" {
+			setNotification(c, "Failed to delete credential: "+err.Error(), "error")
+			c.Set("HX-Reswap", "none")
+			return c.SendString("")
+		}
+		return c.Status(500).SendString(err.Error())
+	}
 
 	if c.Get("HX-Request") == "true" {
 		setNotification(c, "Credential deleted", "success")
-		return c.SendStatus(200)
+		return c.SendString("")
 	}
 
 	return c.Redirect("/settings/credentials")
@@ -786,31 +967,47 @@ func (h *FormHandler) DeleteCredential(c *fiber.Ctx) error {
 
 // ── Routine Forms ──────────────────────────────────────
 
-func (h *FormHandler) NewRoutine(c *fiber.Ctx) error {
+func (h *FormHandler) renderRoutineForm(c *fiber.Ctx, routine models.BackupRoutine, errMsg string, status int) error {
+	if status != 0 {
+		c.Status(status)
+	}
+
+	if routine.ID != 0 {
+		h.DB.Where("routine_id = ?", routine.ID).Order("name asc").Find(&routine.Nodes)
+	}
+
+	title := "New Routine"
+	if routine.ID != 0 {
+		title = "Edit " + routine.Name
+	}
+
 	return c.Render("routine_form", fiber.Map{
-		"Title":        "New Routine",
+		"Title":        title,
 		"Username":     c.Locals("username"),
 		"Avatar":       c.Locals("avatar"),
 		"Role":         c.Locals("role"),
-		"CurrentRoute": "settings",
+		"CurrentRoute": "routines",
+		"ActiveTab":    "routines",
+		"Routine":      routine,
+		"IsEdit":       routine.ID != 0,
+		"Error":        errMsg,
 	}, "base")
+}
+
+func (h *FormHandler) NewRoutine(c *fiber.Ctx) error {
+	return h.renderRoutineForm(c, models.BackupRoutine{Frequency: "24", BackupHour: "02:00", Enabled: true}, "", 0)
 }
 
 func (h *FormHandler) EditRoutine(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var routine models.BackupRoutine
-	if err := h.DB.Where("id = ?", id).First(&routine).Error; err != nil {
+	if err := h.DB.Preload("Nodes", func(db *gorm.DB) *gorm.DB {
+		return db.Order("name asc")
+	}).Where("id = ?", id).First(&routine).Error; err != nil {
 		return c.Status(404).SendString("Routine not found")
 	}
 
-	return c.Render("routine_form", fiber.Map{
-		"Title":        "Edit " + routine.Name,
-		"Username":     c.Locals("username"),
-		"Avatar":       c.Locals("avatar"),
-		"Role":         c.Locals("role"),
-		"CurrentRoute": "settings",
-		"Routine":      routine,
-	}, "base")
+	return h.renderRoutineForm(c, routine, "", 0)
 }
 
 func (h *FormHandler) SaveRoutine(c *fiber.Ctx) error {
@@ -818,18 +1015,51 @@ func (h *FormHandler) SaveRoutine(c *fiber.Ctx) error {
 	var routine models.BackupRoutine
 
 	if id != "" {
-		h.DB.Where("id = ?", id).First(&routine)
+		if err := h.DB.Where("id = ?", id).First(&routine).Error; err != nil {
+			return c.Status(404).SendString("Routine not found")
+		}
 	}
 
-	routine.Name = c.FormValue("name")
-	routine.Description = c.FormValue("description")
-	routine.Frequency = c.FormValue("frequency")
-	routine.BackupHour = c.FormValue("backup_hour")
-	routine.BackupDay = c.FormValue("backup_day")
+	routine.Name = strings.TrimSpace(c.FormValue("name"))
+	routine.Description = strings.TrimSpace(c.FormValue("description"))
+	routine.Frequency = strings.TrimSpace(c.FormValue("frequency"))
+	if routine.Frequency == "" {
+		routine.Frequency = "24"
+	}
+	routine.BackupHour = strings.TrimSpace(c.FormValue("backup_hour"))
+	routine.BackupDay = strings.TrimSpace(c.FormValue("backup_day"))
 	routine.Enabled = c.FormValue("enabled") == "on"
 
+	if routine.Name == "" {
+		return h.renderRoutineForm(c, routine, "Routine name is required.", fiber.StatusBadRequest)
+	}
+	if !supportedNodeFrequencies[routine.Frequency] {
+		return h.renderRoutineForm(c, routine, "Invalid backup frequency.", fiber.StatusBadRequest)
+	}
+	if routine.BackupHour != "" {
+		if _, err := time.Parse("15:04", routine.BackupHour); err != nil {
+			return h.renderRoutineForm(c, routine, "Backup time must use HH:MM format.", fiber.StatusBadRequest)
+		}
+	}
+	if routine.BackupDay != "" {
+		parsedDay, err := strconv.Atoi(routine.BackupDay)
+		if err != nil || parsedDay < 0 || parsedDay > 6 {
+			return h.renderRoutineForm(c, routine, "Backup day must be between Monday and Sunday.", fiber.StatusBadRequest)
+		}
+	}
+
+	var duplicateCount int64
+	duplicateQuery := h.DB.Model(&models.BackupRoutine{}).Where("LOWER(name) = ?", strings.ToLower(routine.Name))
+	if routine.ID != 0 {
+		duplicateQuery = duplicateQuery.Where("id <> ?", routine.ID)
+	}
+	duplicateQuery.Count(&duplicateCount)
+	if duplicateCount > 0 {
+		return h.renderRoutineForm(c, routine, "A routine with this name already exists.", fiber.StatusBadRequest)
+	}
+
 	if err := h.DB.Save(&routine).Error; err != nil {
-		return c.Status(500).SendString(err.Error())
+		return h.renderRoutineForm(c, routine, "Failed to save routine: "+err.Error(), fiber.StatusInternalServerError)
 	}
 
 	setNotification(c, "Routine saved successfully", "success")
@@ -838,11 +1068,40 @@ func (h *FormHandler) SaveRoutine(c *fiber.Ctx) error {
 
 func (h *FormHandler) DeleteRoutine(c *fiber.Ctx) error {
 	id := c.Params("id")
-	h.DB.Where("id = ?", id).Delete(&models.BackupRoutine{})
+	var routine models.BackupRoutine
+	if err := h.DB.Where("id = ?", id).First(&routine).Error; err != nil {
+		if c.Get("HX-Request") == "true" {
+			setNotification(c, "Routine not found", "error")
+			c.Set("HX-Reswap", "none")
+			return c.SendString("")
+		}
+		return c.Status(404).SendString("Routine not found")
+	}
+
+	var linkedNodes int64
+	h.DB.Model(&models.Node{}).Where("routine_id = ?", routine.ID).Count(&linkedNodes)
+	if linkedNodes > 0 {
+		message := fmt.Sprintf("Routine is linked to %d node(s). Move those nodes before deleting.", linkedNodes)
+		if c.Get("HX-Request") == "true" {
+			setNotification(c, message, "error")
+			c.Set("HX-Reswap", "none")
+			return c.SendString("")
+		}
+		return c.Status(fiber.StatusConflict).SendString(message)
+	}
+
+	if err := h.DB.Delete(&routine).Error; err != nil {
+		if c.Get("HX-Request") == "true" {
+			setNotification(c, "Failed to delete routine: "+err.Error(), "error")
+			c.Set("HX-Reswap", "none")
+			return c.SendString("")
+		}
+		return c.Status(500).SendString(err.Error())
+	}
 
 	if c.Get("HX-Request") == "true" {
 		setNotification(c, "Routine deleted", "success")
-		return c.SendStatus(200)
+		return c.SendString("")
 	}
 
 	return c.Redirect("/settings/routines")
@@ -850,33 +1109,111 @@ func (h *FormHandler) DeleteRoutine(c *fiber.Ctx) error {
 
 // ── Settings Save (SFTP) ───────────────────────────────
 
+func normalizeSFTPPath(value string) string {
+	value = strings.TrimSpace(strings.ReplaceAll(value, "\\", "/"))
+	if value == "" {
+		return "/"
+	}
+	if !strings.HasPrefix(value, "/") {
+		value = "/" + value
+	}
+	return path.Clean(value)
+}
+
+func (h *FormHandler) sftpStatusStats(settings models.SftpSettings) SftpStatusStats {
+	stats := SftpStatusStats{
+		Enabled:     settings.Enabled,
+		HasPassword: strings.TrimSpace(settings.Password) != "",
+		LastStatus:  settings.LastExportStatus,
+	}
+	if stats.LastStatus == "" {
+		stats.LastStatus = "never"
+	}
+	stats.Configured = strings.TrimSpace(settings.Host) != "" && strings.TrimSpace(settings.Username) != "" && stats.HasPassword
+	h.DB.Model(&models.NodeBackup{}).Where("status = ? AND exported = ?", "success", false).Count(&stats.PendingBackups)
+	h.DB.Model(&models.NodeBackup{}).Where("status = ? AND exported = ?", "success", false).Distinct("node_id").Count(&stats.PendingNodes)
+	h.DB.Model(&models.NodeBackup{}).Where("status = ? AND exported = ?", "success", true).Count(&stats.ExportedBackups)
+	return stats
+}
+
+func (h *FormHandler) renderSFTPSettings(c *fiber.Ctx, settings models.SftpSettings, errMsg string, status int) error {
+	if status != 0 {
+		c.Status(status)
+	}
+
+	return c.Render("settings", fiber.Map{
+		"Title":        "SFTP Configuration",
+		"Username":     c.Locals("username"),
+		"Avatar":       c.Locals("avatar"),
+		"Role":         c.Locals("role"),
+		"CurrentRoute": "sftp",
+		"ActiveTab":    "sftp",
+		"Sftp":         settings,
+		"SftpStats":    h.sftpStatusStats(settings),
+		"Error":        errMsg,
+	}, "base")
+}
+
+func validateSFTPSettings(settings models.SftpSettings, requireConnection bool) error {
+	if settings.Port < 1 || settings.Port > 65535 {
+		return fmt.Errorf("SFTP port must be between 1 and 65535")
+	}
+	if settings.SyncTime != "" {
+		if _, err := time.Parse("15:04", settings.SyncTime); err != nil {
+			return fmt.Errorf("sync time must use HH:MM format")
+		}
+	}
+	if requireConnection || settings.Enabled {
+		if strings.TrimSpace(settings.Host) == "" {
+			return fmt.Errorf("SFTP host is required")
+		}
+		if strings.ContainsAny(settings.Host, " \t\r\n") {
+			return fmt.Errorf("SFTP host cannot contain spaces")
+		}
+		if strings.TrimSpace(settings.Username) == "" {
+			return fmt.Errorf("SFTP username is required")
+		}
+		if strings.TrimSpace(settings.Password) == "" {
+			return fmt.Errorf("SFTP password is required")
+		}
+	}
+	return nil
+}
+
 func (h *FormHandler) SaveSettings(c *fiber.Ctx) error {
 	var settings models.SftpSettings
 	h.DB.First(&settings)
 
-	settings.Host = c.FormValue("host")
-	port, _ := strconv.Atoi(c.FormValue("port"))
-	if port < 1 || port > 65535 {
+	settings.Host = strings.TrimSpace(c.FormValue("host"))
+	port, err := strconv.Atoi(strings.TrimSpace(c.FormValue("port")))
+	if err != nil || port == 0 {
 		port = 22
 	}
 	settings.Port = port
-	settings.Username = c.FormValue("username")
+	settings.Username = strings.TrimSpace(c.FormValue("username"))
 
 	rawPass := c.FormValue("password")
 	if rawPass != "" {
 		encPass, err := crypto.Encrypt(rawPass)
 		if err != nil {
-			return c.Status(500).SendString("Error encrypting password: " + err.Error())
+			return h.renderSFTPSettings(c, settings, "Error encrypting password: "+err.Error(), fiber.StatusInternalServerError)
 		}
 		settings.Password = encPass
 	}
 
-	settings.Path = c.FormValue("path")
+	settings.Path = normalizeSFTPPath(c.FormValue("path"))
 	settings.Enabled = c.FormValue("enabled") == "on"
-	settings.SyncTime = c.FormValue("sync_time")
+	settings.SyncTime = strings.TrimSpace(c.FormValue("sync_time"))
+	if settings.SyncTime == "" {
+		settings.SyncTime = "23:00"
+	}
+
+	if err := validateSFTPSettings(settings, false); err != nil {
+		return h.renderSFTPSettings(c, settings, err.Error(), fiber.StatusBadRequest)
+	}
 
 	if err := h.DB.Save(&settings).Error; err != nil {
-		return c.Status(500).SendString(err.Error())
+		return h.renderSFTPSettings(c, settings, "Failed to save SFTP settings: "+err.Error(), fiber.StatusInternalServerError)
 	}
 	setNotification(c, "SFTP settings saved", "success")
 	return c.Redirect("/settings/sftp")
@@ -888,26 +1225,27 @@ func (h *FormHandler) TestSFTPConnection(c *fiber.Ctx) error {
 	// We populate from form, but fallback to DB for password if empty
 	h.DB.First(&settings)
 
-	settings.Host = c.FormValue("host")
-	port, _ := strconv.Atoi(c.FormValue("port"))
-	if port < 1 || port > 65535 {
+	settings.Host = strings.TrimSpace(c.FormValue("host"))
+	port, err := strconv.Atoi(strings.TrimSpace(c.FormValue("port")))
+	if err != nil || port == 0 {
 		port = 22
 	}
 	settings.Port = port
-	settings.Username = c.FormValue("username")
-	settings.Path = c.FormValue("path")
+	settings.Username = strings.TrimSpace(c.FormValue("username"))
+	settings.Path = normalizeSFTPPath(c.FormValue("path"))
+	settings.SyncTime = strings.TrimSpace(c.FormValue("sync_time"))
 
 	rawPass := c.FormValue("password")
 	if rawPass != "" {
-		encPass, err := crypto.Encrypt(rawPass)
-		if err != nil {
-			setNotification(c, "Connection failed: error encrypting password", "error")
-			return c.SendStatus(200)
-		}
-		settings.Password = encPass
+		settings.Password = rawPass
 	}
 
-	err := h.Sftp.TestConnection(&settings)
+	if err := validateSFTPSettings(settings, true); err != nil {
+		setNotification(c, "Connection failed: "+err.Error(), "error")
+		return c.SendStatus(200)
+	}
+
+	err = h.Sftp.TestConnection(&settings)
 	if err != nil {
 		setNotification(c, fmt.Sprintf("Connection failed: %v", err), "error")
 		return c.SendStatus(200)
@@ -969,6 +1307,13 @@ func (h *FormHandler) ExportBackup(c *fiber.Ctx) error {
 	if err := h.DB.First(&settings).Error; err != nil {
 		return c.Status(400).SendString("SFTP not configured")
 	}
+	if err := validateSFTPSettings(settings, true); err != nil {
+		if c.Get("HX-Request") == "true" {
+			setNotification(c, "Export failed: "+err.Error(), "error")
+			return c.SendStatus(200)
+		}
+		return c.Status(400).SendString(err.Error())
+	}
 
 	if err := h.Sftp.Export(&backup, &settings); err != nil {
 		if c.Get("HX-Request") == "true" {
@@ -977,6 +1322,9 @@ func (h *FormHandler) ExportBackup(c *fiber.Ctx) error {
 		}
 		return c.Status(500).SendString(fmt.Sprintf("Export failed: %v", err))
 	}
+
+	backup.Exported = true
+	h.DB.Save(&backup)
 
 	if c.Get("HX-Request") == "true" {
 		setNotification(c, "Backup successfully exported", "success")
@@ -994,56 +1342,152 @@ func (h *FormHandler) PostSync(c *fiber.Ctx) error {
 	if err := h.DB.First(&settings).Error; err != nil {
 		return c.Status(400).SendString("SFTP not configured")
 	}
+	if err := validateSFTPSettings(settings, true); err != nil {
+		setNotification(c, "Sync failed: "+err.Error(), "error")
+		return c.SendStatus(200)
+	}
 
 	successCount := 0
+	failureCount := 0
+	lastErr := ""
 	for _, node := range nodes {
 		var lastBackup models.NodeBackup
 		err := h.DB.Where("node_id = ? AND status = ?", node.ID, "success").Order("created_at desc").First(&lastBackup).Error
 		if err == nil {
 			lastBackup.Node = node
 			if err := h.Sftp.Export(&lastBackup, &settings); err == nil {
+				lastBackup.Exported = true
+				h.DB.Save(&lastBackup)
 				successCount++
+			} else {
+				failureCount++
+				lastErr = err.Error()
 			}
 		}
 	}
 
 	now := time.Now()
 	settings.LastExportAt = &now
-	settings.LastExportStatus = "success"
+	if failureCount == 0 {
+		settings.LastExportStatus = "success"
+		settings.LastExportError = ""
+	} else if successCount > 0 {
+		settings.LastExportStatus = "partial"
+		settings.LastExportError = lastErr
+	} else {
+		settings.LastExportStatus = "error"
+		settings.LastExportError = lastErr
+	}
 	h.DB.Save(&settings)
 
-	setNotification(c, fmt.Sprintf("Sync complete: %d nodes exported", successCount), "success")
+	if failureCount > 0 {
+		setNotification(c, fmt.Sprintf("Sync partial: %d exported, %d failed", successCount, failureCount), "warning")
+	} else {
+		setNotification(c, fmt.Sprintf("Sync complete: %d nodes exported", successCount), "success")
+	}
 	return c.SendStatus(200)
 }
 
 // ── Alert Rule Forms ───────────────────────────────────
 
-func (h *FormHandler) NewAlertRule(c *fiber.Ctx) error {
+var supportedAlertProviders = map[string]bool{
+	"webhook":  true,
+	"telegram": true,
+}
+
+func (h *FormHandler) renderAlertRuleForm(c *fiber.Ctx, rule models.AlertRule, errMsg string, status int) error {
+	if status != 0 {
+		c.Status(status)
+	}
+
+	title := "New Alert Rule"
+	if rule.ID != 0 {
+		title = "Edit " + rule.Name
+	}
+
+	var groups []string
+	h.DB.Model(&models.Node{}).
+		Distinct(`"group"`).
+		Where(`"group" <> ''`).
+		Order(`"group" asc`).
+		Pluck("group", &groups)
+
 	return c.Render("alert_form", fiber.Map{
-		"Title":        "New Alert Rule",
+		"Title":        title,
 		"Username":     c.Locals("username"),
 		"Avatar":       c.Locals("avatar"),
 		"Role":         c.Locals("role"),
-		"CurrentRoute": "settings",
-		"Alert":        models.AlertRule{TargetGroup: "Global", Enabled: true, Provider: "webhook"},
+		"CurrentRoute": "alerts",
+		"ActiveTab":    "alerts",
+		"Alert":        rule,
+		"IsEdit":       rule.ID != 0,
+		"Groups":       groups,
+		"Error":        errMsg,
 	}, "base")
+}
+
+func normalizeAlertTargetGroup(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" || strings.EqualFold(value, "global") || value == "*" {
+		return "*"
+	}
+	return value
+}
+
+func validateAlertURL(value string) error {
+	parsed, err := url.ParseRequestURI(value)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return fmt.Errorf("enter a valid webhook URL")
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return fmt.Errorf("webhook URL must start with http:// or https://")
+	}
+	return nil
+}
+
+func validateAlertRule(rule models.AlertRule, hasWebhook bool, hasTelegramToken bool, hasTelegramChat bool) error {
+	if strings.TrimSpace(rule.Name) == "" {
+		return fmt.Errorf("rule name is required")
+	}
+	if len(rule.Name) > 100 {
+		return fmt.Errorf("rule name must be 100 characters or less")
+	}
+	if rule.TargetGroup == "" {
+		return fmt.Errorf("target group is required")
+	}
+	if !supportedAlertProviders[rule.Provider] {
+		return fmt.Errorf("choose a valid alert provider")
+	}
+	if !rule.AlertOnDiff && !rule.AlertOnFailure && !rule.AlertOnSecurity {
+		return fmt.Errorf("select at least one event that should trigger this rule")
+	}
+	if rule.Provider == "webhook" && !hasWebhook {
+		return fmt.Errorf("webhook URL is required for webhook alerts")
+	}
+	if rule.Provider == "telegram" && (!hasTelegramToken || !hasTelegramChat) {
+		return fmt.Errorf("bot token and chat ID are required for Telegram alerts")
+	}
+	return nil
+}
+
+func (h *FormHandler) NewAlertRule(c *fiber.Ctx) error {
+	return h.renderAlertRuleForm(c, models.AlertRule{
+		TargetGroup:    "*",
+		Enabled:        true,
+		Provider:       "webhook",
+		AlertOnDiff:    true,
+		AlertOnFailure: true,
+	}, "", 0)
 }
 
 func (h *FormHandler) EditAlertRule(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var rule models.AlertRule
 	if err := h.DB.Where("id = ?", id).First(&rule).Error; err != nil {
-		return c.Status(404).SendString("Alert Rule not found")
+		return c.Status(404).SendString("Alert rule not found")
 	}
 
-	return c.Render("alert_form", fiber.Map{
-		"Title":        "Edit Alert Rule",
-		"Username":     c.Locals("username"),
-		"Avatar":       c.Locals("avatar"),
-		"Role":         c.Locals("role"),
-		"CurrentRoute": "settings",
-		"Alert":        rule,
-	}, "base")
+	return h.renderAlertRuleForm(c, rule, "", 0)
 }
 
 func (h *FormHandler) SaveAlertRule(c *fiber.Ctx) error {
@@ -1051,39 +1495,58 @@ func (h *FormHandler) SaveAlertRule(c *fiber.Ctx) error {
 	var rule models.AlertRule
 
 	if id != "" {
-		h.DB.Where("id = ?", id).First(&rule)
+		if err := h.DB.Where("id = ?", id).First(&rule).Error; err != nil {
+			return c.Status(404).SendString("Alert rule not found")
+		}
 	}
 
-	rule.Name = c.FormValue("name")
-	rule.TargetGroup = c.FormValue("target_group")
+	rule.Name = strings.TrimSpace(c.FormValue("name"))
+	rule.TargetGroup = normalizeAlertTargetGroup(c.FormValue("target_group"))
 	rule.Enabled = c.FormValue("enabled") == "on"
-	rule.Provider = c.FormValue("provider")
-
-	whURL := c.FormValue("webhook_url")
-	if whURL != "" {
-		enc, _ := crypto.Encrypt(whURL)
-		rule.WebhookURL = enc
+	rule.Provider = strings.TrimSpace(c.FormValue("provider"))
+	if rule.Provider == "" {
+		rule.Provider = "webhook"
 	}
-
-	tToken := c.FormValue("telegram_token")
-	if tToken != "" {
-		enc, _ := crypto.Encrypt(tToken)
-		rule.TelegramToken = enc
-	}
-
-	tChatID := c.FormValue("telegram_chat_id")
-	if tChatID != "" {
-		enc, _ := crypto.Encrypt(tChatID)
-		rule.TelegramChatID = enc
-	}
-
 	rule.AlertOnDiff = c.FormValue("alert_on_diff") == "on"
 	rule.AlertOnFailure = c.FormValue("alert_on_failure") == "on"
 	rule.AlertOnSecurity = c.FormValue("alert_on_security") == "on"
 
+	whURL := strings.TrimSpace(c.FormValue("webhook_url"))
+	if whURL != "" {
+		if err := validateAlertURL(whURL); err != nil {
+			return h.renderAlertRuleForm(c, rule, err.Error()+".", fiber.StatusBadRequest)
+		}
+		enc, err := crypto.Encrypt(whURL)
+		if err != nil {
+			return h.renderAlertRuleForm(c, rule, "Failed to encrypt webhook URL.", fiber.StatusInternalServerError)
+		}
+		rule.WebhookURL = enc
+	}
+
+	tToken := strings.TrimSpace(c.FormValue("telegram_token"))
+	if tToken != "" {
+		enc, err := crypto.Encrypt(tToken)
+		if err != nil {
+			return h.renderAlertRuleForm(c, rule, "Failed to encrypt Telegram token.", fiber.StatusInternalServerError)
+		}
+		rule.TelegramToken = enc
+	}
+
+	tChatID := strings.TrimSpace(c.FormValue("telegram_chat_id"))
+	if tChatID != "" {
+		enc, err := crypto.Encrypt(tChatID)
+		if err != nil {
+			return h.renderAlertRuleForm(c, rule, "Failed to encrypt Telegram chat ID.", fiber.StatusInternalServerError)
+		}
+		rule.TelegramChatID = enc
+	}
+
+	if err := validateAlertRule(rule, rule.WebhookURL != "", rule.TelegramToken != "", rule.TelegramChatID != ""); err != nil {
+		return h.renderAlertRuleForm(c, rule, err.Error()+".", fiber.StatusBadRequest)
+	}
+
 	if err := h.DB.Save(&rule).Error; err != nil {
-		setNotification(c, fmt.Sprintf("Failed to save rule: %v", err), "error")
-		return c.SendStatus(500)
+		return h.renderAlertRuleForm(c, rule, "Failed to save alert rule: "+err.Error(), fiber.StatusInternalServerError)
 	}
 
 	setNotification(c, "Alert rule saved successfully", "success")
@@ -1092,68 +1555,109 @@ func (h *FormHandler) SaveAlertRule(c *fiber.Ctx) error {
 
 func (h *FormHandler) DeleteAlertRule(c *fiber.Ctx) error {
 	id := c.Params("id")
-	h.DB.Where("id = ?", id).Delete(&models.AlertRule{})
+	var rule models.AlertRule
+	if err := h.DB.Where("id = ?", id).First(&rule).Error; err != nil {
+		if c.Get("HX-Request") == "true" {
+			setNotification(c, "Alert rule not found", "error")
+			c.Set("HX-Reswap", "none")
+			return c.SendString("")
+		}
+		return c.Status(404).SendString("Alert rule not found")
+	}
+
+	if err := h.DB.Delete(&rule).Error; err != nil {
+		if c.Get("HX-Request") == "true" {
+			setNotification(c, "Failed to delete alert rule: "+err.Error(), "error")
+			c.Set("HX-Reswap", "none")
+			return c.SendString("")
+		}
+		return c.Status(500).SendString(err.Error())
+	}
 
 	if c.Get("HX-Request") == "true" {
 		setNotification(c, "Alert rule deleted", "success")
-		return c.SendStatus(200)
+		return c.SendString("")
 	}
 
 	return c.Redirect("/settings/alerts")
 }
 
 func (h *FormHandler) TestAlertRule(c *fiber.Ctx) error {
-	provider := c.FormValue("provider")
+	provider := strings.TrimSpace(c.FormValue("provider"))
+	if provider == "" {
+		provider = "webhook"
+	}
+	if !supportedAlertProviders[provider] {
+		setNotification(c, "Choose a valid alert provider.", "error")
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
 	id := c.FormValue("id")
-	msg := "👋 Test message from Mimic Backup System!"
+	msg := "Test message from Mimic Backup System."
 
 	if provider == "webhook" {
-		whURL := c.FormValue("webhook_url")
+		whURL := strings.TrimSpace(c.FormValue("webhook_url"))
 		if whURL == "" && id != "" && id != "0" {
 			var rule models.AlertRule
 			if h.DB.Where("id = ?", id).First(&rule).Error == nil && rule.WebhookURL != "" {
-				whURL, _ = crypto.Decrypt(rule.WebhookURL)
+				decrypted, err := crypto.Decrypt(rule.WebhookURL)
+				if err != nil {
+					setNotification(c, "Stored webhook URL could not be decrypted.", "error")
+					return c.SendStatus(fiber.StatusInternalServerError)
+				}
+				whURL = decrypted
 			}
 		}
 		if whURL == "" {
 			setNotification(c, "Webhook URL is required.", "error")
-			return c.SendStatus(400)
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+		if err := validateAlertURL(whURL); err != nil {
+			setNotification(c, err.Error()+".", "error")
+			return c.SendStatus(fiber.StatusBadRequest)
 		}
 
-		err := alert.SendWebhook(whURL, msg)
-		if err != nil {
+		if err := alert.SendWebhook(whURL, msg); err != nil {
 			setNotification(c, fmt.Sprintf("Webhook test failed: %v", err), "error")
-			return c.SendStatus(500)
+			return c.SendStatus(fiber.StatusBadGateway)
 		}
 	} else if provider == "telegram" {
-		token := c.FormValue("telegram_token")
-		chatID := c.FormValue("telegram_chat_id")
+		token := strings.TrimSpace(c.FormValue("telegram_token"))
+		chatID := strings.TrimSpace(c.FormValue("telegram_chat_id"))
 
 		if (token == "" || chatID == "") && id != "" && id != "0" {
 			var rule models.AlertRule
 			if h.DB.Where("id = ?", id).First(&rule).Error == nil {
 				if token == "" && rule.TelegramToken != "" {
-					token, _ = crypto.Decrypt(rule.TelegramToken)
+					decrypted, err := crypto.Decrypt(rule.TelegramToken)
+					if err != nil {
+						setNotification(c, "Stored Telegram token could not be decrypted.", "error")
+						return c.SendStatus(fiber.StatusInternalServerError)
+					}
+					token = decrypted
 				}
 				if chatID == "" && rule.TelegramChatID != "" {
-					chatID, _ = crypto.Decrypt(rule.TelegramChatID)
+					decrypted, err := crypto.Decrypt(rule.TelegramChatID)
+					if err != nil {
+						setNotification(c, "Stored Telegram chat ID could not be decrypted.", "error")
+						return c.SendStatus(fiber.StatusInternalServerError)
+					}
+					chatID = decrypted
 				}
 			}
 		}
 
 		if token == "" || chatID == "" {
-			setNotification(c, "Telegram Token and Chat ID are required.", "error")
-			return c.SendStatus(400)
+			setNotification(c, "Telegram token and chat ID are required.", "error")
+			return c.SendStatus(fiber.StatusBadRequest)
 		}
 
-		err := alert.SendTelegram(token, chatID, msg)
-		if err != nil {
+		if err := alert.SendTelegram(token, chatID, msg); err != nil {
 			setNotification(c, fmt.Sprintf("Telegram test failed: %v", err), "error")
-			return c.SendStatus(500)
+			return c.SendStatus(fiber.StatusBadGateway)
 		}
 	}
 
-	setNotification(c, "Test successful! Check your app.", "success")
+	setNotification(c, "Test successful. Check your alert destination.", "success")
 	return c.SendStatus(200)
 }
 

@@ -22,7 +22,7 @@
                class="settings-tab {{ if eq .ActiveTab "sftp" }}active{{ end }}">
                 <i class="bx bx-cloud-upload"></i> SFTP
             </a>
-            <a href="/settings?tab=alerts" class="settings-tab {{ if eq .ActiveTab "alerts" }}active{{ end }}" hx-get="/settings/alerts" hx-target="#settings-content" hx-push-url="/settings?tab=alerts" hx-swap="innerHTML">
+            <a href="/settings/alerts" class="settings-tab {{ if eq .ActiveTab "alerts" }}active{{ end }}" hx-get="/settings/alerts" hx-target="#settings-content" hx-push-url="true" hx-swap="innerHTML">
                 <i class='bx bx-bell'></i> Alerting Rules
             </a>
             <a href="/settings?tab=security" class="settings-tab {{ if eq .ActiveTab "security" }}active{{ end }}" hx-get="/settings/security" hx-target="#settings-content" hx-push-url="/settings?tab=security" hx-swap="innerHTML">

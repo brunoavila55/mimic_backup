@@ -117,7 +117,7 @@ func (s *SftpService) Export(backup *models.NodeBackup, settings *models.SftpSet
 
 	// Sanitize Node Name to prevent Path Traversal
 	safeName := regexp.MustCompile(`[^a-zA-Z0-9_-]`).ReplaceAllString(backup.Node.Name, "_")
-	
+
 	filename := fmt.Sprintf("%s_%v.txt", safeName, backup.CreatedAt.Format("20060102_1504"))
 	remotePath := path.Join(settings.Path, filename) // Use path.Join to ensure /
 

@@ -1,45 +1,161 @@
-<div class="page-enter" style="max-width: 500px; margin: 0 auto;">
-    <div class="page-header">
-        <div class="flex items-center gap-3">
-            <a href="/settings/users" class="btn btn-ghost btn-icon"><i class="bx bx-arrow-back"></i></a>
-            <h1 class="page-title">{{ .Title }}</h1>
+<div class="page-enter user-form-page"
+     x-data="{
+        role: '{{ if .EditUser.Role }}{{ .EditUser.Role }}{{ else }}Viewer{{ end }}',
+        showPassword: false,
+        isSelf: {{ if .IsSelf }}true{{ else }}false{{ end }},
+        roleDescription() {
+            return this.role === 'Administrator'
+                ? 'Full access to settings, node actions, imports and exports.'
+                : 'Read-only access to inventory, backups and status views.';
+        }
+     }">
+    <div class="user-form-header">
+        <div class="user-form-title">
+            <a href="/settings/users" class="btn btn-ghost btn-icon" title="Back to users" aria-label="Back to users">
+                <i class="bx bx-arrow-back"></i>
+            </a>
+            <div>
+                <div class="nodes-eyebrow">
+                    <i class="bx bx-user"></i>
+                    Access control
+                </div>
+                <h1 class="page-title">{{ if .IsEdit }}Edit user{{ else }}New user{{ end }}</h1>
+                <p class="page-desc">{{ if .IsEdit }}Update account details, password and permission level.{{ else }}Create an account with the right level of system access.{{ end }}</p>
+            </div>
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-body">
-            <form action="{{ if .EditUser.ID }}/settings/users/save/{{ .EditUser.ID }}{{ else }}/settings/users/save{{ end }}" method="POST">
+    {{ if .Error }}
+    <div class="user-form-error">
+        <i class="bx bx-error-circle"></i>
+        <span>{{ .Error }}</span>
+    </div>
+    {{ end }}
+
+    <form action="{{ if .EditUser.ID }}/settings/users/save/{{ .EditUser.ID }}{{ else }}/settings/users/save{{ end }}" method="POST" class="user-form-shell">
+        <section class="user-editor-panel">
+            <div class="user-editor-section-head">
+                <i class="bx bx-id-card"></i>
+                <div>
+                    <h2>Account identity</h2>
+                    <p>Use a short username for login and an email address for team visibility.</p>
+                </div>
+            </div>
+
+            <div class="user-form-grid">
                 <div class="form-group">
-                    <label class="form-label">Username</label>
-                    <input type="text" name="username" class="form-input" value="{{ .EditUser.Username }}" placeholder="username" required />
+                    <label class="form-label" for="user-username">Username</label>
+                    <input id="user-username"
+                           type="text"
+                           name="username"
+                           class="form-input"
+                           value="{{ .EditUser.Username }}"
+                           placeholder="network-admin"
+                           autocomplete="username"
+                           maxlength="80"
+                           required />
+                    <div class="form-hint">Usernames must be unique and cannot contain spaces.</div>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Email</label>
-                    <input type="email" name="email" class="form-input" value="{{ .EditUser.Email }}" placeholder="user@company.com" />
+                    <label class="form-label" for="user-email">Email</label>
+                    <input id="user-email"
+                           type="email"
+                           name="email"
+                           class="form-input"
+                           value="{{ .EditUser.Email }}"
+                           placeholder="user@company.com"
+                           autocomplete="email"
+                           maxlength="140" />
+                    <div class="form-hint">Optional, but useful for audit and team handoff.</div>
+                </div>
+            </div>
+
+            <div class="user-editor-section-head compact">
+                <i class="bx bx-lock-alt"></i>
+                <div>
+                    <h2>Password and access</h2>
+                    <p>Leave the password empty while editing to keep the current login secret.</p>
+                </div>
+            </div>
+
+            <div class="user-form-grid">
+                <div class="form-group">
+                    <label class="form-label" for="user-password">Password</label>
+                    <div class="user-password-field">
+                        <input id="user-password"
+                               :type="showPassword ? 'text' : 'password'"
+                               name="password"
+                               class="form-input"
+                               placeholder="{{ if .IsEdit }}Leave blank to keep the current password{{ else }}Access password{{ end }}"
+                               autocomplete="new-password"
+                               minlength="6"
+                               {{ if not .IsEdit }}required{{ end }} />
+                        <button type="button" @click="showPassword = !showPassword" :title="showPassword ? 'Hide password' : 'Show password'" aria-label="Toggle password visibility">
+                            <span x-text="showPassword ? 'Hide' : 'Show'"></span>
+                        </button>
+                    </div>
+                    <div class="form-hint">{{ if .IsEdit }}Use this only when rotating the user's password.{{ else }}Use at least 6 characters.{{ end }}</div>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Password</label>
-                    <input type="password" name="password" class="form-input" placeholder="{{ if .EditUser.ID }}Leave blank to keep{{ else }}Access password{{ end }}" {{ if not .EditUser.ID }}required{{ end }} autocomplete="new-password" />
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Role</label>
-                    <select name="role" class="form-input">
-                        <option value="Administrator" {{ if eq .EditUser.Role "Administrator" }}selected{{ end }}>Administrator</option>
+                    <label class="form-label" for="user-role">Role</label>
+                    <select id="user-role" name="role" class="form-input" x-model="role" required>
                         <option value="Viewer" {{ if eq .EditUser.Role "Viewer" }}selected{{ end }}>Viewer</option>
+                        <option value="Administrator" {{ if eq .EditUser.Role "Administrator" }}selected{{ end }}>Administrator</option>
                     </select>
-                    <div class="form-hint">Administrators have full access. Viewers can only view.</div>
+                    <div class="form-hint" x-text="roleDescription()"></div>
                 </div>
+            </div>
 
-                <div class="form-actions">
-                    <a href="/settings/users" class="btn btn-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bx bx-save"></i> Save
-                    </button>
+            <div class="user-access-preview" :class="{ 'is-admin': role === 'Administrator' }">
+                <i :class="role === 'Administrator' ? 'bx bx-shield-quarter' : 'bx bx-show'"></i>
+                <div>
+                    <span>Selected access</span>
+                    <strong x-text="role"></strong>
+                    <p x-text="roleDescription()"></p>
                 </div>
-            </form>
-        </div>
-    </div>
+            </div>
+
+            <div class="user-form-actions">
+                <a href="/settings/users" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bx bx-save"></i>
+                    {{ if .IsEdit }}Save changes{{ else }}Create user{{ end }}
+                </button>
+            </div>
+        </section>
+
+        <aside class="user-side-panel">
+            <div class="user-side-card">
+                <div class="user-side-icon">
+                    <i class="bx bx-shield-quarter"></i>
+                </div>
+                <h2>Guardrails</h2>
+                <p>Mimic keeps account management safe by blocking actions that would remove the last administrator or delete your own user.</p>
+                <div class="user-side-list">
+                    <span><i class="bx bx-check-circle"></i>At least one administrator must remain</span>
+                    <span><i class="bx bx-check-circle"></i>Your own account cannot be deleted here</span>
+                    <span><i class="bx bx-check-circle"></i>Passwords are stored as bcrypt hashes</span>
+                </div>
+            </div>
+
+            {{ if .IsEdit }}
+            <div class="user-side-card">
+                <div class="user-profile-preview">
+                    <img src="{{ if .EditUser.Avatar }}{{ .EditUser.Avatar }}{{ else }}https://ui-avatars.com/api/?name={{ .EditUser.Username }}&background=1c1f28&color=e8eaed&bold=true&size=96{{ end }}" alt="{{ .EditUser.Username }}" />
+                    <div>
+                        <h2>{{ .EditUser.Username }}</h2>
+                        <p>{{ if .EditUser.Email }}{{ .EditUser.Email }}{{ else }}No email set{{ end }}</p>
+                    </div>
+                </div>
+                <div class="user-side-facts">
+                    <span><strong>{{ .EditUser.Role }}</strong>Current role</span>
+                    <span><strong>{{ .EditUser.CreatedAt.Format "Jan 02, 2006" }}</strong>Created</span>
+                    <span><strong>{{ if .IsSelf }}Yes{{ else }}No{{ end }}</strong>Current session</span>
+                </div>
+            </div>
+            {{ end }}
+        </aside>
+    </form>
 </div>

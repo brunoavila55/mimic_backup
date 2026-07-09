@@ -34,7 +34,7 @@ func Dispatch(db *gorm.DB, rule models.AlertRule, message string) {
 		} else if rule.Provider == "telegram" && rule.TelegramToken != "" && rule.TelegramChatID != "" {
 			token, decErr1 := crypto.Decrypt(rule.TelegramToken)
 			chatID, decErr2 := crypto.Decrypt(rule.TelegramChatID)
-			
+
 			if decErr1 != nil || decErr2 != nil {
 				log.Printf("[Alert] Failed to decrypt Telegram credentials")
 				return
@@ -90,13 +90,13 @@ func SendWebhook(url string, message string) error {
 
 func SendTelegram(token string, chatID string, message string) error {
 	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token)
-	
+
 	payload := map[string]string{
-		"chat_id": chatID,
-		"text":    message,
+		"chat_id":    chatID,
+		"text":       message,
 		"parse_mode": "Markdown",
 	}
-	
+
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return err

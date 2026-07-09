@@ -5,17 +5,17 @@
             Operations overview
         </div>
         <h1 class="page-title">Dashboard</h1>
-        <p class="page-desc">Acompanhe saude dos nodes, falhas recentes, sincronizacao SFTP e proximas execucoes.</p>
+        <p class="page-desc">Track node health, recent failures, SFTP sync and upcoming runs.</p>
     </div>
     <div class="dashboard-hero-actions">
         <a href="/nodes" class="btn btn-secondary">
             <i class="bx bx-server"></i>
-            Ver nodes
+            View nodes
         </a>
         {{ if eq .Role "Administrator" }}
         <button hx-post="/trigger-backups" hx-swap="none" class="btn btn-primary">
             <i class="bx bx-refresh"></i>
-            Rodar backups
+            Run backups
         </button>
         {{ end }}
     </div>
@@ -24,9 +24,9 @@
 <section class="dashboard-summary">
     <div class="dashboard-health {{ if gt .Stats.AttentionNodes 0 }}is-warning{{ else }}is-good{{ end }}">
         <div>
-            <span class="dashboard-card-label">Estado geral</span>
-            <strong>{{ if gt .Stats.AttentionNodes 0 }}Atencao necessaria{{ else }}Operacao estavel{{ end }}</strong>
-            <p>{{ .Stats.ActiveNodes }} nodes ativos, {{ .Stats.AttentionNodes }} exigindo acao.</p>
+            <span class="dashboard-card-label">Overall status</span>
+            <strong>{{ if gt .Stats.AttentionNodes 0 }}Needs attention{{ else }}Stable operation{{ end }}</strong>
+            <p>{{ .Stats.ActiveNodes }} active nodes, {{ .Stats.AttentionNodes }} requiring action.</p>
         </div>
         <i class="bx {{ if gt .Stats.AttentionNodes 0 }}bx-error-circle{{ else }}bx-check-circle{{ end }}"></i>
     </div>
@@ -35,29 +35,29 @@
         <a href="/nodes" class="dashboard-kpi">
             <span>Total nodes</span>
             <strong>{{ .Stats.TotalNodes }}</strong>
-            <small>{{ .Stats.ActiveNodes }} ativos</small>
+            <small>{{ .Stats.ActiveNodes }} active</small>
         </a>
         <a href="/nodes?status=success" class="dashboard-kpi success">
-            <span>Saudaveis</span>
+            <span>Healthy</span>
             <strong>{{ .Stats.HealthyNodes }}</strong>
-            <small>ultimo backup ok</small>
+            <small>latest backup ok</small>
         </a>
         <a href="/nodes?status=error" class="dashboard-kpi danger">
-            <span>Com falha</span>
+            <span>Failing</span>
             <strong>{{ len .FailedNodes }}</strong>
-            <small>precisam revisao</small>
+            <small>need review</small>
         </a>
         {{ if eq .Role "Administrator" }}
         <a href="/settings/export" class="dashboard-kpi {{ if gt .Stats.SftpUnsyncedNodes 0 }}warning{{ else }}success{{ end }}">
-            <span>SFTP pendente</span>
+            <span>SFTP pending</span>
             <strong>{{ .Stats.SftpUnsyncedNodes }}</strong>
-            <small>nodes nao exportados</small>
+            <small>nodes not exported</small>
         </a>
         {{ else }}
         <div class="dashboard-kpi {{ if gt .Stats.SftpUnsyncedNodes 0 }}warning{{ else }}success{{ end }}">
-            <span>SFTP pendente</span>
+            <span>SFTP pending</span>
             <strong>{{ .Stats.SftpUnsyncedNodes }}</strong>
-            <small>nodes nao exportados</small>
+            <small>nodes not exported</small>
         </div>
         {{ end }}
     </div>
@@ -68,11 +68,11 @@
         <article class="dashboard-panel dashboard-panel-attention">
             <div class="dashboard-panel-header">
                 <div>
-                    <span class="dashboard-card-label">Fila de acao</span>
-                    <h2>Precisa de atencao</h2>
+                    <span class="dashboard-card-label">Action queue</span>
+                    <h2>Needs attention</h2>
                 </div>
                 <span class="badge {{ if gt .Stats.AttentionNodes 0 }}badge-danger{{ else }}badge-success{{ end }}">
-                    {{ .Stats.AttentionNodes }} itens
+                    {{ .Stats.AttentionNodes }} items
                 </span>
             </div>
 
@@ -84,13 +84,13 @@
                     <div class="dashboard-action-copy">
                         <div class="dashboard-action-title">
                             <a href="/nodes/{{ .ID }}">{{ .Name }}</a>
-                            <span class="badge badge-danger">Falha</span>
+                            <span class="badge badge-danger">Failed</span>
                         </div>
-                        <p>{{ if .LastError }}{{ .LastError }}{{ else }}Erro no ultimo backup.{{ end }}</p>
+                        <p>{{ if .LastError }}{{ .LastError }}{{ else }}Error in the latest backup.{{ end }}</p>
                     </div>
                     {{ if eq $.Role "Administrator" }}
                         <button class="btn btn-sm btn-ghost" hx-post="/nodes/{{ .ID }}/trigger" hx-swap="none">
-                            Rodar
+                            Run
                         </button>
                     {{ end }}
                 </div>
@@ -102,13 +102,13 @@
                     <div class="dashboard-action-copy">
                         <div class="dashboard-action-title">
                             <a href="/nodes/{{ .ID }}">{{ .Name }}</a>
-                            <span class="badge badge-warning">Silencioso</span>
+                            <span class="badge badge-warning">Silent</span>
                         </div>
-                        <p>Sem backup bem-sucedido ha mais de 48 horas.</p>
+                        <p>No successful backup for more than 48 hours.</p>
                     </div>
                     {{ if eq $.Role "Administrator" }}
                         <button class="btn btn-sm btn-ghost" hx-post="/nodes/{{ .ID }}/trigger" hx-swap="none">
-                            Rodar
+                            Run
                         </button>
                     {{ end }}
                 </div>
@@ -117,8 +117,8 @@
             {{ else }}
             <div class="dashboard-empty">
                 <i class="bx bx-check-circle"></i>
-                <strong>Nenhuma pendencia critica</strong>
-                <span>Falhas e nodes silenciosos vao aparecer aqui automaticamente.</span>
+                <strong>No critical pending items</strong>
+                <span>Failures and silent nodes will appear here automatically.</span>
             </div>
             {{ end }}
         </article>
@@ -127,9 +127,9 @@
             <div class="dashboard-panel-header">
                 <div>
                     <span class="dashboard-card-label">Backups</span>
-                    <h2>Resumo de execucoes</h2>
+                    <h2>Run summary</h2>
                 </div>
-                <span class="badge badge-accent">{{ .Stats.SuccessRate }}% sucesso</span>
+                <span class="badge badge-accent">{{ .Stats.SuccessRate }}% success</span>
             </div>
             <div class="dashboard-backup-summary">
                 <div>
@@ -137,11 +137,11 @@
                     <strong>{{ .Stats.TotalBackups }}</strong>
                 </div>
                 <div>
-                    <span>Sucesso</span>
+                    <span>Success</span>
                     <strong class="success">{{ .Stats.SuccessfulBackups }}</strong>
                 </div>
                 <div>
-                    <span>Falhas</span>
+                    <span>Failures</span>
                     <strong class="danger">{{ .Stats.FailedBackups }}</strong>
                 </div>
             </div>
@@ -152,10 +152,10 @@
         <article class="dashboard-panel">
             <div class="dashboard-panel-header">
                 <div>
-                    <span class="dashboard-card-label">Mudancas</span>
+                    <span class="dashboard-card-label">Changes</span>
                     <h2>Change feed</h2>
                 </div>
-                <a href="/nodes" class="btn btn-sm btn-ghost">Ver todos</a>
+                <a href="/nodes" class="btn btn-sm btn-ghost">View all</a>
             </div>
 
             {{ if .RecentBackups }}
@@ -177,8 +177,8 @@
             {{ else }}
             <div class="dashboard-empty">
                 <i class="bx bx-history"></i>
-                <strong>Sem historico recente</strong>
-                <span>As proximas alteracoes de configuracao vao aparecer aqui.</span>
+                <strong>No recent history</strong>
+                <span>Upcoming configuration changes will appear here.</span>
             </div>
             {{ end }}
         </article>
@@ -186,10 +186,10 @@
         <article class="dashboard-panel">
             <div class="dashboard-panel-header">
                 <div>
-                    <span class="dashboard-card-label">Agenda</span>
-                    <h2>Proximas execucoes</h2>
+                    <span class="dashboard-card-label">Schedule</span>
+                    <h2>Upcoming runs</h2>
                 </div>
-                <span class="badge badge-muted">{{ len .NextBackups }} agendadas</span>
+                <span class="badge badge-muted">{{ len .NextBackups }} scheduled</span>
             </div>
 
             {{ if .NextBackups }}
@@ -207,8 +207,8 @@
             {{ else }}
             <div class="dashboard-empty">
                 <i class="bx bx-calendar"></i>
-                <strong>Nenhum backup agendado</strong>
-                <span>Revise as rotinas ou o agendamento dos nodes ativos.</span>
+                <strong>No backups scheduled</strong>
+                <span>Review routines or schedules for active nodes.</span>
             </div>
             {{ end }}
         </article>
@@ -216,8 +216,8 @@
         <article class="dashboard-panel">
             <div class="dashboard-panel-header">
                 <div>
-                    <span class="dashboard-card-label">Fabricantes</span>
-                    <h2>Falhas por vendor</h2>
+                    <span class="dashboard-card-label">Vendors</span>
+                    <h2>Failures by vendor</h2>
                 </div>
             </div>
 
@@ -233,7 +233,7 @@
             {{ else }}
             <div class="dashboard-empty compact">
                 <i class="bx bx-shield-quarter"></i>
-                <strong>Nenhum vendor com falha</strong>
+                <strong>No vendors with failures</strong>
             </div>
             {{ end }}
         </article>

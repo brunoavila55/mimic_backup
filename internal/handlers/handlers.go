@@ -7,6 +7,8 @@ import (
 	"mimic/internal/models"
 	"mimic/internal/services/sftp"
 	"mimic/pkg/diff"
+	"path"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -445,6 +447,48 @@ type SettingsHandler struct {
 	Sftp  *sftp.SftpService
 }
 
+type UserListStats struct {
+	Total          int
+	Administrators int
+	Viewers        int
+	MissingEmail   int
+}
+
+type CredentialListStats struct {
+	Total       int
+	LinkedNodes int
+	Unused      int
+	CustomPorts int
+}
+
+type RoutineListStats struct {
+	Total       int
+	Active      int
+	Paused      int
+	LinkedNodes int
+	Weekly      int
+}
+
+type SftpStatusStats struct {
+	Configured      bool
+	Enabled         bool
+	HasPassword     bool
+	PendingBackups  int64
+	PendingNodes    int64
+	ExportedBackups int64
+	LastStatus      string
+}
+
+type AlertRuleStats struct {
+	Total         int
+	Enabled       int
+	Disabled      int
+	Webhook       int
+	Telegram      int
+	Global        int
+	MissingEvents int
+}
+
 func (h *SettingsHandler) GetSettings(c *fiber.Ctx) error {
 	return c.Redirect("/settings/users")
 }
@@ -491,8 +535,23 @@ func (h *SettingsHandler) GetUsersTab(c *fiber.Ctx) error {
 	var users []models.User
 	h.DB.Order("created_at asc").Find(&users)
 
+	stats := UserListStats{Total: len(users)}
+	for _, user := range users {
+		if user.Role == "Administrator" {
+			stats.Administrators++
+		} else {
+			stats.Viewers++
+		}
+		if strings.TrimSpace(user.Email) == "" {
+			stats.MissingEmail++
+		}
+	}
+
 	return h.renderTab(c, "users", fiber.Map{
-		"Users": users,
+		"Users":               users,
+		"UserStats":           stats,
+		"CurrentUserID":       c.Locals("user_id"),
+		"CurrentUserIDString": fmt.Sprintf("%v", c.Locals("user_id")),
 	})
 }
 
@@ -525,19 +584,50 @@ func (h *SettingsHandler) GetGoldenTab(c *fiber.Ctx) error {
 
 func (h *SettingsHandler) GetCredentialsTab(c *fiber.Ctx) error {
 	var credentials []models.Credential
-	h.DB.Order("name asc").Find(&credentials)
+	h.DB.Preload("Nodes", func(db *gorm.DB) *gorm.DB {
+		return db.Order("name asc")
+	}).Order("name asc").Find(&credentials)
+
+	stats := CredentialListStats{Total: len(credentials)}
+	for _, credential := range credentials {
+		nodeCount := len(credential.Nodes)
+		stats.LinkedNodes += nodeCount
+		if nodeCount == 0 {
+			stats.Unused++
+		}
+		if credential.Port != 22 {
+			stats.CustomPorts++
+		}
+	}
 
 	return h.renderTab(c, "credentials", fiber.Map{
-		"Credentials": credentials,
+		"Credentials":     credentials,
+		"CredentialStats": stats,
 	})
 }
 
 func (h *SettingsHandler) GetRoutinesTab(c *fiber.Ctx) error {
 	var routines []models.BackupRoutine
-	h.DB.Order("name asc").Find(&routines)
+	h.DB.Preload("Nodes", func(db *gorm.DB) *gorm.DB {
+		return db.Order("name asc")
+	}).Order("name asc").Find(&routines)
+
+	stats := RoutineListStats{Total: len(routines)}
+	for _, routine := range routines {
+		stats.LinkedNodes += len(routine.Nodes)
+		if routine.Enabled {
+			stats.Active++
+		} else {
+			stats.Paused++
+		}
+		if routine.Frequency == "168" {
+			stats.Weekly++
+		}
+	}
 
 	return h.renderTab(c, "routines", fiber.Map{
-		"Routines": routines,
+		"Routines":     routines,
+		"RoutineStats": stats,
 	})
 }
 
@@ -545,8 +635,21 @@ func (h *SettingsHandler) GetSFTPTab(c *fiber.Ctx) error {
 	var settings models.SftpSettings
 	h.DB.First(&settings)
 
+	var stats SftpStatusStats
+	stats.Enabled = settings.Enabled
+	stats.HasPassword = strings.TrimSpace(settings.Password) != ""
+	stats.Configured = strings.TrimSpace(settings.Host) != "" && strings.TrimSpace(settings.Username) != "" && stats.HasPassword
+	stats.LastStatus = settings.LastExportStatus
+	if stats.LastStatus == "" {
+		stats.LastStatus = "never"
+	}
+	h.DB.Model(&models.NodeBackup{}).Where("status = ? AND exported = ?", "success", false).Count(&stats.PendingBackups)
+	h.DB.Model(&models.NodeBackup{}).Where("status = ? AND exported = ?", "success", false).Distinct("node_id").Count(&stats.PendingNodes)
+	h.DB.Model(&models.NodeBackup{}).Where("status = ? AND exported = ?", "success", true).Count(&stats.ExportedBackups)
+
 	return h.renderTab(c, "sftp", fiber.Map{
-		"Sftp": settings,
+		"Sftp":      settings,
+		"SftpStats": stats,
 	})
 }
 
@@ -565,10 +668,32 @@ func (h *SettingsHandler) GetExportTab(c *fiber.Ctx) error {
 
 func (h *SettingsHandler) GetAlertsTab(c *fiber.Ctx) error {
 	var rules []models.AlertRule
-	h.DB.Find(&rules)
+	h.DB.Order("enabled desc, name asc").Find(&rules)
+
+	stats := AlertRuleStats{Total: len(rules)}
+	for _, rule := range rules {
+		if rule.Enabled {
+			stats.Enabled++
+		} else {
+			stats.Disabled++
+		}
+		switch rule.Provider {
+		case "telegram":
+			stats.Telegram++
+		default:
+			stats.Webhook++
+		}
+		if rule.TargetGroup == "*" || strings.EqualFold(rule.TargetGroup, "global") {
+			stats.Global++
+		}
+		if !rule.AlertOnDiff && !rule.AlertOnFailure && !rule.AlertOnSecurity {
+			stats.MissingEvents++
+		}
+	}
 
 	return h.renderTab(c, "alerts", fiber.Map{
-		"Alerts": rules,
+		"Alerts":     rules,
+		"AlertStats": stats,
 	})
 }
 
@@ -599,31 +724,17 @@ func (h *SettingsHandler) GetSFTPExplore(c *fiber.Ctx) error {
 	if remotePath == "" {
 		remotePath = settings.Path
 	}
-	if remotePath == "" {
-		remotePath = "/"
-	}
+	remotePath = normalizeSFTPPath(remotePath)
 
 	files, err := h.Sftp.ListDir(&settings, remotePath)
 	if err != nil {
-		return c.Status(500).SendString(fmt.Sprintf("<div class='alert alert-error' style='color: #ef4444; background: #fee2e2; padding: 12px; border-radius: 6px; margin-top: 16px;'>Failed to list directory: %s</div>", html.EscapeString(err.Error())))
+		return c.Status(200).SendString(fmt.Sprintf("<div class='sftp-explorer-error'><i class='bx bx-error-circle'></i><strong>Unable to open remote directory</strong><span>%s</span></div>", html.EscapeString(err.Error())))
 	}
 
 	parentPath := ""
 	if remotePath != "/" {
-		// Calculate parent path using string manipulation or path package.
-		// To avoid importing path just for this, we can do simple parsing or import path.
-		// Since we didn't add "path" to imports yet, let's just use string parsing or actually we will add the import.
-		// It's safer to use simple string manipulation:
-		lastSlash := -1
-		for i := len(remotePath) - 1; i >= 0; i-- {
-			if remotePath[i] == '/' {
-				lastSlash = i
-				break
-			}
-		}
-		if lastSlash > 0 {
-			parentPath = remotePath[:lastSlash]
-		} else {
+		parentPath = path.Dir(remotePath)
+		if parentPath == "." {
 			parentPath = "/"
 		}
 	}

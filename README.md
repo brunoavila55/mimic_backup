@@ -1,6 +1,6 @@
 # Mimic Backup Systems
 
-**Current interface version:** `0.7.1`
+**Current interface version:** `0.8.0`
 
 Mimic is a platform for automating, versioning, auditing, and centralizing configuration backups for network equipment such as switches, routers, OLTs, and firewalls. It connects to devices over SSH, captures their configurations, compares versions, and keeps a searchable history for operational visibility, compliance, and disaster recovery.
 
@@ -8,7 +8,7 @@ Mimic is a platform for automating, versioning, auditing, and centralizing confi
 
 Modern network environments need reliable configuration history, clear change tracking, and quick visibility into backup failures. Mimic schedules configuration captures, stores meaningful backup versions, highlights drift, and helps teams understand which devices need action.
 
-The interface is designed around operational workflows: dashboard triage, node inventory, CSV import/export, backup history, security rule auditing, and SFTP synchronization.
+The interface is designed around operational workflows: dashboard triage, node inventory, settings management, CSV import/export, backup history, security rule auditing, alert routing, and SFTP synchronization.
 
 ## Key Features
 
@@ -21,6 +21,7 @@ The interface is designed around operational workflows: dashboard triage, node i
 - **Golden Config Checks:** Compare device backups against expected baseline configurations.
 - **Secure Credential Management:** Store SSH credentials encrypted at rest using AES-GCM.
 - **SFTP Synchronization:** Export successful backups to an external SFTP destination.
+- **Alerting Rules:** Route drift, failure, recovery, and security notifications to Webhook or Telegram destinations.
 - **Role-Based Access Control:** Administrators can manage and execute actions; Viewers have read-oriented access.
 - **Audit Logs:** Track operational activity and backup/export events.
 
@@ -63,15 +64,15 @@ Rules can target:
 
 Rules support vendor filters, group filters, regex matching, context blocks, severities, penalties, remediation text, and per-node exceptions.
 
-## Recent Updates (v0.7.1)
+## Recent Updates (v0.8.0)
 
-- **Dashboard Rework:** Rebuilt the main dashboard with clearer health summary, action queue, backup success metrics, change feed, upcoming executions, and vendor failure visibility.
-- **Nodes UI Rework:** Improved node listing, node creation, filters, status cards, schedule presentation, and admin-only action visibility.
-- **CSV Import Rework:** Added a clearer import interface and stronger backend handling for BOM headers, comma/semicolon delimiters, blank rows, optional columns, tags, and row-level errors.
-- **Security Rules Rework:** Improved rule creation UX, validation, vendor/group matching, regex validation, and re-evaluation after rule changes or exceptions.
-- **Backend Hardening:** Removed duplicate backup routes, improved error handling, escaped dynamic SFTP error output, validated user roles and ports, and standardized HTMX notifications.
-- **Naming Normalization:** Normalized node vendor, group, tags, and schedule fields to reduce inconsistent records.
-- **Viewer Experience:** Hidden admin-only controls from Viewer users while keeping read-only visibility intact.
+- **Clean B2B Interface:** Removed decorative icons and emoji-style messaging, reduced visual noise, and kept actions readable with text labels.
+- **Settings Rework:** Rebuilt Users, SSH Credentials, Backup Routines, SFTP, and Alerting Rules with cards, metrics, search/filter controls, clearer empty states, and focused edit forms.
+- **SFTP Backend Hardening:** Added stronger validation for server settings, path normalization, safer remote explorer output, manual export state updates, and clearer scheduled sync status handling.
+- **Alerting Rules Rework:** Added provider-aware validation, encrypted destination handling, safer test delivery, rule metrics, and clean routing for Webhook or Telegram notifications.
+- **User and Access Safety:** Added duplicate checks, safer role validation, last-admin protection, self-delete protection, and session refresh after profile-level account edits.
+- **Credential and Routine Safety:** Added unique-name validation and blocked deletion when nodes still depend on a credential or routine.
+- **Template Reliability:** Added template parsing coverage to catch broken views before deployment.
 
 ## Extensibility
 

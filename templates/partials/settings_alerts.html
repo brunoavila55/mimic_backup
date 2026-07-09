@@ -1,73 +1,162 @@
 {{ define "partials/settings_alerts" }}
-<div>
-    <div class="flex items-center justify-between mb-4">
+<div class="alerts-page"
+     x-data="{
+        query: '',
+        status: 'all',
+        matches(el) {
+            const q = this.query.trim().toLowerCase();
+            const statusOk = this.status === 'all' || el.dataset.status === this.status || el.dataset.provider === this.status || el.dataset.scope === this.status || el.dataset.health === this.status;
+            const searchOk = !q || el.dataset.search.toLowerCase().includes(q);
+            return statusOk && searchOk;
+        },
+        countVisible() {
+            if (!this.$refs.list) return 0;
+            return Array.from(this.$refs.list.querySelectorAll('[data-alert-card]')).filter((el) => this.matches(el)).length;
+        }
+     }">
+    <div class="alerts-hero">
         <div>
-            <h2 class="settings-section-title">Configuration Drift Alerts</h2>
-            <p class="settings-section-desc">Manage alert rules to notify you when nodes change.</p>
+            <div class="nodes-eyebrow">
+                <i class="bx bx-bell"></i>
+                Notification routing
+            </div>
+            <h1 class="page-title">Alerting Rules</h1>
+            <p class="page-desc">Route drift, backup failure and security notifications to the right destination without noisy duplicates.</p>
         </div>
-        <a href="/settings/alerts/new" class="btn btn-primary btn-sm">
-            <i class="bx bx-plus"></i> New Rule
+        <a href="/settings/alerts/new" class="btn btn-primary">
+            <i class="bx bx-plus"></i>
+            New Rule
         </a>
     </div>
 
-    <div class="table-wrap">
-        <table>
-            <thead>
-                <tr>
-                    <th>Rule Name</th>
-                    <th>Target Group</th>
-                    <th>Provider</th>
-                    <th>Status</th>
-                    <th style="width: 80px;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{ if .Alerts }}
-                {{ range .Alerts }}
-                <tr>
-                    <td style="font-weight: 600;">{{ .Name }}</td>
-                    <td>
-                        {{ if eq .TargetGroup "*" }}
-                            <span class="badge badge-accent">All (Global)</span>
-                        {{ else }}
-                            <span class="badge badge-muted">{{ .TargetGroup }}</span>
-                        {{ end }}
-                    </td>
-                    <td>
-                        {{ if eq .Provider "telegram" }}
-                            <i class="bx bxl-telegram" style="color: #2AABEE; margin-right: 4px;"></i> Telegram
-                        {{ else }}
-                            <i class="bx bx-world" style="color: #8B5CF6; margin-right: 4px;"></i> Webhook
-                        {{ end }}
-                    </td>
-                    <td>
-                        {{ if .Enabled }}
-                            <span class="badge badge-success">Enabled</span>
-                        {{ else }}
-                            <span class="badge badge-muted">Disabled</span>
-                        {{ end }}
-                    </td>
-                    <td>
-                        <div class="action-group">
-                            <a href="/settings/alerts/{{ .ID }}/edit" class="action-btn" title="Edit">
-                                <i class="bx bx-edit-alt"></i>
-                            </a>
-                            <button hx-delete="/settings/alerts/{{ .ID }}"
-                                    hx-confirm="Delete this alert rule?"
-                                    hx-target="closest tr"
-                                    hx-swap="outerHTML"
-                                    class="action-btn danger" title="Delete">
-                                <i class="bx bx-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                {{ end }}
-                {{ else }}
-                <tr><td colspan="5" class="table-empty">No alert rules configured.</td></tr>
-                {{ end }}
-            </tbody>
-        </table>
+    <div class="alerts-metrics">
+        <div class="alerts-metric">
+            <i class="bx bx-bell"></i>
+            <div>
+                <strong>{{ .AlertStats.Total }}</strong>
+                <span>Total rules</span>
+            </div>
+        </div>
+        <div class="alerts-metric success">
+            <i class="bx bx-check-circle"></i>
+            <div>
+                <strong>{{ .AlertStats.Enabled }}</strong>
+                <span>Enabled</span>
+            </div>
+        </div>
+        <div class="alerts-metric accent">
+            <i class="bx bx-globe"></i>
+            <div>
+                <strong>{{ .AlertStats.Global }}</strong>
+                <span>Global scope</span>
+            </div>
+        </div>
+        <div class="alerts-metric {{ if gt .AlertStats.MissingEvents 0 }}warning{{ end }}">
+            <i class="bx bx-error-circle"></i>
+            <div>
+                <strong>{{ .AlertStats.MissingEvents }}</strong>
+                <span>Need events</span>
+            </div>
+        </div>
     </div>
+
+    <div class="alerts-toolbar">
+        <div class="search-box alerts-search">
+            <i class="bx bx-search"></i>
+            <input type="search"
+                   class="form-input"
+                   placeholder="Search by rule, group, provider or event..."
+                   x-model.debounce.150ms="query" />
+        </div>
+        <div class="alerts-filter-group" role="group" aria-label="Alert rule filter">
+            <button type="button" class="alerts-filter-btn" :class="{ 'active': status === 'all' }" @click="status = 'all'">All</button>
+            <button type="button" class="alerts-filter-btn" :class="{ 'active': status === 'enabled' }" @click="status = 'enabled'">Enabled</button>
+            <button type="button" class="alerts-filter-btn" :class="{ 'active': status === 'disabled' }" @click="status = 'disabled'">Disabled</button>
+            <button type="button" class="alerts-filter-btn" :class="{ 'active': status === 'webhook' }" @click="status = 'webhook'">Webhook</button>
+            <button type="button" class="alerts-filter-btn" :class="{ 'active': status === 'telegram' }" @click="status = 'telegram'">Telegram</button>
+        </div>
+    </div>
+
+    {{ if .Alerts }}
+    <div class="alerts-list" x-ref="list">
+        {{ range .Alerts }}
+        <article class="alert-card {{ if not .Enabled }}is-disabled{{ end }}"
+                 data-alert-card
+                 data-status="{{ if .Enabled }}enabled{{ else }}disabled{{ end }}"
+                 data-provider="{{ if eq .Provider "telegram" }}telegram{{ else }}webhook{{ end }}"
+                 data-scope="{{ if or (eq .TargetGroup "*") (eq .TargetGroup "Global") }}global{{ else }}group{{ end }}"
+                 data-health="{{ if and (not .AlertOnDiff) (not .AlertOnFailure) (not .AlertOnSecurity) }}needs-events{{ else }}ready{{ end }}"
+                 data-search="{{ .Name }} {{ .TargetGroup }} {{ .Provider }} {{ if .AlertOnDiff }}drift {{ end }}{{ if .AlertOnFailure }}failure recovery {{ end }}{{ if .AlertOnSecurity }}security compliance {{ end }}"
+                 x-show="matches($el)"
+                 x-transition>
+            <div class="alert-card-main">
+                <div class="alert-icon {{ if eq .Provider "telegram" }}telegram{{ end }}">
+                    <i class="bx {{ if eq .Provider "telegram" }}bxl-telegram{{ else }}bx-world{{ end }}"></i>
+                </div>
+                <div class="alert-copy">
+                    <div class="alert-title-line">
+                        <h3>{{ .Name }}</h3>
+                        {{ if .Enabled }}
+                        <span class="badge badge-success"><i class="bx bx-check-circle"></i> Enabled</span>
+                        {{ else }}
+                        <span class="badge badge-muted"><i class="bx bx-pause-circle"></i> Disabled</span>
+                        {{ end }}
+                        {{ if and (not .AlertOnDiff) (not .AlertOnFailure) (not .AlertOnSecurity) }}
+                        <span class="badge badge-warning"><i class="bx bx-error-circle"></i> No events</span>
+                        {{ end }}
+                    </div>
+                    <div class="alert-meta">
+                        <span><i class="bx bx-target-lock"></i>{{ if or (eq .TargetGroup "*") (eq .TargetGroup "Global") }}All nodes{{ else }}{{ .TargetGroup }}{{ end }}</span>
+                        <span><i class="bx {{ if eq .Provider "telegram" }}bxl-telegram{{ else }}bx-world{{ end }}"></i>{{ if eq .Provider "telegram" }}Telegram{{ else }}Webhook{{ end }}</span>
+                        <span><i class="bx bx-calendar"></i>Created {{ .CreatedAt.Format "Jan 02, 2006" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert-events">
+                <span>Triggers</span>
+                <div>
+                    {{ if .AlertOnDiff }}<small><i class="bx bx-git-compare"></i>Drift</small>{{ end }}
+                    {{ if .AlertOnFailure }}<small><i class="bx bx-error"></i>Failure</small>{{ end }}
+                    {{ if .AlertOnSecurity }}<small><i class="bx bx-shield-quarter"></i>Security</small>{{ end }}
+                    {{ if and (not .AlertOnDiff) (not .AlertOnFailure) (not .AlertOnSecurity) }}<small class="warning"><i class="bx bx-error-circle"></i>Select events</small>{{ end }}
+                </div>
+            </div>
+
+            <div class="alert-actions">
+                <a href="/settings/alerts/{{ .ID }}/edit" class="action-btn" title="Edit rule" aria-label="Edit rule">
+                    <i class="bx bx-edit-alt"></i>
+                </a>
+                <button type="button"
+                        hx-delete="/settings/alerts/{{ .ID }}"
+                        hx-confirm="Delete this alert rule?"
+                        hx-target="closest .alert-card"
+                        hx-swap="delete"
+                        class="action-btn danger"
+                        title="Delete rule"
+                        aria-label="Delete rule">
+                    <i class="bx bx-trash"></i>
+                </button>
+            </div>
+        </article>
+        {{ end }}
+    </div>
+
+    <div class="alerts-empty" x-show="countVisible() === 0" x-cloak>
+        <i class="bx bx-search"></i>
+        <strong>No matching alert rules</strong>
+        <span>Adjust the search or filter to widen the list.</span>
+    </div>
+    {{ else }}
+    <div class="alerts-empty">
+        <i class="bx bx-bell-off"></i>
+        <strong>No alert rules yet</strong>
+        <span>Create a rule to notify your team about drift, failures or security findings.</span>
+        <a href="/settings/alerts/new" class="btn btn-primary">
+            <i class="bx bx-plus"></i>
+            Create first rule
+        </a>
+    </div>
+    {{ end }}
 </div>
 {{ end }}

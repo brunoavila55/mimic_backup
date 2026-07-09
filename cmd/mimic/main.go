@@ -27,7 +27,7 @@ func main() {
 	fmt.Println(`   /  |/  (_)___ ___  (_)____  `)
 	fmt.Println(`  / /|_/ / / __ ` + "`" + `__ \/ / ___/  `)
 	fmt.Println(` / /  / / / / / / / / / /__    `)
-	fmt.Println(`/_/  /_/_/_/ /_/ /_/_/\___/  Backup Systems v0.7.1`)
+	fmt.Println(`/_/  /_/_/_/ /_/ /_/_/\___/  Backup Systems v0.8.0`)
 	fmt.Println("===================================================")
 
 	// Database connection
@@ -79,7 +79,7 @@ func main() {
 	// Get Version from Git or Build Flags
 	appVersion := AppVersion
 	if appVersion == "" {
-		appVersion = "0.7.1"
+		appVersion = "0.8.0"
 	}
 
 	// Template Engine
@@ -106,7 +106,7 @@ func main() {
 
 	app := fiber.New(fiber.Config{
 		Views:   engine,
-		AppName: "Mimic Backup Systems v0.7.1",
+		AppName: "Mimic Backup Systems v0.8.0",
 	})
 
 	// Static Files

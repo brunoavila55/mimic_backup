@@ -1,59 +1,164 @@
-<div>
-    <div class="flex items-center justify-between mb-4">
+<div class="users-page"
+     x-data="{
+        query: '',
+        role: 'all',
+        matches(el) {
+            const q = this.query.trim().toLowerCase();
+            const roleOk = this.role === 'all' || el.dataset.role === this.role || el.dataset.state === this.role;
+            const searchOk = !q || el.dataset.search.toLowerCase().includes(q);
+            return roleOk && searchOk;
+        },
+        countVisible() {
+            if (!this.$refs.list) return 0;
+            return Array.from(this.$refs.list.querySelectorAll('[data-user-card]')).filter((el) => this.matches(el)).length;
+        }
+     }">
+    <div class="users-hero">
         <div>
-            <h2 class="settings-section-title">Users</h2>
-            <p class="settings-section-desc">Manage users and system access permissions.</p>
+            <div class="nodes-eyebrow">
+                <i class="bx bx-group"></i>
+                Access control
+            </div>
+            <h1 class="page-title">Users</h1>
+            <p class="page-desc">Manage account access, administrator coverage and read-only viewers from one place.</p>
         </div>
-        <a href="/settings/users/new" class="btn btn-primary btn-sm">
-            <i class="bx bx-plus"></i> New User
+        <a href="/settings/users/new" class="btn btn-primary">
+            <i class="bx bx-plus"></i>
+            New User
         </a>
     </div>
 
-    <div class="table-wrap">
-        <table>
-            <thead>
-                <tr>
-                    <th>User</th>
-                    <th>E-mail</th>
-                    <th>Role</th>
-                    <th>Created</th>
-                    <th style="width: 80px;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{ if .Users }}
-                {{ range .Users }}
-                <tr>
-                    <td style="font-weight: 600;">{{ .Username }}</td>
-                    <td class="text-secondary">{{ if .Email }}{{ .Email }}{{ else }}-{{ end }}</td>
-                    <td>
-                        {{ if eq .Role "Administrator" }}
-                            <span class="badge badge-accent">Admin</span>
-                        {{ else }}
-                            <span class="badge badge-muted">Viewer</span>
-                        {{ end }}
-                    </td>
-                    <td class="text-secondary">{{ .CreatedAt.Format "02/01/2006" }}</td>
-                    <td>
-                        <div class="action-group">
-                            <a href="/settings/users/{{ .ID }}/edit" class="action-btn" title="Edit">
-                                <i class="bx bx-edit-alt"></i>
-                            </a>
-                            <button hx-delete="/settings/users/{{ .ID }}"
-                                    hx-confirm="Delete this user?"
-                                    hx-target="closest tr"
-                                    hx-swap="outerHTML"
-                                    class="action-btn danger" title="Delete">
-                                <i class="bx bx-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                {{ end }}
-                {{ else }}
-                <tr><td colspan="5" class="table-empty">No users registered.</td></tr>
-                {{ end }}
-            </tbody>
-        </table>
+    <div class="users-metrics">
+        <div class="users-metric">
+            <i class="bx bx-group"></i>
+            <div>
+                <strong>{{ .UserStats.Total }}</strong>
+                <span>Total users</span>
+            </div>
+        </div>
+        <div class="users-metric accent">
+            <i class="bx bx-shield-quarter"></i>
+            <div>
+                <strong>{{ .UserStats.Administrators }}</strong>
+                <span>Administrators</span>
+            </div>
+        </div>
+        <div class="users-metric success">
+            <i class="bx bx-show"></i>
+            <div>
+                <strong>{{ .UserStats.Viewers }}</strong>
+                <span>Viewers</span>
+            </div>
+        </div>
+        <div class="users-metric warning">
+            <i class="bx bx-envelope"></i>
+            <div>
+                <strong>{{ .UserStats.MissingEmail }}</strong>
+                <span>Missing email</span>
+            </div>
+        </div>
     </div>
+
+    <div class="users-toolbar">
+        <div class="search-box users-search">
+            <i class="bx bx-search"></i>
+            <input type="search"
+                   class="form-input"
+                   placeholder="Search by username, email or role..."
+                   x-model.debounce.150ms="query" />
+        </div>
+        <div class="users-filter-group" role="group" aria-label="User filter">
+            <button type="button" class="users-filter-btn" :class="{ 'active': role === 'all' }" @click="role = 'all'">All</button>
+            <button type="button" class="users-filter-btn" :class="{ 'active': role === 'administrator' }" @click="role = 'administrator'">Admins</button>
+            <button type="button" class="users-filter-btn" :class="{ 'active': role === 'viewer' }" @click="role = 'viewer'">Viewers</button>
+            <button type="button" class="users-filter-btn" :class="{ 'active': role === 'current' }" @click="role = 'current'">You</button>
+        </div>
+    </div>
+
+    {{ if .Users }}
+    <div class="users-list" x-ref="list">
+        {{ range .Users }}
+        {{ $isCurrent := eq (printf "%v" .ID) $.CurrentUserIDString }}
+        <article class="user-card"
+                 data-user-card
+                 data-role="{{ if eq .Role "Administrator" }}administrator{{ else }}viewer{{ end }}"
+                 data-state="{{ if $isCurrent }}current{{ else }}other{{ end }}"
+                 data-search="{{ .Username }} {{ .Email }} {{ .Role }}"
+                 x-show="matches($el)"
+                 x-transition>
+            <div class="user-card-main">
+                <div class="user-card-avatar">
+                    <img src="{{ if .Avatar }}{{ .Avatar }}{{ else }}https://ui-avatars.com/api/?name={{ .Username }}&background=1c1f28&color=e8eaed&bold=true&size=80{{ end }}" alt="{{ .Username }}" />
+                </div>
+                <div class="user-card-copy">
+                    <div class="user-title-line">
+                        <h3>{{ .Username }}</h3>
+                        {{ if $isCurrent }}
+                        <span class="badge badge-accent"><i class="bx bx-user-check"></i> You</span>
+                        {{ end }}
+                        {{ if eq .Role "Administrator" }}
+                        <span class="badge badge-success"><i class="bx bx-shield-quarter"></i> Administrator</span>
+                        {{ else }}
+                        <span class="badge badge-muted"><i class="bx bx-show"></i> Viewer</span>
+                        {{ end }}
+                    </div>
+                    <div class="user-meta">
+                        <span><i class="bx bx-envelope"></i>{{ if .Email }}{{ .Email }}{{ else }}No email set{{ end }}</span>
+                        <span><i class="bx bx-calendar"></i>Created {{ .CreatedAt.Format "Jan 02, 2006" }}</span>
+                        <span><i class="bx bx-refresh"></i>Updated {{ .UpdatedAt.Format "Jan 02, 2006" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="user-access">
+                <span>Access level</span>
+                <strong>{{ if eq .Role "Administrator" }}Full{{ else }}Read-only{{ end }}</strong>
+                <small>{{ if eq .Role "Administrator" }}Can manage settings and run actions.{{ else }}Can view inventory and backup data.{{ end }}</small>
+            </div>
+
+            <div class="user-actions">
+                <a href="/settings/users/{{ .ID }}/edit" class="action-btn" title="Edit user" aria-label="Edit user">
+                    <i class="bx bx-edit-alt"></i>
+                </a>
+                {{ if $isCurrent }}
+                <button type="button"
+                        class="action-btn danger is-disabled"
+                        title="You cannot delete your own user."
+                        aria-label="Delete unavailable for current user"
+                        disabled>
+                    <i class="bx bx-trash"></i>
+                </button>
+                {{ else }}
+                <button type="button"
+                        hx-delete="/settings/users/{{ .ID }}"
+                        hx-confirm="Delete this user?"
+                        hx-target="closest .user-card"
+                        hx-swap="delete"
+                        class="action-btn danger"
+                        title="Delete user"
+                        aria-label="Delete user">
+                    <i class="bx bx-trash"></i>
+                </button>
+                {{ end }}
+            </div>
+        </article>
+        {{ end }}
+    </div>
+
+    <div class="users-empty" x-show="countVisible() === 0" x-cloak>
+        <i class="bx bx-search"></i>
+        <strong>No matching users</strong>
+        <span>Adjust the search or role filter to widen the list.</span>
+    </div>
+    {{ else }}
+    <div class="users-empty">
+        <i class="bx bx-group"></i>
+        <strong>No users yet</strong>
+        <span>Create an administrator account to manage Mimic.</span>
+        <a href="/settings/users/new" class="btn btn-primary btn-sm">
+            <i class="bx bx-plus"></i>
+            New User
+        </a>
+    </div>
+    {{ end }}
 </div>

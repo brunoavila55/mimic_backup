@@ -1,55 +1,245 @@
-<div>
-    <h2 class="settings-section-title">SFTP Storage</h2>
-    <p class="settings-section-desc">Configure the SFTP server for automatic backup export.</p>
+<div class="sftp-page"
+     x-data="{
+        enabled: {{ if .Sftp.Enabled }}true{{ else }}false{{ end }},
+        showPassword: false,
+        host: '',
+        path: '/'
+     }"
+     x-init="host = $refs.host.value; path = $refs.path.value">
+    <div class="sftp-hero">
+        <div>
+            <div class="nodes-eyebrow">
+                <i class="bx bx-cloud-upload"></i>
+                Remote storage
+            </div>
+            <h1 class="page-title">SFTP Storage</h1>
+            <p class="page-desc">Configure automatic backup exports and verify the remote directory before relying on scheduled sync.</p>
+        </div>
+        <button type="button" class="btn btn-secondary"
+                hx-post="/settings/sftp/test"
+                hx-include="#sftp-settings-form"
+                hx-swap="none">
+            <i class="bx bx-plug"></i>
+            Test Connection
+        </button>
+    </div>
 
-    <form action="/settings/sftp/save" method="POST">
-        <div class="form-row">
-            <div class="form-group">
-                <label class="form-label">Host / IP</label>
-                <input type="text" name="host" class="form-input font-mono" value="{{ .Sftp.Host }}" placeholder="sftp.company.com" />
-            </div>
-            <div class="form-group">
-                <label class="form-label">Port</label>
-                <input type="number" name="port" class="form-input" value="{{ .Sftp.Port }}" placeholder="22" />
+    <div class="sftp-metrics">
+        <div class="sftp-metric {{ if .SftpStats.Configured }}success{{ else }}warning{{ end }}">
+            <i class="bx {{ if .SftpStats.Configured }}bx-check-circle{{ else }}bx-error-circle{{ end }}"></i>
+            <div>
+                <strong>{{ if .SftpStats.Configured }}Ready{{ else }}Draft{{ end }}</strong>
+                <span>Configuration</span>
             </div>
         </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label class="form-label">User</label>
-                <input type="text" name="username" class="form-input" value="{{ .Sftp.Username }}" placeholder="sftp_user" />
-            </div>
-            <div class="form-group">
-                <label class="form-label">Password</label>
-                <input type="password" name="password" class="form-input" placeholder="Leave blank to keep current" />
+        <div class="sftp-metric {{ if .Sftp.Enabled }}accent{{ else }}warning{{ end }}">
+            <i class="bx {{ if .Sftp.Enabled }}bx-sync{{ else }}bx-pause-circle{{ end }}"></i>
+            <div>
+                <strong>{{ if .Sftp.Enabled }}Enabled{{ else }}Paused{{ end }}</strong>
+                <span>Scheduled export</span>
             </div>
         </div>
-        <div class="form-group">
-            <label class="form-label">Remote Path</label>
-            <input type="text" name="path" class="form-input font-mono" value="{{ .Sftp.Path }}" placeholder="/backups/network" />
-            <div class="form-hint">Missing directories will be created automatically.</div>
+        <div class="sftp-metric warning">
+            <i class="bx bx-upload"></i>
+            <div>
+                <strong>{{ .SftpStats.PendingBackups }}</strong>
+                <span>Pending backups</span>
+            </div>
         </div>
+        <div class="sftp-metric">
+            <i class="bx bx-server"></i>
+            <div>
+                <strong>{{ .SftpStats.PendingNodes }}</strong>
+                <span>Nodes pending</span>
+            </div>
+        </div>
+    </div>
 
-        <div class="form-row" style="margin-top: 16px; margin-bottom: 16px;">
+    {{ if .Error }}
+    <div class="sftp-form-error">
+        <i class="bx bx-error-circle"></i>
+        <span>{{ .Error }}</span>
+    </div>
+    {{ end }}
+
+    <form id="sftp-settings-form" action="/settings/sftp/save" method="POST" class="sftp-shell">
+        <section class="sftp-editor-panel">
+            <div class="sftp-editor-section-head">
+                <i class="bx bx-server"></i>
+                <div>
+                    <h2>Server connection</h2>
+                    <p>Set the SFTP endpoint and credentials used by automatic and manual backup exports.</p>
+                </div>
+            </div>
+
+            <div class="sftp-form-grid">
+                <div class="form-group">
+                    <label class="form-label" for="sftp-host">Host / IP</label>
+                    <input id="sftp-host"
+                           x-ref="host"
+                           type="text"
+                           name="host"
+                           class="form-input font-mono"
+                           value="{{ .Sftp.Host }}"
+                           placeholder="sftp.company.com"
+                           autocomplete="off"
+                           x-model="host" />
+                    <div class="form-hint">Use the hostname or IP reachable from the Mimic server.</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="sftp-port">Port</label>
+                    <input id="sftp-port"
+                           type="number"
+                           name="port"
+                           class="form-input font-mono"
+                           value="{{ if .Sftp.Port }}{{ .Sftp.Port }}{{ else }}22{{ end }}"
+                           min="1"
+                           max="65535"
+                           inputmode="numeric" />
+                    <div class="form-hint">Default SFTP port is 22.</div>
+                </div>
+            </div>
+
+            <div class="sftp-form-grid">
+                <div class="form-group">
+                    <label class="form-label" for="sftp-username">Username</label>
+                    <input id="sftp-username"
+                           type="text"
+                           name="username"
+                           class="form-input"
+                           value="{{ .Sftp.Username }}"
+                           placeholder="sftp_user"
+                           autocomplete="username" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="sftp-password">Password</label>
+                    <div class="sftp-password-field">
+                        <input id="sftp-password"
+                               :type="showPassword ? 'text' : 'password'"
+                               name="password"
+                               class="form-input"
+                               placeholder="{{ if .SftpStats.HasPassword }}Leave blank to keep current{{ else }}SFTP password{{ end }}"
+                               autocomplete="new-password" />
+                        <button type="button" @click="showPassword = !showPassword" :title="showPassword ? 'Hide password' : 'Show password'" aria-label="Toggle password visibility">
+                            <span x-text="showPassword ? 'Hide' : 'Show'"></span>
+                        </button>
+                    </div>
+                    <div class="form-hint">{{ if .SftpStats.HasPassword }}A password is stored. Fill this only to rotate it.{{ else }}Required before enabling exports.{{ end }}</div>
+                </div>
+            </div>
+
+            <div class="sftp-editor-section-head compact">
+                <i class="bx bx-folder"></i>
+                <div>
+                    <h2>Remote destination</h2>
+                    <p>The directory is verified or created during connection tests and exports.</p>
+                </div>
+            </div>
+
             <div class="form-group">
-                <label class="form-label" style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" name="enabled" {{ if .Sftp.Enabled }}checked{{ end }}> Enable Scheduled Export
+                <label class="form-label" for="sftp-path">Remote path</label>
+                <input id="sftp-path"
+                       x-ref="path"
+                       type="text"
+                       name="path"
+                       class="form-input font-mono"
+                       value="{{ if .Sftp.Path }}{{ .Sftp.Path }}{{ else }}/{{ end }}"
+                       placeholder="/backups/network"
+                       x-model="path" />
+                <div class="form-hint">Missing directories are created automatically. Paths are normalized with a leading slash.</div>
+            </div>
+
+            <div class="sftp-form-grid">
+                <label class="sftp-toggle-card" :class="{ 'is-paused': !enabled }">
+                    <input type="checkbox" name="enabled" x-model="enabled" {{ if .Sftp.Enabled }}checked{{ end }} />
+                    <span>
+                        <strong x-text="enabled ? 'Scheduled export enabled' : 'Scheduled export paused'"></strong>
+                        <small x-text="enabled ? 'Pending successful backups sync once a day.' : 'Settings are saved, but scheduled sync is skipped.'"></small>
+                    </span>
+                    <i :class="enabled ? 'bx bx-check-circle' : 'bx bx-pause-circle'"></i>
                 </label>
-                <div class="form-hint">Only unexported updated backups will be sent.</div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Sync Time</label>
-                <input type="time" name="sync_time" class="form-input" value="{{ .Sftp.SyncTime }}" />
-                <div class="form-hint">Time of day to push updated backups (HH:MM)</div>
-            </div>
-        </div>
 
-        <div class="form-actions" style="border-top: none; margin-top: 16px; display: flex; gap: 12px; align-items: center;">
-            <button type="submit" class="btn btn-primary">
-                <i class="bx bx-save"></i> Save Settings
-            </button>
-            <button type="button" class="btn btn-secondary" hx-post="/settings/sftp/test" hx-include="closest form" hx-swap="none">
-                <i class="bx bx-plug"></i> Test Connection & Directory
-            </button>
-        </div>
+                <div class="form-group">
+                    <label class="form-label" for="sftp-sync-time">Sync time</label>
+                    <input id="sftp-sync-time"
+                           type="time"
+                           name="sync_time"
+                           class="form-input"
+                           value="{{ if .Sftp.SyncTime }}{{ .Sftp.SyncTime }}{{ else }}23:00{{ end }}" />
+                    <div class="form-hint">Server-local time for daily export checks.</div>
+                </div>
+            </div>
+
+            <div class="sftp-preview">
+                <span>Destination preview</span>
+                <strong><span x-text="host || 'sftp-host'"></span>:{{ if .Sftp.Port }}{{ .Sftp.Port }}{{ else }}22{{ end }}<span x-text="path || '/'"></span></strong>
+            </div>
+
+            <div class="sftp-form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bx bx-save"></i>
+                    Save settings
+                </button>
+                <button type="button" class="btn btn-secondary"
+                        hx-post="/settings/sftp/test"
+                        hx-include="#sftp-settings-form"
+                        hx-swap="none">
+                    <i class="bx bx-plug"></i>
+                    Test connection
+                </button>
+            </div>
+        </section>
+
+        <aside class="sftp-side-panel">
+            <div class="sftp-side-card">
+                <div class="sftp-side-title">
+                    <span>Last export</span>
+                    <strong class="{{ if eq .SftpStats.LastStatus "success" }}text-success{{ else if or (eq .SftpStats.LastStatus "error") (eq .SftpStats.LastStatus "partial") }}text-danger{{ end }}">{{ .SftpStats.LastStatus }}</strong>
+                </div>
+                <p>
+                    {{ if .Sftp.LastExportAt }}
+                        {{ .Sftp.LastExportAt.Format "Jan 02, 2006 15:04" }}
+                    {{ else }}
+                        No export has completed yet.
+                    {{ end }}
+                </p>
+                {{ if .Sftp.LastExportError }}
+                <div class="sftp-error-note">{{ .Sftp.LastExportError }}</div>
+                {{ end }}
+            </div>
+
+            <div class="sftp-side-card">
+                <div class="sftp-side-icon">
+                    <i class="bx bx-shield-quarter"></i>
+                </div>
+                <h2>Export behavior</h2>
+                <div class="sftp-side-list">
+                    <span><i class="bx bx-check-circle"></i>Only successful backups are exported</span>
+                    <span><i class="bx bx-check-circle"></i>Manual exports mark backups as exported</span>
+                    <span><i class="bx bx-check-circle"></i>Passwords are encrypted when saved</span>
+                </div>
+            </div>
+
+            <div class="sftp-side-card">
+                <div class="sftp-side-title">
+                    <span>Remote explorer</span>
+                    <strong>{{ if .SftpStats.Configured }}Ready{{ else }}Needs config{{ end }}</strong>
+                </div>
+                <p>After saving valid credentials, browse the configured remote path to verify the destination.</p>
+                <button type="button"
+                        class="btn btn-secondary btn-sm"
+                        hx-get="/settings/sftp/explore"
+                        hx-target="#sftp-explorer"
+                        hx-swap="innerHTML"
+                        {{ if not .SftpStats.Configured }}disabled{{ end }}>
+                    <i class="bx bx-folder-open"></i>
+                    Open explorer
+                </button>
+            </div>
+        </aside>
     </form>
+
+    <div id="sftp-explorer" class="sftp-explorer-shell"></div>
 </div>

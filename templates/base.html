@@ -8,8 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico" />
-    <link rel="stylesheet" href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" />
-    <link rel="stylesheet" href="/static/css/style.css?v=0.7.1" />
+    <link rel="stylesheet" href="/static/css/style.css?v=0.8.0" />
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>[x-cloak] { display: none !important; }</style>
@@ -81,7 +80,7 @@
             <header class="header">
                 <div class="header-left">
                     <button type="button" class="mobile-menu-btn" @click="sidebarOpen = true">
-                        <i class="bx bx-menu"></i>
+                        <span>Menu</span>
                     </button>
                     <div class="breadcrumb">
                         <span class="breadcrumb-root">Mimic</span>
@@ -91,7 +90,6 @@
                 </div>
                 <div class="header-right">
                     <div id="global-loader" class="htmx-indicator header-indicator">
-                        <i class="bx bx-loader-alt spin"></i>
                         <span>Loading...</span>
                     </div>
                 </div>
@@ -124,8 +122,7 @@
              x-transition:enter-end="opacity-100 scale-100">
             <div id="modal-content-area" class="modal-body">
                 <div style="padding: 40px; text-align: center; color: var(--text-muted);">
-                    <i class="bx bx-loader-alt spin" style="font-size: 24px; color: var(--accent);"></i>
-                    <div style="margin-top: 8px; font-size: 12px;">Loading...</div>
+                    <div style="font-size: 12px;">Loading...</div>
                 </div>
             </div>
         </div>
@@ -143,10 +140,10 @@
             if (!container) return;
 
             const colors = {
-                success: { icon: 'bx-check-circle', color: 'var(--success)', label: 'Success' },
-                error:   { icon: 'bx-x-circle',     color: 'var(--danger)',  label: 'Error' },
-                warning: { icon: 'bx-error',         color: 'var(--warning)', label: 'Warning' },
-                info:    { icon: 'bx-info-circle',   color: 'var(--info)',    label: 'Info' },
+                success: { color: 'var(--success)', label: 'Success' },
+                error:   { color: 'var(--danger)',  label: 'Error' },
+                warning: { color: 'var(--warning)', label: 'Warning' },
+                info:    { color: 'var(--info)',    label: 'Info' },
             };
 
             const c = colors[type] || colors.success;
@@ -154,9 +151,8 @@
             el.className = 'notification';
             el.style.cssText = 'opacity:0; transform:translateX(16px);';
             el.innerHTML = `
-                <i class="bx ${c.icon} notif-icon" style="color:${c.color}"></i>
                 <div>
-                    <div class="notif-label">${c.label}</div>
+                    <div class="notif-label" style="color:${c.color}">${c.label}</div>
                     <div class="notif-message">${message}</div>
                 </div>
             `;

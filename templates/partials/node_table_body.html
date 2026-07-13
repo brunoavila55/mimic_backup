@@ -90,7 +90,7 @@
                 <span class="badge badge-muted">Paused</span>
             {{ end }}
         </td>
-        {{ if eq $.Role "Administrator" }}
+        {{ if or (eq $.Role "Administrator") (eq $.Role "Operator") }}
         <td>
             <div class="action-group nodes-row-actions">
                 <a href="/nodes/{{ .ID }}" class="action-btn" title="Details">
@@ -150,7 +150,7 @@
     {{ end }}
 {{ else }}
     <tr>
-        {{ if eq .Role "Administrator" }}
+        {{ if or (eq .Role "Administrator") (eq .Role "Operator") }}
         <td colspan="7" class="table-empty nodes-empty">
         {{ else }}
         <td colspan="6" class="table-empty nodes-empty">
@@ -158,7 +158,7 @@
             <i class="bx bx-server"></i>
             <strong>No nodes found</strong>
             <span>Adjust the filters or create the first node in this inventory.</span>
-            {{ if eq .Role "Administrator" }}
+            {{ if or (eq .Role "Administrator") (eq .Role "Operator") }}
             <a href="/nodes/new" class="btn btn-primary btn-sm">
                 <i class="bx bx-plus"></i>
                 New Node

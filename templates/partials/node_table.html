@@ -19,7 +19,7 @@
                     <th>Health</th>
                     <th>Backups</th>
                     <th>Active</th>
-                    {{ if eq .Role "Administrator" }}
+                    {{ if or (eq .Role "Administrator") (eq .Role "Operator") }}
                     <th class="nodes-actions-col">Actions</th>
                     {{ end }}
                 </tr>

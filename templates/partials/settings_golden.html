@@ -7,9 +7,11 @@
                 Define baseline templates to compare your network devices against.
             </p>
         </div>
+        {{ if .CanManagePolicies }}
         <a href="/settings/golden/new" class="btn btn-primary btn-sm">
             <i class="bx bx-plus"></i> New Golden Config
         </a>
+        {{ end }}
     </div>
     <div class="card-body" style="padding: 0;">
         <div class="table-container">
@@ -20,7 +22,7 @@
                         <th>Vendor Match</th>
                         <th>Group Match</th>
                         <th>Template Size</th>
-                        <th style="width: 80px; text-align: center;">Actions</th>
+                        {{ if .CanManagePolicies }}<th style="width: 80px; text-align: center;">Actions</th>{{ end }}
                     </tr>
                 </thead>
                 <tbody>
@@ -33,7 +35,7 @@
                             <td><span class="badge badge-info">{{ .Vendor }}</span></td>
                             <td><span class="badge badge-warning">{{ .TargetGroup }}</span></td>
                             <td><span style="font-family: monospace; font-size: 12px; color: var(--text-muted);">{{ len .ConfigTemplate }} bytes</span></td>
-                            <td style="text-align: center;">
+                            {{ if $.CanManagePolicies }}<td style="text-align: center;">
                                 <div class="action-group" style="justify-content: center;">
                                     <a href="/settings/golden/{{ .ID }}/edit" class="action-btn" title="Edit Template"><i class='bx bx-edit-alt'></i></a>
                                     <button hx-delete="/settings/golden/{{ .ID }}" 
@@ -42,12 +44,12 @@
                                             hx-swap="outerHTML swap:1s"
                                             class="action-btn text-danger" title="Delete Template"><i class='bx bx-trash'></i></button>
                                 </div>
-                            </td>
+                            </td>{{ end }}
                         </tr>
                         {{ end }}
                     {{ else }}
                         <tr>
-                            <td colspan="5" style="text-align: center; padding: 32px; color: var(--text-muted);">
+                            <td colspan="{{ if .CanManagePolicies }}5{{ else }}4{{ end }}" style="text-align: center; padding: 32px; color: var(--text-muted);">
                                 <i class='bx bx-check-shield' style="font-size: 32px; margin-bottom: 8px; opacity: 0.5;"></i>
                                 <p>No Golden Configs defined yet.</p>
                             </td>

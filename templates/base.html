@@ -34,6 +34,7 @@
                     <i class="bx bx-server"></i>
                     <span>Nodes</span>
                 </a>
+                {{ if or (eq .Role "Administrator") (eq .Role "Operator") }}
                 <a href="/settings/credentials" class="sidebar-link {{ if or (eq .CurrentRoute "credentials") (eq .ActiveTab "credentials") }}active{{ end }}">
                     <i class="bx bx-key"></i>
                     <span>Credentials</span>
@@ -42,9 +43,10 @@
                     <i class="bx bx-time-five"></i>
                     <span>Routines</span>
                 </a>
+                {{ end }}
 
                 <div class="sidebar-section">System</div>
-                <a href="/settings" class="sidebar-link {{ if or (eq .CurrentRoute "settings") (eq .CurrentRoute "users") (eq .CurrentRoute "sftp") (eq .CurrentRoute "export") (eq .CurrentRoute "logs") (eq .CurrentRoute "profile") }}active{{ end }}">
+                <a href="{{ if eq .Role "Administrator" }}/settings{{ else if eq .Role "Auditor" }}/settings/security{{ else }}/settings/profile{{ end }}" class="sidebar-link {{ if or (eq .CurrentRoute "settings") (eq .CurrentRoute "users") (eq .CurrentRoute "sftp") (eq .CurrentRoute "alerts") (eq .CurrentRoute "export") (eq .CurrentRoute "logs") (eq .CurrentRoute "security") (eq .CurrentRoute "golden") (eq .CurrentRoute "profile") }}active{{ end }}">
                     <i class="bx bx-cog"></i>
                     <span>Settings</span>
                 </a>

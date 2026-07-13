@@ -8,39 +8,52 @@
 
     <div class="settings-layout">
         <nav class="settings-nav">
+            {{ if .CanManageUsers }}
             <div class="settings-nav-section">Management</div>
             <a href="/settings/users"
                hx-get="/settings/users" hx-target="#settings-content" hx-push-url="true"
                class="settings-tab {{ if eq .ActiveTab "users" }}active{{ end }}">
                 <i class="bx bx-group"></i> Users
             </a>
+            {{ end }}
 
-
+            {{ if or .CanManageSystem .CanManagePolicies .CanExportBackups .CanViewAudit }}
             <div class="settings-nav-section">System</div>
+            {{ end }}
+            {{ if .CanManageSystem }}
             <a href="/settings/sftp"
                hx-get="/settings/sftp" hx-target="#settings-content" hx-push-url="true"
                class="settings-tab {{ if eq .ActiveTab "sftp" }}active{{ end }}">
                 <i class="bx bx-cloud-upload"></i> SFTP
             </a>
+            {{ end }}
+            {{ if .CanManagePolicies }}
             <a href="/settings/alerts" class="settings-tab {{ if eq .ActiveTab "alerts" }}active{{ end }}" hx-get="/settings/alerts" hx-target="#settings-content" hx-push-url="true" hx-swap="innerHTML">
                 <i class='bx bx-bell'></i> Alerting Rules
             </a>
-            <a href="/settings?tab=security" class="settings-tab {{ if eq .ActiveTab "security" }}active{{ end }}" hx-get="/settings/security" hx-target="#settings-content" hx-push-url="/settings?tab=security" hx-swap="innerHTML">
+            {{ end }}
+            {{ if .CanViewAudit }}
+            <a href="/settings/security" class="settings-tab {{ if eq .ActiveTab "security" }}active{{ end }}" hx-get="/settings/security" hx-target="#settings-content" hx-push-url="true" hx-swap="innerHTML">
                 <i class='bx bx-shield-quarter'></i> Security Rules
             </a>
-            <a href="/settings?tab=golden" class="settings-tab {{ if eq .ActiveTab "golden" }}active{{ end }}" hx-get="/settings/golden" hx-target="#settings-content" hx-push-url="/settings?tab=golden" hx-swap="innerHTML">
+            <a href="/settings/golden" class="settings-tab {{ if eq .ActiveTab "golden" }}active{{ end }}" hx-get="/settings/golden" hx-target="#settings-content" hx-push-url="true" hx-swap="innerHTML">
                 <i class='bx bx-check-shield'></i> Golden Configs
             </a>
+            {{ end }}
+            {{ if .CanExportBackups }}
             <a href="/settings/export"
                hx-get="/settings/export" hx-target="#settings-content" hx-push-url="true"
                class="settings-tab {{ if eq .ActiveTab "export" }}active{{ end }}">
                 <i class="bx bx-export"></i> Export
             </a>
+            {{ end }}
+            {{ if .CanViewAudit }}
             <a href="/settings/logs"
                hx-get="/settings/logs" hx-target="#settings-content" hx-push-url="true"
                class="settings-tab {{ if eq .ActiveTab "logs" }}active{{ end }}">
                 <i class="bx bx-list-ul"></i> Logs
             </a>
+            {{ end }}
 
             <div class="settings-nav-section">Account</div>
             <a href="/settings/profile"
@@ -56,6 +69,8 @@
             {{ else if eq .ActiveTab "routines" }}{{ template "partials/settings_routines" . }}
             {{ else if eq .ActiveTab "sftp" }}{{ template "partials/settings_sftp" . }}
             {{ else if eq .ActiveTab "alerts" }}{{ template "partials/settings_alerts" . }}
+            {{ else if eq .ActiveTab "security" }}{{ template "partials/settings_security" . }}
+            {{ else if eq .ActiveTab "golden" }}{{ template "partials/settings_golden" . }}
             {{ else if eq .ActiveTab "export" }}{{ template "partials/settings_export" . }}
             {{ else if eq .ActiveTab "logs" }}{{ template "partials/settings_logs" . }}
             {{ else if eq .ActiveTab "profile" }}{{ template "partials/settings_profile" . }}

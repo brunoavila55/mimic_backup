@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"html"
+	"mimic/internal/access"
 	"mimic/internal/models"
 	"mimic/internal/services/sftp"
 	"mimic/pkg/diff"
@@ -450,8 +451,9 @@ type SettingsHandler struct {
 type UserListStats struct {
 	Total          int
 	Administrators int
+	Operators      int
+	Auditors       int
 	Viewers        int
-	MissingEmail   int
 }
 
 type CredentialListStats struct {
@@ -479,6 +481,31 @@ type SftpStatusStats struct {
 	LastStatus      string
 }
 
+type ExportNodeRow struct {
+	ID          uint
+	Name        string
+	Vendor      string
+	IP          string
+	Group       string
+	BackupAt    *time.Time
+	ExportState string
+}
+
+type ExportPageStats struct {
+	ActiveNodes int
+	Pending     int
+	Exported    int
+	Unavailable int
+	Configured  bool
+}
+
+type LogPageStats struct {
+	Loaded   int
+	Errors   int
+	Warnings int
+	Success  int
+}
+
 type AlertRuleStats struct {
 	Total         int
 	Enabled       int
@@ -490,7 +517,17 @@ type AlertRuleStats struct {
 }
 
 func (h *SettingsHandler) GetSettings(c *fiber.Ctx) error {
-	return c.Redirect("/settings/users")
+	role, _ := c.Locals("role").(string)
+	switch role {
+	case access.RoleAdministrator:
+		return c.Redirect("/settings/users")
+	case access.RoleOperator:
+		return c.Redirect("/settings/credentials")
+	case access.RoleAuditor:
+		return c.Redirect("/settings/security")
+	default:
+		return c.Redirect("/settings/profile")
+	}
 }
 
 func (h *SettingsHandler) renderTab(c *fiber.Ctx, tab string, data fiber.Map) error {
@@ -517,6 +554,14 @@ func (h *SettingsHandler) renderTab(c *fiber.Ctx, tab string, data fiber.Map) er
 	data["Role"] = c.Locals("role")
 	data["CurrentRoute"] = tab
 	data["ActiveTab"] = tab
+	role, _ := c.Locals("role").(string)
+	data["CanManageUsers"] = access.Allows(role, access.ManageUsers)
+	data["CanManageNodes"] = access.Allows(role, access.ManageNodes)
+	data["CanManageOperations"] = access.Allows(role, access.ManageOperations)
+	data["CanManagePolicies"] = access.Allows(role, access.ManagePolicies)
+	data["CanManageSystem"] = access.Allows(role, access.ManageSystem)
+	data["CanExportBackups"] = access.Allows(role, access.ExportBackups)
+	data["CanViewAudit"] = access.Allows(role, access.ViewAudit)
 
 	if c.Get("HX-Request") == "true" {
 		c.Set("HX-Push-Url", "/settings/"+tab)
@@ -537,13 +582,15 @@ func (h *SettingsHandler) GetUsersTab(c *fiber.Ctx) error {
 
 	stats := UserListStats{Total: len(users)}
 	for _, user := range users {
-		if user.Role == "Administrator" {
+		switch user.Role {
+		case access.RoleAdministrator:
 			stats.Administrators++
-		} else {
+		case access.RoleOperator:
+			stats.Operators++
+		case access.RoleAuditor:
+			stats.Auditors++
+		default:
 			stats.Viewers++
-		}
-		if strings.TrimSpace(user.Email) == "" {
-			stats.MissingEmail++
 		}
 	}
 
@@ -655,14 +702,61 @@ func (h *SettingsHandler) GetSFTPTab(c *fiber.Ctx) error {
 
 func (h *SettingsHandler) GetExportTab(c *fiber.Ctx) error {
 	var nodes []models.Node
-	h.DB.Where("enabled = ?", true).Find(&nodes)
+	h.DB.Where("enabled = ?", true).Order("name asc").Find(&nodes)
 
 	var settings models.SftpSettings
 	h.DB.First(&settings)
 
+	latestBackups := make(map[uint]models.NodeBackup, len(nodes))
+	if len(nodes) > 0 {
+		nodeIDs := make([]uint, 0, len(nodes))
+		for _, node := range nodes {
+			nodeIDs = append(nodeIDs, node.ID)
+		}
+
+		var backups []models.NodeBackup
+		h.DB.Where("node_id IN ? AND status = ?", nodeIDs, "success").
+			Order("created_at desc").Find(&backups)
+		for _, backup := range backups {
+			if _, exists := latestBackups[backup.NodeID]; !exists {
+				latestBackups[backup.NodeID] = backup
+			}
+		}
+	}
+
+	rows := make([]ExportNodeRow, 0, len(nodes))
+	stats := ExportPageStats{
+		ActiveNodes: len(nodes),
+		Configured: strings.TrimSpace(settings.Host) != "" &&
+			strings.TrimSpace(settings.Username) != "" &&
+			strings.TrimSpace(settings.Password) != "" &&
+			settings.Port > 0 && settings.Port <= 65535,
+	}
+	for _, node := range nodes {
+		row := ExportNodeRow{
+			ID: node.ID, Name: node.Name, Vendor: node.Vendor,
+			IP: node.IP, Group: node.Group, ExportState: "unavailable",
+		}
+		if backup, exists := latestBackups[node.ID]; exists {
+			backupAt := backup.CreatedAt
+			row.BackupAt = &backupAt
+			if backup.Exported {
+				row.ExportState = "exported"
+				stats.Exported++
+			} else {
+				row.ExportState = "pending"
+				stats.Pending++
+			}
+		} else {
+			stats.Unavailable++
+		}
+		rows = append(rows, row)
+	}
+
 	return h.renderTab(c, "export", fiber.Map{
-		"Nodes": nodes,
-		"Sftp":  settings,
+		"ExportNodes": rows,
+		"ExportStats": stats,
+		"Sftp":        settings,
 	})
 }
 
@@ -701,8 +795,26 @@ func (h *SettingsHandler) GetLogsTab(c *fiber.Ctx) error {
 	var logs []models.SystemLog
 	h.DB.Order("created_at desc").Limit(200).Find(&logs)
 
+	stats := LogPageStats{Loaded: len(logs)}
+	for _, entry := range logs {
+		switch strings.ToLower(entry.Level) {
+		case "error":
+			stats.Errors++
+		case "warning":
+			stats.Warnings++
+		case "success":
+			stats.Success++
+		}
+	}
+
+	var categories []string
+	h.DB.Model(&models.SystemLog{}).
+		Where("category <> ''").Distinct("category").Order("category asc").Pluck("category", &categories)
+
 	return h.renderTab(c, "logs", fiber.Map{
-		"Logs": logs,
+		"Logs":          logs,
+		"LogStats":      stats,
+		"LogCategories": categories,
 	})
 }
 

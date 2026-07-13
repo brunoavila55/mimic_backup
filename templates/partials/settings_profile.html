@@ -1,40 +1,154 @@
-<div>
-    <h2 class="settings-section-title">My Profile</h2>
-    <p class="settings-section-desc">Update your personal information and password.</p>
-
-    <form action="/settings/profile/save" method="POST" style="max-width: 480px;">
-        <div class="form-group">
-            <label class="form-label">User</label>
-            <input type="text" name="username" class="form-input" value="{{ .ProfileUser.Username }}" required />
+<section class="profile-page"
+         x-data="{
+            showPassword: false,
+            removePhoto: false,
+            photoName: '',
+            avatarPreview: '{{ if .ProfileUser.Avatar }}{{ .ProfileUser.Avatar | js }}{{ else }}https://ui-avatars.com/api/?name={{ .ProfileUser.Username | js }}&background=1c1f28&color=e8eaed&bold=true&size=240{{ end }}',
+            fallbackAvatar: 'https://ui-avatars.com/api/?name={{ .ProfileUser.Username | js }}&background=1c1f28&color=e8eaed&bold=true&size=240',
+            previewPhoto(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                this.avatarPreview = URL.createObjectURL(file);
+                this.photoName = file.name;
+                this.removePhoto = false;
+            },
+            clearPhoto() {
+                this.avatarPreview = this.fallbackAvatar;
+                this.photoName = '';
+                this.removePhoto = true;
+                this.$refs.avatarInput.value = '';
+            }
+         }">
+    <div class="profile-hero">
+        <div>
+            <div class="nodes-eyebrow">
+                <i class="bx bx-id-card"></i>
+                Personal account
+            </div>
+            <h2>My Profile</h2>
+            <p>Keep your identity, profile photo and login credentials up to date.</p>
         </div>
+        {{ if .CanManageUsers }}
+        <a href="/settings/users" class="btn btn-secondary">
+            <i class="bx bx-group"></i>
+            Manage team
+        </a>
+        {{ end }}
+    </div>
 
-        <div class="form-group">
-            <label class="form-label">E-mail</label>
-            <input type="email" name="email" class="form-input" value="{{ .ProfileUser.Email }}" placeholder="your@email.com" />
-        </div>
+    {{ if .Error }}
+    <div class="profile-error">
+        <i class="bx bx-error-circle"></i>
+        <span>{{ .Error }}</span>
+    </div>
+    {{ end }}
 
-        <div class="form-group">
-            <label class="form-label">New Password</label>
-            <input type="password" name="password" class="form-input" placeholder="Leave blank to keep current" autocomplete="new-password" />
-            <div class="form-hint">Minimum 6 characters.</div>
-        </div>
+    <div class="profile-layout">
+        <aside class="profile-summary-card">
+            <div class="profile-avatar-large">
+                <img :src="avatarPreview" alt="Profile photo preview" />
+                <span><i class="bx bx-camera"></i></span>
+            </div>
+            <h3>{{ .ProfileUser.Username }}</h3>
+            <p>{{ if .ProfileUser.Email }}{{ .ProfileUser.Email }}{{ else }}No email configured{{ end }}</p>
+            <span class="profile-role role-{{ .ProfileUser.Role }}">
+                <i class="bx {{ if eq .ProfileUser.Role "Administrator" }}bx-shield-quarter{{ else if eq .ProfileUser.Role "Operator" }}bx-wrench{{ else if eq .ProfileUser.Role "Auditor" }}bx-search-alt{{ else }}bx-show{{ end }}"></i>
+                {{ .ProfileUser.Role }}
+            </span>
 
-        <div class="form-group" style="padding: 12px; background: var(--bg-tertiary); border-radius: var(--radius); margin-top: 20px;">
-            <div class="flex items-center gap-3">
-                <div style="width: 36px; height: 36px; border-radius: var(--radius); overflow: hidden; background: var(--bg-hover);">
-                    <img src="https://ui-avatars.com/api/?name={{ .ProfileUser.Username }}&background=1c1f28&color=e8eaed&bold=true&size=72" alt="{{ .ProfileUser.Username }}" style="width: 100%; height: 100%;" />
-                </div>
+            <div class="profile-facts">
+                <div><span>Member since</span><strong>{{ .ProfileUser.CreatedAt.Format "Jan 02, 2006" }}</strong></div>
+                <div><span>Last profile update</span><strong>{{ .ProfileUser.UpdatedAt.Format "Jan 02, 2006" }}</strong></div>
+            </div>
+
+            <div class="profile-access-summary">
+                <span>Permission level</span>
+                {{ if eq .ProfileUser.Role "Administrator" }}
+                <strong>Full system control</strong>
+                <p>Users, nodes, policies, integrations and operations.</p>
+                {{ else if eq .ProfileUser.Role "Operator" }}
+                <strong>Operational control</strong>
+                <p>Nodes, credentials, routines, exports and backup runs.</p>
+                {{ else if eq .ProfileUser.Role "Auditor" }}
+                <strong>Audit access</strong>
+                <p>Security rules, Golden Configs and system activity.</p>
+                {{ else }}
+                <strong>Read-only access</strong>
+                <p>Inventory, backups and operational status.</p>
+                {{ end }}
+            </div>
+        </aside>
+
+        <form action="/settings/profile/save" method="POST" enctype="multipart/form-data" class="profile-editor-card">
+            <div class="profile-section-head">
+                <i class="bx bx-user"></i>
                 <div>
-                    <div style="font-size: 12px; font-weight: 600; color: var(--text);">{{ .ProfileUser.Username }}</div>
-                    <div style="font-size: 11px; color: var(--text-muted);">{{ .ProfileUser.Role }}</div>
+                    <h3>Account identity</h3>
+                    <p>Your username is used to sign in. Email helps identify you to the team.</p>
                 </div>
             </div>
-        </div>
 
-        <div class="form-actions" style="border-top: none; margin-top: 20px;">
-            <button type="submit" class="btn btn-primary">
-                <i class="bx bx-save"></i> Save Profile
-            </button>
-        </div>
-    </form>
-</div>
+            <div class="profile-form-grid">
+                <div class="form-group">
+                    <label class="form-label" for="profile-username">Username</label>
+                    <input id="profile-username" type="text" name="username" class="form-input" value="{{ .ProfileUser.Username }}" maxlength="80" autocomplete="username" required />
+                    <div class="form-hint">Must be unique and cannot contain spaces.</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="profile-email">Email</label>
+                    <input id="profile-email" type="email" name="email" class="form-input" value="{{ .ProfileUser.Email }}" maxlength="140" autocomplete="email" placeholder="you@company.com" />
+                    <div class="form-hint">Used only for account identification.</div>
+                </div>
+            </div>
+
+            <div class="profile-section-head compact">
+                <i class="bx bx-image"></i>
+                <div>
+                    <h3>Profile photo</h3>
+                    <p>Upload a square JPEG or PNG for your sidebar and team profile.</p>
+                </div>
+            </div>
+
+            <div class="profile-photo-control">
+                <img :src="avatarPreview" alt="Selected profile photo" />
+                <div>
+                    <strong x-text="photoName || '{{ if .ProfileUser.Avatar }}Current profile photo{{ else }}Generated initials{{ end }}'"></strong>
+                    <span>JPEG or PNG, up to 2 MB. Images must be 32–4096 px.</span>
+                    <div class="profile-photo-actions">
+                        <label for="profile-avatar" class="btn btn-secondary btn-sm">
+                            <i class="bx bx-upload"></i>
+                            Choose photo
+                        </label>
+                        <button type="button" class="btn btn-ghost btn-sm" @click="clearPhoto()" x-show="avatarPreview !== fallbackAvatar || photoName">Remove</button>
+                    </div>
+                </div>
+                <input x-ref="avatarInput" id="profile-avatar" type="file" name="avatar" accept="image/jpeg,image/png" @change="previewPhoto($event)" />
+                <input type="hidden" name="remove_avatar" :value="removePhoto ? '1' : '0'" />
+            </div>
+
+            <div class="profile-section-head compact">
+                <i class="bx bx-lock-alt"></i>
+                <div>
+                    <h3>Login security</h3>
+                    <p>Leave this empty to keep your current password.</p>
+                </div>
+            </div>
+
+            <div class="form-group profile-password-group">
+                <label class="form-label" for="profile-password">New password</label>
+                <div class="profile-password-field">
+                    <input id="profile-password" :type="showPassword ? 'text' : 'password'" name="password" class="form-input" minlength="8" autocomplete="new-password" placeholder="At least 8 characters" />
+                    <button type="button" @click="showPassword = !showPassword" :aria-label="showPassword ? 'Hide password' : 'Show password'" x-text="showPassword ? 'Hide' : 'Show'"></button>
+                </div>
+                <div class="form-hint">Your permission level can only be changed by an administrator.</div>
+            </div>
+
+            <div class="profile-form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bx bx-save"></i>
+                    Save profile
+                </button>
+            </div>
+        </form>
+    </div>
+</section>

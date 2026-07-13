@@ -1,9 +1,11 @@
 package sftp
 
 import (
+	"errors"
 	"fmt"
 	"mimic/internal/models"
 	"mimic/pkg/crypto"
+	"net"
 	"os"
 	"path"
 	"regexp"
@@ -11,9 +13,12 @@ import (
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
+	"gorm.io/gorm"
 )
 
-type SftpService struct{}
+type SftpService struct {
+	DB *gorm.DB
+}
 
 func (s *SftpService) ListDir(settings *models.SftpSettings, remotePath string) ([]os.FileInfo, error) {
 	config, err := s.getClientConfig(settings)
@@ -47,16 +52,55 @@ func (s *SftpService) ListDir(settings *models.SftpSettings, remotePath string) 
 func (s *SftpService) getClientConfig(settings *models.SftpSettings) (*ssh.ClientConfig, error) {
 	password, err := crypto.Decrypt(settings.Password)
 	if err != nil {
-		password = settings.Password
+		return nil, fmt.Errorf("failed to decrypt SFTP password: %w", err)
 	}
 
 	config := &ssh.ClientConfig{
 		User:            settings.Username,
 		Auth:            []ssh.AuthMethod{ssh.Password(password)},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: s.verifyHostKey(settings),
 		Timeout:         15 * time.Second,
 	}
 	return config, nil
+}
+
+// verifyHostKey implements trust-on-first-use for the configured SFTP server.
+// The first key is persisted; subsequent connections must present the same key.
+func (s *SftpService) verifyHostKey(settings *models.SftpSettings) ssh.HostKeyCallback {
+	return func(_ string, _ net.Addr, key ssh.PublicKey) error {
+		fingerprint := ssh.FingerprintSHA256(key)
+		if settings.HostFingerprint != "" {
+			if settings.HostFingerprint != fingerprint {
+				return fmt.Errorf("SFTP host key mismatch: expected %s, got %s", settings.HostFingerprint, fingerprint)
+			}
+			return nil
+		}
+
+		if s.DB == nil || settings.ID == 0 {
+			return errors.New("SFTP host fingerprint is not configured and cannot be persisted")
+		}
+
+		result := s.DB.Model(&models.SftpSettings{}).
+			Where("id = ? AND (host_fingerprint IS NULL OR host_fingerprint = '')", settings.ID).
+			Update("host_fingerprint", fingerprint)
+		if result.Error != nil {
+			return fmt.Errorf("failed to persist SFTP host fingerprint: %w", result.Error)
+		}
+		if result.RowsAffected == 1 {
+			settings.HostFingerprint = fingerprint
+			return nil
+		}
+
+		var current models.SftpSettings
+		if err := s.DB.Select("host_fingerprint").First(&current, settings.ID).Error; err != nil {
+			return fmt.Errorf("failed to verify persisted SFTP host fingerprint: %w", err)
+		}
+		if current.HostFingerprint != fingerprint {
+			return fmt.Errorf("SFTP host key mismatch: expected %s, got %s", current.HostFingerprint, fingerprint)
+		}
+		settings.HostFingerprint = current.HostFingerprint
+		return nil
+	}
 }
 
 func (s *SftpService) TestConnection(settings *models.SftpSettings) error {

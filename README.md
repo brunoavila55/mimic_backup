@@ -22,7 +22,7 @@ The interface is designed around operational workflows: dashboard triage, node i
 - **Secure Credential Management:** Store SSH credentials encrypted at rest using AES-GCM.
 - **SFTP Synchronization:** Export successful backups to an external SFTP destination.
 - **Alerting Rules:** Route drift, failure, recovery, and security notifications to Webhook or Telegram destinations.
-- **Role-Based Access Control:** Administrators can manage and execute actions; Viewers have read-oriented access.
+- **Role-Based Access Control:** Administrators have full control, Operators manage network operations, Auditors review policies and logs, and Viewers have read-only access.
 - **Audit Logs:** Track operational activity and backup/export events.
 
 ## Supported Vendors
@@ -70,7 +70,7 @@ Rules support vendor filters, group filters, regex matching, context blocks, sev
 - **Settings Rework:** Rebuilt Users, SSH Credentials, Backup Routines, SFTP, and Alerting Rules with cards, metrics, search/filter controls, clearer empty states, and focused edit forms.
 - **SFTP Backend Hardening:** Added stronger validation for server settings, path normalization, safer remote explorer output, manual export state updates, and clearer scheduled sync status handling.
 - **Alerting Rules Rework:** Added provider-aware validation, encrypted destination handling, safer test delivery, rule metrics, and clean routing for Webhook or Telegram notifications.
-- **User and Access Safety:** Added duplicate checks, safer role validation, last-admin protection, self-delete protection, and session refresh after profile-level account edits.
+- **User and Access Safety:** Includes duplicate checks, server-side permission enforcement, live role refresh, last-admin protection, self-delete protection, and validated profile-photo uploads.
 - **Credential and Routine Safety:** Added unique-name validation and blocked deletion when nodes still depend on a credential or routine.
 - **Template Reliability:** Added template parsing coverage to catch broken views before deployment.
 

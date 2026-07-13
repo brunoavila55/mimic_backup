@@ -16,17 +16,17 @@ git clone https://github.com/brunoavila55/mimic_backup.git
 cd mimic_backup
 ```
 
-## 2. Optional Configurations (Environment Variables)
-The `docker-compose.yml` file comes with all credentials and addresses correctly pointed to the database container (named `db`).
+## 2. Required Environment Variables
+The database password and application encryption key do not have insecure defaults. Create an `.env` file before starting the containers:
 
 If you want to change the **timezone**, **database password**, or **secret key**, we recommend creating an `.env` file based on our example:
 
 ```bash
 cp .env.example .env
 ```
-Open the `.env` file in your preferred editor (like `nano` or `vim`) and update the `TZ` variable to match your local timezone (e.g., `America/New_York`), and optionally define your `SECRET_KEY`.
+Open the `.env` file and replace both `POSTGRES_PASSWORD` and `SECRET_KEY`. The secret key must contain at least 32 random characters. Set `COOKIE_SECURE=true` when the application is exposed through HTTPS, and set `APP_ORIGIN` to its canonical URL when it is behind a reverse proxy.
 
-> **Note on SECRET_KEY:** The `SECRET_KEY` is automatically generated on the first run and persisted securely. If you prefer to manage it manually (e.g., in a distributed Docker environment), define the `SECRET_KEY` in the `.env` file.
+> **Important:** Keep `SECRET_KEY` stable and backed up. Changing it makes existing encrypted SSH, SFTP, and alert credentials unreadable.
 
 ## 3. Spin Up the Containers
 While inside the `mimic_backup` folder, run the command:

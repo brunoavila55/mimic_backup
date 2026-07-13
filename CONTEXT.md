@@ -63,7 +63,7 @@ The system is data-driven, heavily relying on GORM models. Here is a breakdown o
 ### Core Management
 | Model | Feature Details |
 |-------|-----------------|
-| `User` | **Access Control:** Manages system users (Admin/Viewer) using bcrypt for passwords. The system forces a Setup Wizard on first boot if no users exist. |
+| `User` | **Access Control:** Manages system users (Administrator/Operator/Auditor/Viewer), profile photos and bcrypt passwords. The system forces a Setup Wizard on first boot if no users exist. |
 | `Credential` | **Reusable Auth:** Instead of defining passwords per node, you create an SSH Credential and link it to hundreds of nodes. When a password changes, you only update it here. Encrypted using AES-GCM. |
 | `BackupRoutine` | **Scheduling:** Defines when backups happen (e.g., "Every 24h", "Tuesdays at 02:00"). Linked to nodes. |
 | `Node` | **Inventory:** Network equipment. Tracks IP, Vendor, linked Credential, Routine, and `SecurityScore`. Features include manual backup execution, configuration viewing, and diff analysis. |
@@ -117,7 +117,7 @@ The `/settings` route is a unified hub with multiple tabs loaded via **HTMX** fo
 - **SFTP (`/settings/sftp`)**: Remote backup mirroring config.
 - **Export (`/settings/export`)**: Manual/Bulk sync control for SFTP.
 - **Logs (`/settings/logs`)**: System activity logs.
-- **Profile (`/settings/profile`)**: Logged-in user's profile and password change.
+- **Profile (`/settings/profile`)**: Logged-in user's identity, profile photo and password change.
 - **Alerts (`/settings/alerts`)**: Webhook and Telegram notification rules.
 - **Security Rules (`/settings/security`)**: Policy catalog with metrics, search, severity/status filters, vendor/group scope, and enabled state.
 

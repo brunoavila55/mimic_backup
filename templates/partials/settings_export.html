@@ -1,66 +1,168 @@
-<div>
-    <div class="flex items-center justify-between mb-4">
+<section id="export-tab"
+         class="export-page"
+         x-data="{ search: '', status: 'all' }"
+         hx-get="/settings/export"
+         hx-trigger="exportSyncCompleted from:body"
+         hx-target="#settings-content"
+         hx-swap="innerHTML">
+    <div class="export-hero">
         <div>
-            <h2 class="settings-section-title">Export Backups</h2>
-            <p class="settings-section-desc">Sync the latest backups from all active nodes to the SFTP server.</p>
+            <div class="nodes-eyebrow">
+                <i class="bx bx-transfer-alt"></i>
+                Backup delivery
+            </div>
+            <h2>Export Center</h2>
+            <p>Track the latest successful backup from every active node and deliver it to remote storage.</p>
         </div>
-        <button hx-post="/settings/export/sync" hx-swap="none" class="btn btn-primary btn-sm">
-            <i class="bx bx-sync"></i> Sync All
-        </button>
+        <div class="export-hero-actions">
+            <a href="/settings/sftp" class="btn btn-secondary">
+                <i class="bx bx-cog"></i>
+                Configure SFTP
+            </a>
+            <button type="button"
+                    class="btn btn-primary"
+                    hx-post="/settings/export/sync"
+                    hx-swap="none"
+                    hx-disabled-elt="this"
+                    {{ if not .ExportStats.Configured }}disabled title="Complete the SFTP configuration before syncing"{{ end }}>
+                <i class="bx bx-sync"></i>
+                <span>Sync latest backups</span>
+                <i class="bx bx-loader-alt bx-spin htmx-indicator"></i>
+            </button>
+        </div>
     </div>
 
-    {{ if .Sftp.Host }}
-    <div class="card mb-4" style="border: none; background: var(--bg-tertiary);">
-        <div class="card-body" style="padding: 14px 16px;">
-            <div class="flex items-center gap-3">
-                <i class="bx bx-cloud-upload text-accent" style="font-size: 20px;"></i>
-                <div>
-                    <div style="font-size: 13px; font-weight: 600; color: var(--text);">
-                        {{ .Sftp.Host }}:{{ .Sftp.Port }}
-                    </div>
-                    <div class="text-secondary" style="font-size: 12px;">
-                        {{ if .Sftp.LastExportAt }}
-                            Last export: {{ .Sftp.LastExportAt.Format "02/01/2006 15:04" }}
-                            - <span class="{{ if eq .Sftp.LastExportStatus "success" }}text-success{{ else }}text-danger{{ end }}">{{ .Sftp.LastExportStatus }}</span>
-                        {{ else }}
-                            No exports performed
-                        {{ end }}
-                    </div>
-                </div>
-            </div>
+    <div class="export-metrics">
+        <div class="export-metric">
+            <i class="bx bx-server"></i>
+            <div><strong>{{ .ExportStats.ActiveNodes }}</strong><span>Active nodes</span></div>
+        </div>
+        <div class="export-metric warning">
+            <i class="bx bx-time-five"></i>
+            <div><strong>{{ .ExportStats.Pending }}</strong><span>Pending export</span></div>
+        </div>
+        <div class="export-metric success">
+            <i class="bx bx-check-circle"></i>
+            <div><strong>{{ .ExportStats.Exported }}</strong><span>Latest exported</span></div>
+        </div>
+        <div class="export-metric muted">
+            <i class="bx bx-minus-circle"></i>
+            <div><strong>{{ .ExportStats.Unavailable }}</strong><span>Without backup</span></div>
         </div>
     </div>
-    {{ else }}
-    <div class="card mb-4" style="border: none; background: var(--bg-tertiary);">
-        <div class="card-body text-center text-muted" style="padding: 20px;">
-            SFTP not configured. <a href="/settings/sftp" class="text-accent" style="font-weight: 600;">Configure now</a>
+
+    <div class="export-destination {{ if not .ExportStats.Configured }}is-warning{{ end }}">
+        <div class="export-destination-icon">
+            <i class="bx {{ if .ExportStats.Configured }}bx-cloud-upload{{ else }}bx-error-circle{{ end }}"></i>
         </div>
+        <div class="export-destination-main">
+            <span>Remote destination</span>
+            {{ if .ExportStats.Configured }}
+            <strong>{{ .Sftp.Host }}:{{ .Sftp.Port }}{{ if .Sftp.Path }}{{ .Sftp.Path }}{{ else }}/{{ end }}</strong>
+            <small>
+                {{ if .Sftp.Enabled }}Scheduled daily at {{ .Sftp.SyncTime }}{{ else }}Automatic export is paused{{ end }}
+            </small>
+            {{ else }}
+            <strong>SFTP configuration incomplete</strong>
+            <small>Add a host, username and password before starting a manual sync.</small>
+            {{ end }}
+        </div>
+        <div class="export-last-run">
+            <span>Last sync</span>
+            <strong class="export-run-status status-{{ .Sftp.LastExportStatus }}">
+                {{ if .Sftp.LastExportStatus }}{{ .Sftp.LastExportStatus }}{{ else }}never{{ end }}
+            </strong>
+            <small>{{ if .Sftp.LastExportAt }}{{ .Sftp.LastExportAt.Format "Jan 02, 2006 15:04" }}{{ else }}No sync recorded{{ end }}</small>
+        </div>
+    </div>
+
+    {{ if .Sftp.LastExportError }}
+    <div class="export-error-note">
+        <i class="bx bx-error-circle"></i>
+        <div><strong>Last sync reported an issue</strong><span>{{ .Sftp.LastExportError }}</span></div>
     </div>
     {{ end }}
 
-    <div class="table-wrap">
-        <table>
-            <thead><tr><th>Node</th><th>IP</th><th>Last Backup</th><th>Status</th></tr></thead>
-            <tbody>
-            {{ if .Nodes }}
-                {{ range .Nodes }}
-                <tr>
-                    <td style="font-weight: 600;">{{ .Name }}</td>
-                    <td class="font-mono">{{ .IP }}</td>
-                    <td class="text-secondary">
-                        {{ if .LastBackupAt }}{{ .LastBackupAt.Format "02/01/2006 15:04" }}{{ else }}-{{ end }}
-                    </td>
-                    <td>
-                        <span class="badge {{ if eq .LastStatus "success" }}badge-success{{ else if eq .LastStatus "error" }}badge-danger{{ else }}badge-muted{{ end }}">
-                            {{ if eq .LastStatus "success" }}OK{{ else if eq .LastStatus "error" }}Error{{ else }}Pending{{ end }}
-                        </span>
-                    </td>
-                </tr>
-                {{ end }}
-            {{ else }}
-                <tr><td colspan="4" class="table-empty">No active nodes.</td></tr>
-            {{ end }}
-            </tbody>
-        </table>
+    <div class="export-toolbar">
+        <div class="search-box export-search">
+            <i class="bx bx-search"></i>
+            <input type="search"
+                   class="form-input"
+                   x-model.debounce.150ms="search"
+                   placeholder="Search by node, IP, vendor or group..."
+                   aria-label="Search export nodes" />
+        </div>
+        <select class="form-input export-filter" x-model="status" aria-label="Filter export status">
+            <option value="all">All export statuses</option>
+            <option value="pending">Pending export</option>
+            <option value="exported">Exported</option>
+            <option value="unavailable">Without backup</option>
+        </select>
     </div>
-</div>
+
+    <div class="export-table-card">
+        <div class="export-table-meta">
+            <div><strong>Latest backups</strong><span>One export candidate per active node</span></div>
+            <span>{{ len .ExportNodes }} nodes</span>
+        </div>
+        <div class="export-table-wrap">
+            <table class="export-table">
+                <thead>
+                    <tr>
+                        <th>Node</th>
+                        <th>Connection</th>
+                        <th>Latest successful backup</th>
+                        <th>Export status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {{ if .ExportNodes }}
+                    {{ range .ExportNodes }}
+                    <tr x-show="('{{ .Name | js }} {{ .IP | js }} {{ .Vendor | js }} {{ .Group | js }}'.toLowerCase().includes(search.toLowerCase())) && (status === 'all' || status === '{{ .ExportState }}')">
+                        <td>
+                            <div class="export-node">
+                                <span class="export-node-icon"><i class="bx bx-server"></i></span>
+                                <div>
+                                    <strong>{{ .Name }}</strong>
+                                    <span>{{ if .Group }}{{ .Group }}{{ else }}General{{ end }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="export-connection">
+                                <strong class="font-mono">{{ .IP }}</strong>
+                                <span>{{ .Vendor }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            {{ if .BackupAt }}
+                            <div class="export-backup-date">
+                                <strong>{{ .BackupAt.Format "Jan 02, 2006" }}</strong>
+                                <span>{{ .BackupAt.Format "15:04" }}</span>
+                            </div>
+                            {{ else }}
+                            <span class="export-no-backup">No successful backup available</span>
+                            {{ end }}
+                        </td>
+                        <td>
+                            <span class="export-status status-{{ .ExportState }}">
+                                <i class="bx {{ if eq .ExportState "exported" }}bx-check-circle{{ else if eq .ExportState "pending" }}bx-time-five{{ else }}bx-minus-circle{{ end }}"></i>
+                                {{ if eq .ExportState "exported" }}Exported{{ else if eq .ExportState "pending" }}Pending{{ else }}Unavailable{{ end }}
+                            </span>
+                        </td>
+                    </tr>
+                    {{ end }}
+                {{ else }}
+                    <tr>
+                        <td colspan="4" class="export-empty">
+                            <i class="bx bx-server"></i>
+                            <strong>No active nodes</strong>
+                            <span>Enable a node to include its latest backup in exports.</span>
+                        </td>
+                    </tr>
+                {{ end }}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>

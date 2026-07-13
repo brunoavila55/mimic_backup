@@ -20,7 +20,7 @@
                 Access control
             </div>
             <h1 class="page-title">Users</h1>
-            <p class="page-desc">Manage account access, administrator coverage and read-only viewers from one place.</p>
+            <p class="page-desc">Manage team accounts and assign the right operational access to each person.</p>
         </div>
         <a href="/settings/users/new" class="btn btn-primary">
             <i class="bx bx-plus"></i>
@@ -44,17 +44,24 @@
             </div>
         </div>
         <div class="users-metric success">
+            <i class="bx bx-wrench"></i>
+            <div>
+                <strong>{{ .UserStats.Operators }}</strong>
+                <span>Operators</span>
+            </div>
+        </div>
+        <div class="users-metric info">
+            <i class="bx bx-search-alt"></i>
+            <div>
+                <strong>{{ .UserStats.Auditors }}</strong>
+                <span>Auditors</span>
+            </div>
+        </div>
+        <div class="users-metric warning">
             <i class="bx bx-show"></i>
             <div>
                 <strong>{{ .UserStats.Viewers }}</strong>
                 <span>Viewers</span>
-            </div>
-        </div>
-        <div class="users-metric warning">
-            <i class="bx bx-envelope"></i>
-            <div>
-                <strong>{{ .UserStats.MissingEmail }}</strong>
-                <span>Missing email</span>
             </div>
         </div>
     </div>
@@ -70,6 +77,8 @@
         <div class="users-filter-group" role="group" aria-label="User filter">
             <button type="button" class="users-filter-btn" :class="{ 'active': role === 'all' }" @click="role = 'all'">All</button>
             <button type="button" class="users-filter-btn" :class="{ 'active': role === 'administrator' }" @click="role = 'administrator'">Admins</button>
+            <button type="button" class="users-filter-btn" :class="{ 'active': role === 'operator' }" @click="role = 'operator'">Operators</button>
+            <button type="button" class="users-filter-btn" :class="{ 'active': role === 'auditor' }" @click="role = 'auditor'">Auditors</button>
             <button type="button" class="users-filter-btn" :class="{ 'active': role === 'viewer' }" @click="role = 'viewer'">Viewers</button>
             <button type="button" class="users-filter-btn" :class="{ 'active': role === 'current' }" @click="role = 'current'">You</button>
         </div>
@@ -81,7 +90,7 @@
         {{ $isCurrent := eq (printf "%v" .ID) $.CurrentUserIDString }}
         <article class="user-card"
                  data-user-card
-                 data-role="{{ if eq .Role "Administrator" }}administrator{{ else }}viewer{{ end }}"
+                 data-role="{{ if eq .Role "Administrator" }}administrator{{ else if eq .Role "Operator" }}operator{{ else if eq .Role "Auditor" }}auditor{{ else }}viewer{{ end }}"
                  data-state="{{ if $isCurrent }}current{{ else }}other{{ end }}"
                  data-search="{{ .Username }} {{ .Email }} {{ .Role }}"
                  x-show="matches($el)"
@@ -98,6 +107,10 @@
                         {{ end }}
                         {{ if eq .Role "Administrator" }}
                         <span class="badge badge-success"><i class="bx bx-shield-quarter"></i> Administrator</span>
+                        {{ else if eq .Role "Operator" }}
+                        <span class="badge badge-accent"><i class="bx bx-wrench"></i> Operator</span>
+                        {{ else if eq .Role "Auditor" }}
+                        <span class="badge badge-info"><i class="bx bx-search-alt"></i> Auditor</span>
                         {{ else }}
                         <span class="badge badge-muted"><i class="bx bx-show"></i> Viewer</span>
                         {{ end }}
@@ -112,8 +125,8 @@
 
             <div class="user-access">
                 <span>Access level</span>
-                <strong>{{ if eq .Role "Administrator" }}Full{{ else }}Read-only{{ end }}</strong>
-                <small>{{ if eq .Role "Administrator" }}Can manage settings and run actions.{{ else }}Can view inventory and backup data.{{ end }}</small>
+                <strong>{{ if eq .Role "Administrator" }}Full{{ else if eq .Role "Operator" }}Operational{{ else if eq .Role "Auditor" }}Audit{{ else }}Read-only{{ end }}</strong>
+                <small>{{ if eq .Role "Administrator" }}Manages users, settings and every operation.{{ else if eq .Role "Operator" }}Manages nodes, credentials, routines and backup runs.{{ else if eq .Role "Auditor" }}Reviews policies, Golden Configs and system logs.{{ else }}Views inventory, backups and status only.{{ end }}</small>
             </div>
 
             <div class="user-actions">

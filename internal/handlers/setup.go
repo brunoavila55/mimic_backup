@@ -1,7 +1,10 @@
 package handlers
 
 import (
+	"log"
 	"mimic/internal/models"
+	"net/mail"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
@@ -45,8 +48,14 @@ func (h *SetupHandler) GetCreateSuperuser(c *fiber.Ctx) error {
 }
 
 func (h *SetupHandler) PostCreateSuperuser(c *fiber.Ctx) error {
-	username := c.FormValue("username")
-	email := c.FormValue("email")
+	userMutationMu.Lock()
+	defer userMutationMu.Unlock()
+	if h.hasUsers() {
+		return c.Redirect("/login")
+	}
+
+	username := strings.TrimSpace(c.FormValue("username"))
+	email := strings.TrimSpace(c.FormValue("email"))
 	password := c.FormValue("password")
 	confirm := c.FormValue("confirm_password")
 
@@ -58,11 +67,20 @@ func (h *SetupHandler) PostCreateSuperuser(c *fiber.Ctx) error {
 		})
 	}
 
-	if len(password) < 6 {
+	if strings.ContainsAny(username, " \t\r\n") {
+		return c.Render("setup_superuser", fiber.Map{"Title": "Create Administrator", "Step": 2, "Error": "Username cannot contain spaces"})
+	}
+	if email != "" {
+		if _, err := mail.ParseAddress(email); err != nil {
+			return c.Render("setup_superuser", fiber.Map{"Title": "Create Administrator", "Step": 2, "Error": "Enter a valid email address"})
+		}
+	}
+
+	if len(password) < 8 {
 		return c.Render("setup_superuser", fiber.Map{
 			"Title": "Create Administrator",
 			"Step":  2,
-			"Error": "Password must be at least 6 characters long",
+			"Error": "Password must be at least 8 characters long",
 		})
 	}
 
@@ -93,9 +111,10 @@ func (h *SetupHandler) PostCreateSuperuser(c *fiber.Ctx) error {
 		return c.Render("setup_superuser", fiber.Map{
 			"Title": "Create Administrator",
 			"Step":  2,
-			"Error": "Error creating user: " + err.Error(),
+			"Error": "Could not create the administrator user",
 		})
 	}
+	writeAuditLog(h.DB, c, "success", "user", "Initial administrator created", "username="+user.Username)
 
 	return c.Redirect("/login")
 }
@@ -105,6 +124,9 @@ func (h *SetupHandler) hasUsers() bool {
 		return false
 	}
 	var count int64
-	h.DB.Model(&models.User{}).Count(&count)
+	if err := h.DB.Model(&models.User{}).Count(&count).Error; err != nil {
+		log.Printf("[Setup] Failed to count users: %v", err)
+		return false
+	}
 	return count > 0
 }

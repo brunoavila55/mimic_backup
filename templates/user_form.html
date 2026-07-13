@@ -4,9 +4,13 @@
         showPassword: false,
         isSelf: {{ if .IsSelf }}true{{ else }}false{{ end }},
         roleDescription() {
-            return this.role === 'Administrator'
-                ? 'Full access to settings, node actions, imports and exports.'
-                : 'Read-only access to inventory, backups and status views.';
+            const descriptions = {
+                Administrator: 'Full access to users, settings, policies and every operation.',
+                Operator: 'Can manage nodes, credentials, routines, exports and backup runs.',
+                Auditor: 'Read-only access to security rules, Golden Configs and system logs.',
+                Viewer: 'Read-only access to inventory, backups and status views.'
+            };
+            return descriptions[this.role] || descriptions.Viewer;
         }
      }">
     <div class="user-form-header">
@@ -102,6 +106,8 @@
                     <label class="form-label" for="user-role">Role</label>
                     <select id="user-role" name="role" class="form-input" x-model="role" required>
                         <option value="Viewer" {{ if eq .EditUser.Role "Viewer" }}selected{{ end }}>Viewer</option>
+                        <option value="Auditor" {{ if eq .EditUser.Role "Auditor" }}selected{{ end }}>Auditor</option>
+                        <option value="Operator" {{ if eq .EditUser.Role "Operator" }}selected{{ end }}>Operator</option>
                         <option value="Administrator" {{ if eq .EditUser.Role "Administrator" }}selected{{ end }}>Administrator</option>
                     </select>
                     <div class="form-hint" x-text="roleDescription()"></div>

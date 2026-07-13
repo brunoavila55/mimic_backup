@@ -43,6 +43,13 @@ func getSecretKey() ([]byte, error) {
 	return []byte(b64Key), nil
 }
 
+// ValidateSecretKey forces key validation during application startup instead
+// of waiting until the first credential is encrypted or decrypted.
+func ValidateSecretKey() error {
+	_, err := getSecretKey()
+	return err
+}
+
 // Encrypt string using AES-GCM
 func Encrypt(text string) (string, error) {
 	key, err := getSecretKey()

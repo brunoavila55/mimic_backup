@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"log"
 	"mimic/internal/models"
@@ -24,24 +25,46 @@ type SchedulerService struct {
 	ssh       *ssh.SSHService
 	sftp      *sftp.SftpService
 	isRunning int32
+	nodeLocks sync.Map
+	stop      chan struct{}
+	stopped   chan struct{}
+	stopOnce  sync.Once
+	jobs      sync.WaitGroup
 }
 
 func NewScheduler(db *gorm.DB) *SchedulerService {
 	return &SchedulerService{
-		db:   db,
-		ssh:  &ssh.SSHService{DB: db},
-		sftp: &sftp.SftpService{},
+		db:      db,
+		ssh:     &ssh.SSHService{DB: db},
+		sftp:    &sftp.SftpService{DB: db},
+		stop:    make(chan struct{}),
+		stopped: make(chan struct{}),
 	}
 }
 
 func (s *SchedulerService) Start() {
 	ticker := time.NewTicker(1 * time.Minute)
 	go func() {
-		for range ticker.C {
-			s.CheckBackups()
-			s.CheckExports()
+		defer ticker.Stop()
+		defer close(s.stopped)
+		for {
+			select {
+			case <-ticker.C:
+				s.CheckBackups()
+				s.CheckExports()
+			case <-s.stop:
+				return
+			}
 		}
 	}()
+}
+
+func (s *SchedulerService) Stop() {
+	s.stopOnce.Do(func() {
+		close(s.stop)
+		<-s.stopped
+		s.jobs.Wait()
+	})
 }
 
 func (s *SchedulerService) CheckBackups() {
@@ -50,16 +73,37 @@ func (s *SchedulerService) CheckBackups() {
 		return
 	}
 	defer atomic.StoreInt32(&s.isRunning, 0)
+	s.checkBackupsLocked()
+}
 
+// StartBackupCycle starts a full cycle without holding the HTTP request open.
+func (s *SchedulerService) StartBackupCycle() bool {
+	if !atomic.CompareAndSwapInt32(&s.isRunning, 0, 1) {
+		return false
+	}
+	s.jobs.Add(1)
+	go func() {
+		defer s.jobs.Done()
+		defer atomic.StoreInt32(&s.isRunning, 0)
+		s.checkBackupsLocked()
+	}()
+	return true
+}
+
+func (s *SchedulerService) checkBackupsLocked() {
 	var nodes []models.Node
 	now := time.Now()
 	// Find nodes that need backup
-	s.db.Preload("Credential").
+	if err := s.db.Preload("Credential").
 		Preload("AccessAgent").
 		Preload("Routine").
 		Joins("LEFT JOIN backup_routines ON backup_routines.id = nodes.routine_id AND backup_routines.deleted_at IS NULL").
 		Where("nodes.enabled = ? AND (nodes.next_backup_at IS NULL OR nodes.next_backup_at <= ?) AND (nodes.schedule_type <> ? OR backup_routines.enabled = ?)", true, now, "routine", true).
-		Find(&nodes)
+		Find(&nodes).Error; err != nil {
+		log.Printf("[Scheduler] Failed to load pending nodes: %v", err)
+		s.recordLog("error", "backup", "Failed to load pending backup jobs", err.Error())
+		return
+	}
 
 	if len(nodes) == 0 {
 		return
@@ -87,6 +131,52 @@ func (s *SchedulerService) CheckBackups() {
 }
 
 func (s *SchedulerService) RunBackup(node *models.Node) {
+	if !s.tryLockNode(node.ID) {
+		log.Printf("[Scheduler] Backup for node %s is already running; duplicate request skipped.", node.Name)
+		return
+	}
+	defer s.unlockNode(node.ID)
+	s.runBackup(node)
+}
+
+// StartBackup reserves the node before starting an asynchronous job.
+func (s *SchedulerService) StartBackup(node *models.Node) bool {
+	if !s.tryLockNode(node.ID) {
+		return false
+	}
+	s.jobs.Add(1)
+	go func() {
+		defer s.jobs.Done()
+		defer s.unlockNode(node.ID)
+		s.runBackup(node)
+	}()
+	return true
+}
+
+func (s *SchedulerService) tryLockNode(nodeID uint) bool {
+	value, _ := s.nodeLocks.LoadOrStore(nodeID, make(chan struct{}, 1))
+	lock := value.(chan struct{})
+	select {
+	case lock <- struct{}{}:
+		return true
+	default:
+		return false
+	}
+}
+
+func (s *SchedulerService) unlockNode(nodeID uint) {
+	if value, ok := s.nodeLocks.Load(nodeID); ok {
+		<-value.(chan struct{})
+	}
+}
+
+func (s *SchedulerService) recordLog(level, category, message, details string) {
+	if err := s.db.Create(&models.SystemLog{Level: level, Category: category, Message: message, Details: details}).Error; err != nil {
+		log.Printf("[Audit] Failed to persist system log: %v", err)
+	}
+}
+
+func (s *SchedulerService) runBackup(node *models.Node) {
 	log.Printf("Starting backup for node: %s", node.Name)
 	config, err := s.ssh.PerformBackup(node)
 
@@ -104,7 +194,11 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 	// Logic for versioning: only create new backup if successful and hash changed
 	if status == "success" {
 		var lastBackup models.NodeBackup
-		s.db.Where("node_id = ? AND status = 'success'", node.ID).Order("version desc").First(&lastBackup)
+		if err := s.db.Where("node_id = ? AND status = 'success'", node.ID).Order("version desc").First(&lastBackup).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Printf("[Scheduler] Failed to load backup history for node %s: %v", node.Name, err)
+			s.recordLog("error", "backup", fmt.Sprintf("Failed to load backup history for %s", node.Name), err.Error())
+			return
+		}
 
 		version := 1
 		if lastBackup.ID != 0 {
@@ -124,7 +218,11 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 					DiffAdditions: diffRes.Additions,
 					DiffDeletions: diffRes.Deletions,
 				}
-				s.db.Create(&backup)
+				if err := s.db.Create(&backup).Error; err != nil {
+					log.Printf("[Scheduler] Failed to persist backup for node %s: %v", node.Name, err)
+					s.recordLog("error", "backup", fmt.Sprintf("Failed to persist backup for %s", node.Name), err.Error())
+					return
+				}
 
 				// Disparar alerta se o diff ocorreu
 				isSnoozed := node.AlertSnoozeUntil != nil && time.Now().Before(*node.AlertSnoozeUntil)
@@ -150,7 +248,11 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 				Error:   errorMessage,
 				Version: 1,
 			}
-			s.db.Create(&backup)
+			if err := s.db.Create(&backup).Error; err != nil {
+				log.Printf("[Scheduler] Failed to persist first backup for node %s: %v", node.Name, err)
+				s.recordLog("error", "backup", fmt.Sprintf("Failed to persist backup for %s", node.Name), err.Error())
+				return
+			}
 		}
 
 		// Calculate Security & Compliance Score
@@ -196,6 +298,18 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 
 	} else {
 		// Deduplicação (State Transition): Só alerta falha se o node não estava falhando antes
+		var lastBackup models.NodeBackup
+		version := 0
+		if err := s.db.Where("node_id = ? AND status = 'success'", node.ID).Order("version desc").First(&lastBackup).Error; err == nil {
+			version = lastBackup.Version
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Printf("[Scheduler] Failed to load last successful backup for node %s: %v", node.Name, err)
+		}
+		failedBackup := models.NodeBackup{NodeID: node.ID, Version: version, Status: status, Error: errorMessage}
+		if err := s.db.Create(&failedBackup).Error; err != nil {
+			log.Printf("[Scheduler] Failed to persist failed attempt for node %s: %v", node.Name, err)
+		}
+
 		if node.LastStatus != "error" {
 			isSnoozed := node.AlertSnoozeUntil != nil && time.Now().Before(*node.AlertSnoozeUntil)
 			if !isSnoozed {
@@ -237,13 +351,28 @@ func (s *SchedulerService) RunBackup(node *models.Node) {
 	next := now.Add(time.Duration(freqHours) * time.Hour)
 	node.NextBackupAt = &next
 
-	s.db.Save(node)
+	if err := s.db.Model(&models.Node{}).Where("id = ?", node.ID).Updates(map[string]any{
+		"last_status": status, "last_error": errorMessage,
+		"last_backup_at": node.LastBackupAt, "next_backup_at": node.NextBackupAt,
+	}).Error; err != nil {
+		log.Printf("[Scheduler] Failed to update node %s after backup: %v", node.Name, err)
+		s.recordLog("error", "backup", fmt.Sprintf("Failed to update node %s after backup", node.Name), err.Error())
+		return
+	}
+	if status == "success" {
+		s.recordLog("success", "backup", fmt.Sprintf("Backup completed for %s", node.Name), "")
+	} else {
+		s.recordLog("error", "backup", fmt.Sprintf("Backup failed for %s", node.Name), errorMessage)
+	}
 }
 
 func (s *SchedulerService) CheckExports() {
 	var settings models.SftpSettings
 	if err := s.db.First(&settings).Error; err != nil {
-		return // No settings found
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Printf("[Scheduler] Failed to load SFTP settings: %v", err)
+		}
+		return
 	}
 
 	if !settings.Enabled {
@@ -253,19 +382,33 @@ func (s *SchedulerService) CheckExports() {
 	if strings.TrimSpace(settings.Host) == "" || strings.TrimSpace(settings.Username) == "" || strings.TrimSpace(settings.Password) == "" {
 		settings.LastExportStatus = "error"
 		settings.LastExportError = "SFTP settings are incomplete"
-		s.db.Save(&settings)
+		if err := s.db.Save(&settings).Error; err != nil {
+			log.Printf("[Scheduler] Failed to save incomplete SFTP status: %v", err)
+		}
 		return
 	}
 
 	now := time.Now()
-	// SyncTime is "HH:MM". We check if current time matches.
-	if settings.SyncTime != "" && now.Format("15:04") != settings.SyncTime {
-		return
+	if settings.SyncTime != "" {
+		scheduledClock, err := time.Parse("15:04", settings.SyncTime)
+		if err != nil {
+			log.Printf("[Scheduler] Invalid SFTP sync time %q", settings.SyncTime)
+			return
+		}
+		scheduledAt := time.Date(now.Year(), now.Month(), now.Day(), scheduledClock.Hour(), scheduledClock.Minute(), 0, 0, now.Location())
+		alreadyCompleted := settings.LastExportStatus == "success" && settings.LastExportAt != nil && !settings.LastExportAt.Before(scheduledAt)
+		if now.Before(scheduledAt) || alreadyCompleted {
+			return
+		}
 	}
 
 	var backups []models.NodeBackup
 	// Only fetch successful backups that haven't been exported yet
-	s.db.Preload("Node").Where("status = ? AND exported = ?", "success", false).Find(&backups)
+	if err := s.db.Preload("Node").Where("status = ? AND exported = ?", "success", false).Find(&backups).Error; err != nil {
+		log.Printf("[Scheduler] Failed to load pending SFTP exports: %v", err)
+		s.recordLog("error", "export", "Failed to load pending SFTP exports", err.Error())
+		return
+	}
 
 	if len(backups) == 0 {
 		return
@@ -278,7 +421,11 @@ func (s *SchedulerService) CheckExports() {
 	for _, backup := range backups {
 		if err := s.sftp.Export(&backup, &settings); err == nil {
 			backup.Exported = true
-			s.db.Save(&backup)
+			if err := s.db.Save(&backup).Error; err != nil {
+				lastErr = err.Error()
+				log.Printf("[Scheduler] Export completed but backup state could not be saved for ID %d: %v", backup.ID, err)
+				continue
+			}
 			successCount++
 			log.Printf("[Scheduler] Successfully exported backup ID %d to SFTP.", backup.ID)
 		} else {
@@ -298,5 +445,12 @@ func (s *SchedulerService) CheckExports() {
 		settings.LastExportStatus = "error"
 		settings.LastExportError = lastErr
 	}
-	s.db.Save(&settings)
+	if err := s.db.Save(&settings).Error; err != nil {
+		log.Printf("[Scheduler] Failed to save SFTP export status: %v", err)
+	}
+	if settings.LastExportStatus == "success" {
+		s.recordLog("success", "export", fmt.Sprintf("Scheduled SFTP export completed (%d backups)", successCount), "")
+	} else {
+		s.recordLog("error", "export", fmt.Sprintf("Scheduled SFTP export finished with status %s", settings.LastExportStatus), settings.LastExportError)
+	}
 }

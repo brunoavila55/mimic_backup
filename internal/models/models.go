@@ -11,7 +11,7 @@ type User struct {
 	Username string `gorm:"uniqueIndex"`
 	Password string
 	Email    string
-	Role     string // Administrator, Viewer
+	Role     string // Administrator, Operator, Auditor, Viewer
 	Avatar   string
 }
 
@@ -95,7 +95,6 @@ type NodeBackup struct {
 	Exported      bool `gorm:"default:false;index"`
 	DiffAdditions int  `gorm:"default:0"`
 	DiffDeletions int  `gorm:"default:0"`
-	CreatedAt     time.Time
 }
 
 type SftpSettings struct {
@@ -104,6 +103,7 @@ type SftpSettings struct {
 	Port             int `gorm:"default:22"`
 	Username         string
 	Password         string
+	HostFingerprint  string
 	Path             string
 	Enabled          bool   `gorm:"default:false"`
 	SyncTime         string `gorm:"default:'23:00'"`

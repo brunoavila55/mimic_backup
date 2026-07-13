@@ -226,7 +226,9 @@ func RunAudit(db *gorm.DB, node *models.Node, backupVersion int, configText stri
 	}
 
 	node.SecurityScore = score
-	db.Save(node)
+	if err := db.Model(&models.Node{}).Where("id = ?", node.ID).Update("security_score", score).Error; err != nil {
+		log.Printf("[Audit] Failed to update score for node %d: %v", node.ID, err)
+	}
 
 	// Determine newly introduced violations
 	var newViolations []models.SecurityViolation

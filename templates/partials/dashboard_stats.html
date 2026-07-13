@@ -12,7 +12,7 @@
             <i class="bx bx-server"></i>
             View nodes
         </a>
-        {{ if eq .Role "Administrator" }}
+        {{ if or (eq .Role "Administrator") (eq .Role "Operator") }}
         <button hx-post="/trigger-backups" hx-swap="none" class="btn btn-primary">
             <i class="bx bx-refresh"></i>
             Run backups
@@ -47,7 +47,7 @@
             <strong>{{ len .FailedNodes }}</strong>
             <small>need review</small>
         </a>
-        {{ if eq .Role "Administrator" }}
+        {{ if or (eq .Role "Administrator") (eq .Role "Operator") }}
         <a href="/settings/export" class="dashboard-kpi {{ if gt .Stats.SftpUnsyncedNodes 0 }}warning{{ else }}success{{ end }}">
             <span>SFTP pending</span>
             <strong>{{ .Stats.SftpUnsyncedNodes }}</strong>
@@ -88,7 +88,7 @@
                         </div>
                         <p>{{ if .LastError }}{{ .LastError }}{{ else }}Error in the latest backup.{{ end }}</p>
                     </div>
-                    {{ if eq $.Role "Administrator" }}
+                    {{ if or (eq $.Role "Administrator") (eq $.Role "Operator") }}
                         <button class="btn btn-sm btn-ghost" hx-post="/nodes/{{ .ID }}/trigger" hx-swap="none">
                             Run
                         </button>
@@ -106,7 +106,7 @@
                         </div>
                         <p>No successful backup for more than 48 hours.</p>
                     </div>
-                    {{ if eq $.Role "Administrator" }}
+                    {{ if or (eq $.Role "Administrator") (eq $.Role "Operator") }}
                         <button class="btn btn-sm btn-ghost" hx-post="/nodes/{{ .ID }}/trigger" hx-swap="none">
                             Run
                         </button>

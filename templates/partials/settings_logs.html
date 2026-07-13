@@ -1,35 +1,117 @@
-<div>
-    <h2 class="settings-section-title">System Logs</h2>
-    <p class="settings-section-desc">Last 200 system activity records.</p>
-
-    <div class="table-wrap">
-        <table>
-            <thead>
-                <tr>
-                    <th>Level</th>
-                    <th>Category</th>
-                    <th>Message</th>
-                    <th>Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{ if .Logs }}
-                {{ range .Logs }}
-                <tr>
-                    <td>
-                        <span class="badge {{ if eq .Level "success" }}badge-success{{ else if eq .Level "error" }}badge-danger{{ else if eq .Level "warning" }}badge-warning{{ else }}badge-info{{ end }}">
-                            {{ .Level }}
-                        </span>
-                    </td>
-                    <td class="text-secondary">{{ .Category }}</td>
-                    <td>{{ .Message }}</td>
-                    <td class="text-secondary" style="white-space: nowrap;">{{ .CreatedAt.Format "02/01/2006 15:04:05" }}</td>
-                </tr>
-                {{ end }}
-                {{ else }}
-                <tr><td colspan="4" class="table-empty">No logs recorded.</td></tr>
-                {{ end }}
-            </tbody>
-        </table>
+<section id="logs-tab" class="logs-page" x-data="{ search: '', level: 'all', category: 'all' }">
+    <div class="logs-hero">
+        <div>
+            <div class="nodes-eyebrow">
+                <i class="bx bx-pulse"></i>
+                Operational activity
+            </div>
+            <h2>System Logs</h2>
+            <p>Review recent backup, export, authentication and system events in one timeline.</p>
+        </div>
+        <button type="button"
+                class="btn btn-secondary"
+                hx-get="/settings/logs"
+                hx-target="#settings-content"
+                hx-swap="innerHTML"
+                hx-disabled-elt="this">
+            <i class="bx bx-refresh"></i>
+            <span>Refresh activity</span>
+            <i class="bx bx-loader-alt bx-spin htmx-indicator"></i>
+        </button>
     </div>
-</div>
+
+    <div class="logs-metrics">
+        <div class="logs-metric">
+            <i class="bx bx-list-ul"></i>
+            <div><strong>{{ .LogStats.Loaded }}</strong><span>Records loaded</span></div>
+        </div>
+        <div class="logs-metric danger">
+            <i class="bx bx-error-circle"></i>
+            <div><strong>{{ .LogStats.Errors }}</strong><span>Errors</span></div>
+        </div>
+        <div class="logs-metric warning">
+            <i class="bx bx-error"></i>
+            <div><strong>{{ .LogStats.Warnings }}</strong><span>Warnings</span></div>
+        </div>
+        <div class="logs-metric success">
+            <i class="bx bx-check-circle"></i>
+            <div><strong>{{ .LogStats.Success }}</strong><span>Successful events</span></div>
+        </div>
+    </div>
+
+    <div class="logs-toolbar">
+        <div class="search-box logs-search">
+            <i class="bx bx-search"></i>
+            <input type="search"
+                   class="form-input"
+                   x-model.debounce.150ms="search"
+                   placeholder="Search messages, details or categories..."
+                   aria-label="Search system logs" />
+        </div>
+        <div class="logs-filter-group">
+            <select class="form-input logs-filter" x-model="level" aria-label="Filter by log level">
+                <option value="all">All levels</option>
+                <option value="error">Errors</option>
+                <option value="warning">Warnings</option>
+                <option value="success">Success</option>
+                <option value="info">Information</option>
+            </select>
+            <select class="form-input logs-filter" x-model="category" aria-label="Filter by log category">
+                <option value="all">All categories</option>
+                {{ range .LogCategories }}
+                <option value="{{ . }}">{{ . }}</option>
+                {{ end }}
+            </select>
+        </div>
+    </div>
+
+    <div class="logs-feed-card">
+        <div class="logs-feed-meta">
+            <div>
+                <strong>Activity feed</strong>
+                <span>Most recent events appear first</span>
+            </div>
+            <span>Latest 200 records</span>
+        </div>
+
+        {{ if .Logs }}
+        <div class="logs-feed">
+            {{ range .Logs }}
+            <article class="log-entry level-{{ .Level }}"
+                     x-show="('{{ .Message | js }} {{ .Details | js }} {{ .Category | js }} {{ .Level | js }}'.toLowerCase().includes(search.toLowerCase())) && (level === 'all' || level === '{{ .Level | js }}') && (category === 'all' || category === '{{ .Category | js }}')">
+                <div class="log-entry-marker">
+                    <span>
+                        <i class="bx {{ if eq .Level "error" }}bx-x-circle{{ else if eq .Level "warning" }}bx-error{{ else if eq .Level "success" }}bx-check-circle{{ else }}bx-info-circle{{ end }}"></i>
+                    </span>
+                </div>
+                <div class="log-entry-body">
+                    <div class="log-entry-heading">
+                        <div class="log-entry-tags">
+                            <span class="log-level">{{ .Level }}</span>
+                            <span class="log-category"><i class="bx bx-folder"></i>{{ if .Category }}{{ .Category }}{{ else }}system{{ end }}</span>
+                        </div>
+                        <time datetime="{{ .CreatedAt.Format "2006-01-02T15:04:05Z07:00" }}">
+                            <strong>{{ .CreatedAt.Format "Jan 02, 2006" }}</strong>
+                            <span>{{ .CreatedAt.Format "15:04:05" }}</span>
+                        </time>
+                    </div>
+                    <p class="log-message">{{ .Message }}</p>
+                    {{ if .Details }}
+                    <details class="log-details">
+                        <summary><i class="bx bx-code-alt"></i>View technical details</summary>
+                        <pre>{{ .Details }}</pre>
+                    </details>
+                    {{ end }}
+                </div>
+            </article>
+            {{ end }}
+        </div>
+        {{ else }}
+        <div class="logs-empty">
+            <i class="bx bx-list-check"></i>
+            <strong>No system activity recorded</strong>
+            <span>Backup, export and system events will appear here automatically.</span>
+        </div>
+        {{ end }}
+    </div>
+</section>

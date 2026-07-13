@@ -12,7 +12,7 @@ import (
 func main() {
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		dsn = "host=localhost user=postgres password=123456 dbname=mimic_db port=5432 sslmode=disable"
+		log.Fatal("DATABASE_URL is required")
 	}
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})

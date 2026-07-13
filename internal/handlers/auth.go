@@ -28,15 +28,20 @@ func (h *AuthHandler) PostLogin(c *fiber.Ctx) error {
 
 	var user models.User
 	if err := h.DB.Where("username = ?", username).First(&user).Error; err != nil {
+		writeAuditLog(h.DB, c, "warning", "auth", "Failed login attempt", "username="+username)
 		return c.Render("login", fiber.Map{"Title": "Login", "Error": "Invalid credentials", "LoginUsername": username})
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+		writeAuditLog(h.DB, c, "warning", "auth", "Failed login attempt", "username="+username)
 		return c.Render("login", fiber.Map{"Title": "Login", "Error": "Invalid credentials", "LoginUsername": username})
 	}
 
 	sess, err := h.Store.Get(c)
 	if err != nil {
+		return c.Render("login", fiber.Map{"Title": "Login", "Error": "Session error", "LoginUsername": username})
+	}
+	if err := sess.Regenerate(); err != nil {
 		return c.Render("login", fiber.Map{"Title": "Login", "Error": "Session error", "LoginUsername": username})
 	}
 
@@ -47,14 +52,18 @@ func (h *AuthHandler) PostLogin(c *fiber.Ctx) error {
 	if err := sess.Save(); err != nil {
 		return c.Render("login", fiber.Map{"Title": "Login", "Error": "Error saving session", "LoginUsername": username})
 	}
+	writeAuditLog(h.DB, c, "success", "auth", "User logged in", "username="+user.Username)
 
 	return c.Redirect("/", 302)
 }
 
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
+	writeAuditLog(h.DB, c, "info", "auth", "User logged out", "")
 	sess, err := h.Store.Get(c)
 	if err == nil {
-		sess.Destroy()
+		if err := sess.Destroy(); err != nil {
+			return c.Status(fiber.StatusInternalServerError).SendString("Could not destroy session")
+		}
 	}
 	return c.Redirect("/login", 302)
 }

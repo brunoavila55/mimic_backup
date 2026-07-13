@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync"
 	"time"
 
 	"mimic/internal/models"
@@ -31,6 +32,7 @@ func (s *SSHService) Connect(node *models.Node) (*ssh.Client, error) {
 		authMethods = append(authMethods, ssh.PublicKeys(signer))
 	} else {
 		encPass := node.Password
+		allowLegacyPlaintext := false
 		// Priority: Credential (modern) > AccessAgent (legacy) > direct node credentials
 		if node.CredentialID != nil && node.Credential != nil {
 			encPass = node.Credential.Password
@@ -39,40 +41,55 @@ func (s *SSHService) Connect(node *models.Node) (*ssh.Client, error) {
 			}
 		} else if node.AccessAgentID != nil && node.AccessAgent != nil {
 			encPass = node.AccessAgent.Password
+			allowLegacyPlaintext = true
 			if node.AccessAgent.Username != "" {
 				username = node.AccessAgent.Username
 			}
 		}
-		
+
 		password, err := crypto.Decrypt(encPass)
 		if err != nil {
-			// If decryption fails, try raw password (fallback for old data)
+			if !allowLegacyPlaintext {
+				return nil, fmt.Errorf("failed to decrypt SSH password: %w", err)
+			}
+			// AccessAgent is a legacy model whose existing rows may still be plaintext.
 			password = encPass
 		}
 		authMethods = append(authMethods, ssh.Password(password))
 	}
 
-	var hostKeyCallback ssh.HostKeyCallback
-
-	if !node.VerifyHostKey {
-		hostKeyCallback = ssh.InsecureIgnoreHostKey()
-	} else {
-		hostKeyCallback = func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-			fingerprint := ssh.FingerprintSHA256(key)
-			if node.SSHPublicFingerprint == "" {
-				// TOFU: Trust on First Use
-				if s.DB != nil {
-					node.SSHPublicFingerprint = fingerprint
-					s.DB.Save(node)
-				}
-				return nil
+	hostKeyCallback := func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+		fingerprint := ssh.FingerprintSHA256(key)
+		if node.SSHPublicFingerprint == "" {
+			// TOFU: Trust on First Use
+			if s.DB == nil || node.ID == 0 {
+				return fmt.Errorf("SSH host fingerprint is not configured and cannot be persisted")
 			}
-
-			if node.SSHPublicFingerprint != fingerprint {
-				return fmt.Errorf("host key mismatch: expected %s, got %s", node.SSHPublicFingerprint, fingerprint)
+			if s.DB != nil {
+				result := s.DB.Model(&models.Node{}).
+					Where("id = ? AND (ssh_public_fingerprint IS NULL OR ssh_public_fingerprint = '')", node.ID).
+					Update("ssh_public_fingerprint", fingerprint)
+				if result.Error != nil {
+					return fmt.Errorf("failed to persist SSH host fingerprint: %w", result.Error)
+				}
+				if result.RowsAffected == 0 {
+					var persisted models.Node
+					if err := s.DB.Select("ssh_public_fingerprint").First(&persisted, node.ID).Error; err != nil {
+						return fmt.Errorf("failed to reload SSH host fingerprint: %w", err)
+					}
+					if persisted.SSHPublicFingerprint != fingerprint {
+						return fmt.Errorf("host key mismatch: expected %s, got %s", persisted.SSHPublicFingerprint, fingerprint)
+					}
+				}
+				node.SSHPublicFingerprint = fingerprint
 			}
 			return nil
 		}
+
+		if node.SSHPublicFingerprint != fingerprint {
+			return fmt.Errorf("host key mismatch: expected %s, got %s", node.SSHPublicFingerprint, fingerprint)
+		}
+		return nil
 	}
 
 	config := &ssh.ClientConfig{
@@ -133,6 +150,7 @@ func (s *SSHService) RunInteractiveCommand(client *ssh.Client, prepCommands []st
 
 	// Read output interactively until it idles for 2 seconds
 	var output bytes.Buffer
+	var outputMu sync.Mutex
 	buf := make([]byte, 4096)
 	done := make(chan struct{})
 
@@ -140,7 +158,9 @@ func (s *SSHService) RunInteractiveCommand(client *ssh.Client, prepCommands []st
 		for {
 			n, readErr := stdout.Read(buf)
 			if n > 0 {
+				outputMu.Lock()
 				output.Write(buf[:n])
+				outputMu.Unlock()
 			}
 			if readErr != nil {
 				break
@@ -156,12 +176,18 @@ func (s *SSHService) RunInteractiveCommand(client *ssh.Client, prepCommands []st
 	for {
 		select {
 		case <-done:
-			return output.String(), nil
+			outputMu.Lock()
+			result := output.String()
+			outputMu.Unlock()
+			return result, nil
 		case <-timer.C:
+			outputMu.Lock()
 			currentLen := output.Len()
+			result := output.String()
+			outputMu.Unlock()
 			// If we have some output and it hasn't grown in the idle period, we are done
 			if currentLen > 0 && currentLen == lastLen {
-				return output.String(), nil
+				return result, nil
 			}
 			lastLen = currentLen
 			timer.Reset(idleTimeout)

@@ -13,7 +13,7 @@
                 <i class="bx bx-check-shield"></i> Golden Config Diff
             </button>
             {{ end }}
-            {{ if eq .Role "Administrator" }}
+            {{ if or (eq .Role "Administrator") (eq .Role "Operator") }}
             <button hx-post="/nodes/{{ .Node.ID }}/trigger" hx-swap="none" class="btn btn-secondary">
                 <i class="bx bx-play-circle"></i> Manual Backup
             </button>
@@ -205,7 +205,7 @@
                                          class="action-btn" title="View configuration">
                                      <i class="bx bx-code-block"></i>
                                  </button>
-                                 {{ if eq $.Role "Administrator" }}
+                                 {{ if or (eq $.Role "Administrator") (eq $.Role "Operator") }}
                                      <button hx-post="/backups/{{ .ID }}/export"
                                              hx-swap="none"
                                              class="action-btn" title="Export to SFTP">

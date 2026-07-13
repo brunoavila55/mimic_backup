@@ -17,12 +17,31 @@ type WebhookPayload struct {
 	Text string `json:"text"`
 }
 
+var dispatchSlots = make(chan struct{}, 20)
+
 func Dispatch(db *gorm.DB, rule models.AlertRule, message string) {
 	if !rule.Enabled {
 		return
 	}
 
+	select {
+	case dispatchSlots <- struct{}{}:
+	default:
+		msg := fmt.Sprintf("Alert queue is full; skipped dispatch via %s", rule.Provider)
+		log.Printf("[Alert] %s", msg)
+		if db != nil {
+			db.Create(&models.SystemLog{Level: "error", Category: "system", Message: msg})
+		}
+		return
+	}
+
 	go func() { // Async dispatch to avoid blocking the scheduler
+		defer func() {
+			<-dispatchSlots
+			if recovered := recover(); recovered != nil {
+				log.Printf("[Alert] Recovered from dispatch panic: %v", recovered)
+			}
+		}()
 		var err error
 		if rule.Provider == "webhook" && rule.WebhookURL != "" {
 			url, decErr := crypto.Decrypt(rule.WebhookURL)

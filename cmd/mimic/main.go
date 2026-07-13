@@ -3,16 +3,21 @@ package main
 import (
 	"fmt"
 	"log"
+	"mimic/internal/access"
 	"mimic/internal/handlers"
 	"mimic/internal/middleware"
 	"mimic/internal/models"
 	"mimic/internal/services/scheduler"
 	"mimic/internal/services/sftp"
+	appcrypto "mimic/pkg/crypto"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/session"
 	"github.com/gofiber/template/html/v2"
 	"gorm.io/driver/postgres"
@@ -33,7 +38,10 @@ func main() {
 	// Database connection
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		dsn = "host=localhost user=postgres password=123456 dbname=mimic_db port=5432 sslmode=disable"
+		log.Fatal("DATABASE_URL is required")
+	}
+	if err := appcrypto.ValidateSecretKey(); err != nil {
+		log.Fatalf("invalid encryption key configuration: %v", err)
 	}
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -42,7 +50,7 @@ func main() {
 	}
 
 	// Auto Migrate - ensures schema is always current
-	db.AutoMigrate(
+	if err := db.AutoMigrate(
 		&models.User{},
 		&models.Node{},
 		&models.BackupRoutine{},
@@ -56,13 +64,38 @@ func main() {
 		&models.GoldenConfig{},
 		&models.SecurityViolation{},
 		&models.NodeRuleException{},
-	)
+	); err != nil {
+		log.Fatalf("failed to migrate database schema: %v", err)
+	}
+	for _, statement := range []string{
+		"CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_lower ON users (LOWER(username)) WHERE deleted_at IS NULL",
+		"CREATE UNIQUE INDEX IF NOT EXISTS idx_node_backups_success_version ON node_backups (node_id, version) WHERE deleted_at IS NULL AND status = 'success'",
+		"CREATE UNIQUE INDEX IF NOT EXISTS idx_security_violations_node_rule ON security_violations (node_id, rule_id) WHERE deleted_at IS NULL",
+		"CREATE INDEX IF NOT EXISTS idx_node_backups_lookup ON node_backups (node_id, status, created_at DESC)",
+		"CREATE INDEX IF NOT EXISTS idx_system_logs_created_at ON system_logs (created_at DESC)",
+	} {
+		if err := db.Exec(statement).Error; err != nil {
+			log.Fatalf("failed to install database integrity constraint: %v", err)
+		}
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Fatalf("failed to initialize database pool: %v", err)
+	}
+	sqlDB.SetMaxOpenConns(30)
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetConnMaxLifetime(time.Hour)
 
 	// Ensure at least one SFTP settings record exists
 	var sftpCount int64
-	db.Model(&models.SftpSettings{}).Count(&sftpCount)
+	if err := db.Model(&models.SftpSettings{}).Count(&sftpCount).Error; err != nil {
+		log.Fatalf("failed to inspect SFTP settings: %v", err)
+	}
 	if sftpCount == 0 {
-		db.Create(&models.SftpSettings{Port: 22})
+		if err := db.Create(&models.SftpSettings{Port: 22}).Error; err != nil {
+			log.Fatalf("failed to initialize SFTP settings: %v", err)
+		}
 	}
 
 	// Session Store
@@ -70,6 +103,7 @@ func main() {
 		Expiration:     24 * time.Hour,
 		CookieHTTPOnly: true,
 		CookieSameSite: "Strict",
+		CookieSecure:   strings.EqualFold(os.Getenv("COOKIE_SECURE"), "true"),
 	})
 
 	// Scheduler
@@ -105,15 +139,23 @@ func main() {
 	engine.AddFunc("trimSpace", strings.TrimSpace)
 
 	app := fiber.New(fiber.Config{
-		Views:   engine,
-		AppName: "Mimic Backup Systems v0.8.0",
+		Views:     engine,
+		AppName:   "Mimic Backup Systems v0.8.0",
+		BodyLimit: 8 * 1024 * 1024,
+	})
+	app.Use(middleware.SecurityHeadersAndOrigin())
+	app.Get("/health", func(c *fiber.Ctx) error {
+		if err := sqlDB.Ping(); err != nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"status": "unhealthy"})
+		}
+		return c.JSON(fiber.Map{"status": "ok"})
 	})
 
 	// Static Files
 	app.Static("/static", "./static")
 
 	// Handlers
-	sftpService := &sftp.SftpService{}
+	sftpService := &sftp.SftpService{DB: db}
 	setupHandler := &handlers.SetupHandler{DB: db}
 	authHandler := &handlers.AuthHandler{DB: db, Store: store}
 	dashboardHandler := &handlers.DashboardHandler{DB: db}
@@ -132,55 +174,64 @@ func main() {
 
 	// ── Auth Routes (public) ──────────────────────────
 	app.Get("/login", authHandler.GetLogin)
-	app.Post("/login", authHandler.PostLogin)
+	loginLimiter := limiter.New(limiter.Config{
+		Max:        10,
+		Expiration: time.Minute,
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).Render("login", fiber.Map{
+				"Title": "Login", "Error": "Too many login attempts. Try again in one minute.",
+			})
+		},
+	})
+	app.Post("/login", loginLimiter, authHandler.PostLogin)
 	app.Post("/logout", authHandler.Logout)
 
 	// ── Auth Middleware ───────────────────────────────
-	app.Use(middleware.RequireAuth(store))
+	app.Use(middleware.RequireAuth(store, db))
 
 	// ── Dashboard ─────────────────────────────────────
 	app.Get("/", dashboardHandler.GetDashboard)
 
 	// ── Nodes ─────────────────────────────────────────
 	app.Get("/nodes", nodeHandler.ListNodes)
-	app.Get("/nodes/new", middleware.RequireAdmin(), formHandler.NewNode)
-	app.Get("/nodes/import", middleware.RequireAdmin(), formHandler.ImportNodesForm)
-	app.Post("/nodes/import", middleware.RequireAdmin(), formHandler.ImportNodesCSV)
-	app.Get("/nodes/export", middleware.RequireAdmin(), nodeHandler.ExportNodesCSV)
+	app.Get("/nodes/new", middleware.RequirePermission(access.ManageNodes), formHandler.NewNode)
+	app.Get("/nodes/import", middleware.RequirePermission(access.ManageNodes), formHandler.ImportNodesForm)
+	app.Post("/nodes/import", middleware.RequirePermission(access.ManageNodes), formHandler.ImportNodesCSV)
+	app.Get("/nodes/export", middleware.RequirePermission(access.ManageNodes), nodeHandler.ExportNodesCSV)
 	app.Get("/nodes/:id", nodeHandler.NodeDetails)
-	app.Get("/nodes/:id/edit", middleware.RequireAdmin(), formHandler.EditNode)
-	app.Get("/nodes/:id/delete", middleware.RequireAdmin(), formHandler.DeleteNodeConfirm)
-	app.Post("/nodes/save", middleware.RequireAdmin(), formHandler.SaveNode)
-	app.Post("/nodes/save/:id", middleware.RequireAdmin(), formHandler.SaveNode)
-	app.Post("/nodes/:id/snooze", middleware.RequireAdmin(), formHandler.SnoozeNode)
-	app.Post("/nodes/:id/delete", middleware.RequireAdmin(), formHandler.DeleteNode)
-	app.Delete("/nodes/:id", middleware.RequireAdmin(), formHandler.DeleteNode)
+	app.Get("/nodes/:id/edit", middleware.RequirePermission(access.ManageNodes), formHandler.EditNode)
+	app.Get("/nodes/:id/delete", middleware.RequirePermission(access.ManageNodes), formHandler.DeleteNodeConfirm)
+	app.Post("/nodes/save", middleware.RequirePermission(access.ManageNodes), formHandler.SaveNode)
+	app.Post("/nodes/save/:id", middleware.RequirePermission(access.ManageNodes), formHandler.SaveNode)
+	app.Post("/nodes/:id/snooze", middleware.RequirePermission(access.ManageNodes), formHandler.SnoozeNode)
+	app.Post("/nodes/:id/delete", middleware.RequirePermission(access.ManageNodes), formHandler.DeleteNode)
+	app.Delete("/nodes/:id", middleware.RequirePermission(access.ManageNodes), formHandler.DeleteNode)
 	app.Get("/backups/:id/content", nodeHandler.GetBackupContent)
 	app.Get("/backups/:id/diff", nodeHandler.GetBackupDiff)
 	app.Get("/nodes/:id/golden-diff", nodeHandler.GoldenDiffView)
 	app.Get("/backups/diff/compare", middleware.RequireAdmin(), nodeHandler.CompareBackups)
 
 	// ── Settings Hub ──────────────────────────────────
-	app.Get("/settings", middleware.RequireAdmin(), settingsHandler.GetSettings)
+	app.Get("/settings", settingsHandler.GetSettings)
 	app.Get("/settings/users", middleware.RequireAdmin(), settingsHandler.GetUsersTab)
-	app.Get("/settings/credentials", middleware.RequireAdmin(), settingsHandler.GetCredentialsTab)
-	app.Get("/settings/routines", middleware.RequireAdmin(), settingsHandler.GetRoutinesTab)
+	app.Get("/settings/credentials", middleware.RequirePermission(access.ManageOperations), settingsHandler.GetCredentialsTab)
+	app.Get("/settings/routines", middleware.RequirePermission(access.ManageOperations), settingsHandler.GetRoutinesTab)
 	app.Get("/settings/sftp", middleware.RequireAdmin(), settingsHandler.GetSFTPTab)
 	app.Get("/settings/sftp/explore", middleware.RequireAdmin(), settingsHandler.GetSFTPExplore)
-	app.Get("/settings/export", middleware.RequireAdmin(), settingsHandler.GetExportTab)
+	app.Get("/settings/export", middleware.RequirePermission(access.ExportBackups), settingsHandler.GetExportTab)
 	app.Get("/settings/alerts", middleware.RequireAdmin(), settingsHandler.GetAlertsTab)
-	app.Get("/settings/logs", middleware.RequireAdmin(), settingsHandler.GetLogsTab)
-	app.Get("/settings/security", middleware.RequireAdmin(), settingsHandler.GetSecurityTab)
-	app.Get("/settings/golden", middleware.RequireAdmin(), settingsHandler.GetGoldenTab)
+	app.Get("/settings/logs", middleware.RequirePermission(access.ViewAudit), settingsHandler.GetLogsTab)
+	app.Get("/settings/security", middleware.RequirePermission(access.ViewAudit), settingsHandler.GetSecurityTab)
+	app.Get("/settings/golden", middleware.RequirePermission(access.ViewAudit), settingsHandler.GetGoldenTab)
 	app.Get("/settings/profile", settingsHandler.GetProfileTab)
 
 	// ── Settings Forms ────────────────────────────────
 	app.Get("/settings/users/new", middleware.RequireAdmin(), formHandler.NewUser)
 	app.Get("/settings/users/:id/edit", middleware.RequireAdmin(), formHandler.EditUser)
-	app.Get("/settings/credentials/new", middleware.RequireAdmin(), formHandler.NewCredential)
-	app.Get("/settings/credentials/:id/edit", middleware.RequireAdmin(), formHandler.EditCredential)
-	app.Get("/settings/routines/new", middleware.RequireAdmin(), formHandler.NewRoutine)
-	app.Get("/settings/routines/:id/edit", middleware.RequireAdmin(), formHandler.EditRoutine)
+	app.Get("/settings/credentials/new", middleware.RequirePermission(access.ManageOperations), formHandler.NewCredential)
+	app.Get("/settings/credentials/:id/edit", middleware.RequirePermission(access.ManageOperations), formHandler.EditCredential)
+	app.Get("/settings/routines/new", middleware.RequirePermission(access.ManageOperations), formHandler.NewRoutine)
+	app.Get("/settings/routines/:id/edit", middleware.RequirePermission(access.ManageOperations), formHandler.EditRoutine)
 	app.Get("/settings/alerts/new", middleware.RequireAdmin(), formHandler.NewAlertRule)
 	app.Get("/settings/alerts/:id/edit", middleware.RequireAdmin(), formHandler.EditAlertRule)
 	app.Get("/settings/security/new", middleware.RequireAdmin(), formHandler.NewSecurityRule)
@@ -189,10 +240,10 @@ func main() {
 	// ── Settings Actions ──────────────────────────────
 	app.Post("/settings/users/save", middleware.RequireAdmin(), formHandler.SaveUser)
 	app.Post("/settings/users/save/:id", middleware.RequireAdmin(), formHandler.SaveUser)
-	app.Post("/settings/credentials/save", middleware.RequireAdmin(), formHandler.SaveCredential)
-	app.Post("/settings/credentials/save/:id", middleware.RequireAdmin(), formHandler.SaveCredential)
-	app.Post("/settings/routines/save", middleware.RequireAdmin(), formHandler.SaveRoutine)
-	app.Post("/settings/routines/save/:id", middleware.RequireAdmin(), formHandler.SaveRoutine)
+	app.Post("/settings/credentials/save", middleware.RequirePermission(access.ManageOperations), formHandler.SaveCredential)
+	app.Post("/settings/credentials/save/:id", middleware.RequirePermission(access.ManageOperations), formHandler.SaveCredential)
+	app.Post("/settings/routines/save", middleware.RequirePermission(access.ManageOperations), formHandler.SaveRoutine)
+	app.Post("/settings/routines/save/:id", middleware.RequirePermission(access.ManageOperations), formHandler.SaveRoutine)
 	app.Post("/settings/alerts/save", middleware.RequireAdmin(), formHandler.SaveAlertRule)
 	app.Post("/settings/alerts/save/:id", middleware.RequireAdmin(), formHandler.SaveAlertRule)
 	app.Post("/settings/alerts/test", middleware.RequireAdmin(), formHandler.TestAlertRule)
@@ -206,8 +257,8 @@ func main() {
 
 	// ── Delete Actions ────────────────────────────────
 	app.Delete("/settings/users/:id", middleware.RequireAdmin(), formHandler.DeleteUser)
-	app.Delete("/settings/credentials/:id", middleware.RequireAdmin(), formHandler.DeleteCredential)
-	app.Delete("/settings/routines/:id", middleware.RequireAdmin(), formHandler.DeleteRoutine)
+	app.Delete("/settings/credentials/:id", middleware.RequirePermission(access.ManageOperations), formHandler.DeleteCredential)
+	app.Delete("/settings/routines/:id", middleware.RequirePermission(access.ManageOperations), formHandler.DeleteRoutine)
 	app.Delete("/settings/alerts/:id", middleware.RequireAdmin(), formHandler.DeleteAlertRule)
 	app.Delete("/settings/golden/:id", middleware.RequireAdmin(), formHandler.DeleteGoldenConfig)
 	app.Delete("/settings/security/:id", middleware.RequireAdmin(), formHandler.DeleteSecurityRule)
@@ -215,23 +266,29 @@ func main() {
 	app.Post("/settings/sftp/save", middleware.RequireAdmin(), formHandler.SaveSettings)
 	app.Post("/settings/sftp/test", middleware.RequireAdmin(), formHandler.TestSFTPConnection)
 	app.Post("/settings/profile/save", formHandler.SaveProfile)
-	app.Post("/settings/export/sync", middleware.RequireAdmin(), formHandler.PostSync)
-	app.Post("/backups/:backup_id/export", middleware.RequireAdmin(), formHandler.ExportBackup)
+	app.Post("/settings/export/sync", middleware.RequirePermission(access.ExportBackups), formHandler.PostSync)
+	app.Post("/backups/:backup_id/export", middleware.RequirePermission(access.ExportBackups), formHandler.ExportBackup)
 
 	// ── HTMX Actions ──────────────────────────────────
-	app.Post("/trigger-backups", middleware.RequireAdmin(), func(c *fiber.Ctx) error {
-		sch.CheckBackups()
-		return c.SendStatus(200)
+	app.Post("/trigger-backups", middleware.RequirePermission(access.RunBackups), func(c *fiber.Ctx) error {
+		if !sch.StartBackupCycle() {
+			c.Set("HX-Trigger", `{"showNotification": {"message": "A backup cycle is already running", "type": "warning"}}`)
+			return c.SendStatus(fiber.StatusConflict)
+		}
+		return c.SendStatus(fiber.StatusAccepted)
 	})
 
-	app.Post("/nodes/:id/trigger", middleware.RequireAdmin(), func(c *fiber.Ctx) error {
+	app.Post("/nodes/:id/trigger", middleware.RequirePermission(access.RunBackups), func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		var node models.Node
 		if err := db.Preload("Credential").Preload("AccessAgent").Where("id = ?", id).First(&node).Error; err != nil {
 			c.Set("HX-Trigger", `{"showNotification": {"message": "Node not found", "type": "error"}}`)
 			return c.SendStatus(fiber.StatusNotFound)
 		}
-		go sch.RunBackup(&node)
+		if !sch.StartBackup(&node) {
+			c.Set("HX-Trigger", `{"showNotification": {"message": "A backup for this node is already running", "type": "warning"}}`)
+			return c.SendStatus(fiber.StatusConflict)
+		}
 		c.Set("HX-Trigger", `{"showNotification": {"message": "Manual backup started", "type": "success"}}`)
 		return c.SendStatus(200)
 	})
@@ -245,5 +302,25 @@ func main() {
 	log.Printf("[Database] Connected to PostgreSQL")
 	log.Printf("[Scheduler] Backup engine started (Interval: 1m)")
 
-	log.Fatal(app.Listen(fmt.Sprintf(":%s", port)))
+	serverErr := make(chan error, 1)
+	go func() { serverErr <- app.Listen(fmt.Sprintf(":%s", port)) }()
+
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
+	select {
+	case sig := <-signals:
+		log.Printf("[System] Received %s, shutting down", sig)
+	case err := <-serverErr:
+		if err != nil {
+			log.Printf("[System] HTTP server stopped: %v", err)
+		}
+	}
+
+	if err := app.Shutdown(); err != nil {
+		log.Printf("[System] Graceful HTTP shutdown failed: %v", err)
+	}
+	sch.Stop()
+	if err := sqlDB.Close(); err != nil {
+		log.Printf("[Database] Failed to close connection pool: %v", err)
+	}
 }

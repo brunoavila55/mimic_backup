@@ -5,9 +5,11 @@
             <h2>Security Rules</h2>
             <p>Turn raw device configurations into clear, prioritized findings.</p>
         </div>
+        {{ if .CanManagePolicies }}
         <a href="/settings/security/new" class="btn btn-primary security-add-rule">
             <i class='bx bx-plus'></i> New rule
         </a>
+        {{ end }}
     </div>
 
     <div class="security-metrics">
@@ -81,10 +83,12 @@
                     <code title="{{ .RegexPattern }}">{{ .RegexPattern }}</code>
                 </div>
             </div>
+            {{ if $.CanManagePolicies }}
             <div class="security-rule-actions">
                 <a href="/settings/security/{{ .ID }}/edit" class="btn btn-secondary btn-sm"><i class='bx bx-edit-alt'></i> Edit</a>
                 <button hx-delete="/settings/security/{{ .ID }}" hx-confirm="Delete this security rule?" hx-target="closest article" hx-swap="delete" class="action-btn danger" title="Delete rule"><i class='bx bx-trash'></i></button>
             </div>
+            {{ end }}
         </article>
         {{ end }}
     </div>
@@ -93,7 +97,7 @@
         <div class="security-empty-icon"><i class='bx bx-shield-plus'></i></div>
         <h3>Create your first security rule</h3>
         <p>Start auditing device configurations for risky or missing settings.</p>
-        <a href="/settings/security/new" class="btn btn-primary"><i class='bx bx-plus'></i> New rule</a>
+        {{ if .CanManagePolicies }}<a href="/settings/security/new" class="btn btn-primary"><i class='bx bx-plus'></i> New rule</a>{{ end }}
     </div>
     {{ end }}
 </section>

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"log"
 	"mimic/internal/access"
@@ -25,6 +26,16 @@ import (
 )
 
 var AppVersion string
+
+func assetFingerprint(path string) string {
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		return "unavailable"
+	}
+
+	sum := sha256.Sum256(contents)
+	return fmt.Sprintf("%x", sum[:8])
+}
 
 func main() {
 
@@ -120,6 +131,16 @@ func main() {
 	engine := html.New("./templates", ".html")
 	engine.Reload(true)
 	engine.AddFunc("AppVersion", func() string {
+		return appVersion
+	})
+	assetVersions := map[string]string{
+		"/static/css/style.css": assetFingerprint("./static/css/style.css"),
+		"/static/css/login.css": assetFingerprint("./static/css/login.css"),
+	}
+	engine.AddFunc("AssetVersion", func(path string) string {
+		if version, ok := assetVersions[path]; ok {
+			return version
+		}
 		return appVersion
 	})
 	engine.AddFunc("seq", func(start, end int) []int {

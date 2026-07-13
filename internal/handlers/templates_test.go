@@ -12,6 +12,9 @@ func TestTemplatesParse(t *testing.T) {
 	engine.AddFunc("AppVersion", func() string {
 		return "test"
 	})
+	engine.AddFunc("AssetVersion", func(string) string {
+		return "test-asset"
+	})
 	engine.AddFunc("seq", func(start, end int) []int {
 		values := make([]int, end-start+1)
 		for i := range values {

@@ -41,7 +41,10 @@ func TestValidateInitialAdmin(t *testing.T) {
 }
 
 func TestSetupTemplatesRender(t *testing.T) {
-	funcs := template.FuncMap{"AppVersion": func() string { return "test" }}
+	funcs := template.FuncMap{
+		"AppVersion":   func() string { return "test" },
+		"AssetVersion": func(string) string { return "test-asset" },
+	}
 	tests := []struct {
 		file string
 		data any

@@ -1,241 +1,276 @@
-<section class="dashboard-hero">
-    <div class="dashboard-hero-copy">
-        <div class="nodes-eyebrow">
-            <i class="bx bx-pulse"></i>
-            Operations overview
-        </div>
-        <h1 class="page-title">Dashboard</h1>
-        <p class="page-desc">Track node health, recent failures, SFTP sync and upcoming runs.</p>
+{{ if .LoadError }}
+<section class="dashboard-load-error" role="alert">
+    <span class="dashboard-load-error-icon">!</span>
+    <div>
+        <span class="dashboard-eyebrow">Data unavailable</span>
+        <h1>Dashboard could not be loaded</h1>
+        <p>{{ .LoadError }}</p>
     </div>
-    <div class="dashboard-hero-actions">
-        <a href="/nodes" class="btn btn-secondary">
-            <i class="bx bx-server"></i>
-            View nodes
-        </a>
+    <button class="btn btn-secondary" type="button" onclick="window.location.reload()">Try again</button>
+</section>
+{{ else }}
+<section class="dashboard-topbar">
+    <div class="dashboard-topbar-copy">
+        <span class="dashboard-eyebrow"><span class="dashboard-live-dot"></span>Live operations</span>
+        <h1>Network backup control center</h1>
+        <p>Prioritize risk, verify coverage and keep configuration recovery ready.</p>
+    </div>
+    <div class="dashboard-topbar-actions">
+        <div class="dashboard-refresh-meta">
+            <span>Updated</span>
+            <strong>{{ .Dashboard.UpdatedAt.Format "15:04:05" }}</strong>
+        </div>
+        <button type="button"
+                class="btn btn-secondary"
+                hx-get="/"
+                hx-target="#dashboard-content"
+                hx-swap="innerHTML"
+                hx-indicator="#dashboard-refresh-indicator">
+            <span id="dashboard-refresh-indicator" class="htmx-indicator">Refreshing</span>
+            <span class="dashboard-refresh-label">Refresh</span>
+        </button>
         {{ if or (eq .Role "Administrator") (eq .Role "Operator") }}
-        <button hx-post="/trigger-backups" hx-swap="none" class="btn btn-primary">
-            <i class="bx bx-refresh"></i>
-            Run backups
+        <button type="button" class="btn btn-primary" hx-post="/trigger-backups" hx-swap="none">
+            Run all backups
         </button>
         {{ end }}
     </div>
 </section>
 
-<section class="dashboard-summary">
-    <div class="dashboard-health {{ if gt .Stats.AttentionNodes 0 }}is-warning{{ else }}is-good{{ end }}">
-        <div>
-            <span class="dashboard-card-label">Overall status</span>
-            <strong>{{ if gt .Stats.AttentionNodes 0 }}Needs attention{{ else }}Stable operation{{ end }}</strong>
-            <p>{{ .Stats.ActiveNodes }} active nodes, {{ .Stats.AttentionNodes }} requiring action.</p>
-        </div>
-        <i class="bx {{ if gt .Stats.AttentionNodes 0 }}bx-error-circle{{ else }}bx-check-circle{{ end }}"></i>
-    </div>
-
-    <div class="dashboard-kpis">
-        <a href="/nodes" class="dashboard-kpi">
-            <span>Total nodes</span>
-            <strong>{{ .Stats.TotalNodes }}</strong>
-            <small>{{ .Stats.ActiveNodes }} active</small>
-        </a>
-        <a href="/nodes?status=success" class="dashboard-kpi success">
-            <span>Healthy</span>
-            <strong>{{ .Stats.HealthyNodes }}</strong>
-            <small>latest backup ok</small>
-        </a>
-        <a href="/nodes?status=error" class="dashboard-kpi danger">
-            <span>Failing</span>
-            <strong>{{ len .FailedNodes }}</strong>
-            <small>need review</small>
-        </a>
+{{ if eq .Dashboard.Stats.TotalNodes 0 }}
+<section class="dashboard-onboarding">
+    <div class="dashboard-onboarding-copy">
+        <span class="dashboard-eyebrow">Workspace setup</span>
+        <h2>Build your first protected network</h2>
+        <p>Add access credentials, register a node and attach a backup routine. Mimic will start building configuration history automatically.</p>
         {{ if or (eq .Role "Administrator") (eq .Role "Operator") }}
-        <a href="/settings/export" class="dashboard-kpi {{ if gt .Stats.SftpUnsyncedNodes 0 }}warning{{ else }}success{{ end }}">
-            <span>SFTP pending</span>
-            <strong>{{ .Stats.SftpUnsyncedNodes }}</strong>
-            <small>nodes not exported</small>
-        </a>
+        <div class="dashboard-onboarding-actions">
+            <a href="/settings/credentials" class="btn btn-secondary">Configure credentials</a>
+            <a href="/nodes/new" class="btn btn-primary">Add first node</a>
+        </div>
         {{ else }}
-        <div class="dashboard-kpi {{ if gt .Stats.SftpUnsyncedNodes 0 }}warning{{ else }}success{{ end }}">
-            <span>SFTP pending</span>
-            <strong>{{ .Stats.SftpUnsyncedNodes }}</strong>
-            <small>nodes not exported</small>
+        <div class="dashboard-onboarding-actions">
+            <a href="/nodes" class="btn btn-secondary">View node inventory</a>
         </div>
         {{ end }}
     </div>
+    <ol class="dashboard-onboarding-steps">
+        <li><span>01</span><div><strong>Secure access</strong><small>Store reusable SSH credentials.</small></div></li>
+        <li><span>02</span><div><strong>Add inventory</strong><small>Register routers, switches, OLTs and firewalls.</small></div></li>
+        <li><span>03</span><div><strong>Automate recovery</strong><small>Assign routines and verify the first snapshot.</small></div></li>
+    </ol>
+</section>
+{{ else }}
+<section class="dashboard-overview">
+    <article class="dashboard-status-card {{ if gt .Dashboard.Stats.AttentionNodes 0 }}is-warning{{ else }}is-healthy{{ end }}">
+        <div class="dashboard-status-ring" style="--dashboard-progress: {{ .Dashboard.Stats.HealthRate }}%;">
+            <strong>{{ .Dashboard.Stats.HealthRate }}%</strong>
+            <span>healthy</span>
+        </div>
+        <div class="dashboard-status-copy">
+            <span class="dashboard-eyebrow">Fleet readiness</span>
+            {{ if gt .Dashboard.Stats.AttentionNodes 0 }}
+            <h2>{{ .Dashboard.Stats.AttentionNodes }} nodes require action</h2>
+            <p>{{ .Dashboard.Stats.FailedNodes }} failed and {{ .Dashboard.Stats.SilentNodes }} without a recent successful backup.</p>
+            <a href="#attention-queue">Review action queue</a>
+            {{ else }}
+            <h2>Recovery coverage is stable</h2>
+            <p>Every active node has a successful backup within the last 48 hours.</p>
+            <a href="/nodes">Review protected nodes</a>
+            {{ end }}
+        </div>
+    </article>
+
+    <div class="dashboard-metric-grid">
+        <a href="/nodes?status=active" class="dashboard-metric-card">
+            <span class="dashboard-metric-icon">FL</span>
+            <div><span>Active fleet</span><strong>{{ .Dashboard.Stats.ActiveNodes }}</strong><small>of {{ .Dashboard.Stats.TotalNodes }} registered</small></div>
+        </a>
+        <article class="dashboard-metric-card {{ if gt .Dashboard.Stats.Failed24h 0 }}metric-warning{{ else }}metric-success{{ end }}">
+            <span class="dashboard-metric-icon">OK</span>
+            <div><span>Success · 24h</span>{{ if gt .Dashboard.Stats.Backups24h 0 }}<strong>{{ .Dashboard.Stats.SuccessRate24h }}%</strong><small>{{ .Dashboard.Stats.Successful24h }} of {{ .Dashboard.Stats.Backups24h }} runs</small>{{ else }}<strong>—</strong><small>No runs in this period</small>{{ end }}</div>
+        </article>
+        <a href="/nodes?status=error" class="dashboard-metric-card {{ if gt .Dashboard.Stats.AttentionNodes 0 }}metric-danger{{ end }}">
+            <span class="dashboard-metric-icon">AT</span>
+            <div><span>Needs attention</span><strong>{{ .Dashboard.Stats.AttentionNodes }}</strong><small>failed or stale nodes</small></div>
+        </a>
+        <article class="dashboard-metric-card {{ if gt .Dashboard.Stats.Changes24h 0 }}metric-info{{ end }}">
+            <span class="dashboard-metric-icon">DF</span>
+            <div><span>Config changes · 24h</span><strong>{{ .Dashboard.Stats.Changes24h }}</strong><small>successful runs with drift</small></div>
+        </article>
+    </div>
 </section>
 
-<section class="dashboard-grid">
-    <div class="dashboard-stack">
-        <article class="dashboard-panel dashboard-panel-attention">
-            <div class="dashboard-panel-header">
+<section class="dashboard-workspace">
+    <div class="dashboard-primary-column">
+        <article id="attention-queue" class="dashboard-section-card dashboard-attention-card">
+            <header class="dashboard-section-header">
                 <div>
-                    <span class="dashboard-card-label">Action queue</span>
-                    <h2>Needs attention</h2>
+                    <span class="dashboard-eyebrow">Priority queue</span>
+                    <h2>Action required</h2>
+                    <p>Failures and stale coverage, ordered by operational urgency.</p>
                 </div>
-                <span class="badge {{ if gt .Stats.AttentionNodes 0 }}badge-danger{{ else }}badge-success{{ end }}">
-                    {{ .Stats.AttentionNodes }} items
-                </span>
-            </div>
-
-            {{ if or .FailedNodes .SilentNodes }}
-            <div class="dashboard-action-list">
-                {{ range .FailedNodes }}
-                <div class="dashboard-action-row danger">
-                    <div class="dashboard-status-dot"></div>
-                    <div class="dashboard-action-copy">
-                        <div class="dashboard-action-title">
-                            <a href="/nodes/{{ .ID }}">{{ .Name }}</a>
-                            <span class="badge badge-danger">Failed</span>
+                <span class="dashboard-count-pill {{ if gt .Dashboard.Stats.AttentionNodes 0 }}is-danger{{ else }}is-success{{ end }}">{{ .Dashboard.Stats.AttentionNodes }} open</span>
+            </header>
+            {{ if .Dashboard.Attention }}
+            <div class="dashboard-attention-list">
+                {{ range .Dashboard.Attention }}
+                <div class="dashboard-attention-row is-{{ .Severity }}">
+                    <span class="dashboard-severity-marker"></span>
+                    <div class="dashboard-attention-main">
+                        <div class="dashboard-attention-title">
+                            <a href="/nodes/{{ .Node.ID }}">{{ .Node.Name }}</a>
+                            <span class="dashboard-inline-badge is-{{ .Severity }}">{{ .Label }}</span>
                         </div>
-                        <p>{{ if .LastError }}{{ .LastError }}{{ else }}Error in the latest backup.{{ end }}</p>
+                        <strong>{{ .Title }}</strong>
+                        <p>{{ .Detail }}</p>
+                        <small>{{ .Node.IP }} · {{ .Context }}</small>
                     </div>
                     {{ if or (eq $.Role "Administrator") (eq $.Role "Operator") }}
-                        <button class="btn btn-sm btn-ghost" hx-post="/nodes/{{ .ID }}/trigger" hx-swap="none">
-                            Run
-                        </button>
-                    {{ end }}
-                </div>
-                {{ end }}
-
-                {{ range .SilentNodes }}
-                <div class="dashboard-action-row warning">
-                    <div class="dashboard-status-dot"></div>
-                    <div class="dashboard-action-copy">
-                        <div class="dashboard-action-title">
-                            <a href="/nodes/{{ .ID }}">{{ .Name }}</a>
-                            <span class="badge badge-warning">Silent</span>
-                        </div>
-                        <p>No successful backup for more than 48 hours.</p>
-                    </div>
-                    {{ if or (eq $.Role "Administrator") (eq $.Role "Operator") }}
-                        <button class="btn btn-sm btn-ghost" hx-post="/nodes/{{ .ID }}/trigger" hx-swap="none">
-                            Run
-                        </button>
+                    <button type="button" class="btn btn-sm btn-secondary" hx-post="/nodes/{{ .Node.ID }}/trigger" hx-swap="none">Run now</button>
                     {{ end }}
                 </div>
                 {{ end }}
             </div>
             {{ else }}
-            <div class="dashboard-empty">
-                <i class="bx bx-check-circle"></i>
-                <strong>No critical pending items</strong>
-                <span>Failures and silent nodes will appear here automatically.</span>
+            <div class="dashboard-empty-state is-positive">
+                <span>OK</span>
+                <div><strong>Queue is clear</strong><p>No failed or stale nodes require action.</p></div>
             </div>
             {{ end }}
         </article>
 
-        <article class="dashboard-panel">
-            <div class="dashboard-panel-header">
+        <article class="dashboard-section-card dashboard-trend-card">
+            <header class="dashboard-section-header">
                 <div>
-                    <span class="dashboard-card-label">Backups</span>
-                    <h2>Run summary</h2>
+                    <span class="dashboard-eyebrow">Reliability</span>
+                    <h2>Backup outcomes · 7 days</h2>
+                    <p>Successful and failed executions by day.</p>
                 </div>
-                <span class="badge badge-accent">{{ .Stats.SuccessRate }}% success</span>
+                <div class="dashboard-chart-legend"><span class="is-success">Success</span><span class="is-danger">Failed</span></div>
+            </header>
+            <div class="dashboard-trend-chart" aria-label="Seven day backup outcome chart">
+                {{ range .Dashboard.Trend }}
+                <div class="dashboard-trend-day" title="{{ .Date }}: {{ .Successful }} successful, {{ .Failed }} failed">
+                    <div class="dashboard-trend-value">{{ .Total }}</div>
+                    <div class="dashboard-trend-bars">
+                        <span class="is-success" style="height: {{ .SuccessHeight }}%;"></span>
+                        <span class="is-danger" style="height: {{ .FailureHeight }}%;"></span>
+                    </div>
+                    <strong>{{ .Label }}</strong>
+                    <small>{{ .Date }}</small>
+                </div>
+                {{ end }}
             </div>
-            <div class="dashboard-backup-summary">
-                <div>
-                    <span>Total</span>
-                    <strong>{{ .Stats.TotalBackups }}</strong>
-                </div>
-                <div>
-                    <span>Success</span>
-                    <strong class="success">{{ .Stats.SuccessfulBackups }}</strong>
-                </div>
-                <div>
-                    <span>Failures</span>
-                    <strong class="danger">{{ .Stats.FailedBackups }}</strong>
-                </div>
-            </div>
+            <footer class="dashboard-trend-footer">
+                <span>{{ .Dashboard.Stats.Backups24h }} executions in the last 24 hours</span>
+                {{ if .Dashboard.LastSuccessfulAt }}<span>Latest success {{ .Dashboard.LastSuccessfulAt.Format "02 Jan 15:04" }}</span>{{ end }}
+            </footer>
         </article>
     </div>
 
-    <div class="dashboard-stack">
-        <article class="dashboard-panel">
-            <div class="dashboard-panel-header">
-                <div>
-                    <span class="dashboard-card-label">Changes</span>
-                    <h2>Change feed</h2>
+    <aside class="dashboard-secondary-column">
+        <article class="dashboard-section-card dashboard-coverage-card">
+            <header class="dashboard-section-header">
+                <div><span class="dashboard-eyebrow">Controls</span><h2>Coverage &amp; risk</h2><p>Readiness across the active fleet.</p></div>
+                <a href="/nodes" class="dashboard-text-link">View fleet</a>
+            </header>
+            <div class="dashboard-coverage-list">
+                <div class="dashboard-coverage-row">
+                    <div><span>Recent backup coverage</span><strong>{{ .Dashboard.Stats.HealthyNodes }}/{{ .Dashboard.Stats.ActiveNodes }}</strong></div>
+                    <div class="dashboard-progress"><span class="is-success" style="width: {{ .Dashboard.Stats.HealthRate }}%;"></span></div>
+                    <small>{{ .Dashboard.Stats.HealthRate }}% backed up within 48h</small>
                 </div>
-                <a href="/nodes" class="btn btn-sm btn-ghost">View all</a>
+                <div class="dashboard-coverage-row">
+                    <div><span>Schedule coverage</span><strong>{{ .Dashboard.Stats.ScheduledNodes }}/{{ .Dashboard.Stats.ActiveNodes }}</strong></div>
+                    <div class="dashboard-progress"><span class="is-info" style="width: {{ .Dashboard.Stats.ScheduleCoverage }}%;"></span></div>
+                    <small>{{ .Dashboard.Stats.ScheduleCoverage }}% have a next execution</small>
+                </div>
             </div>
-
-            {{ if .RecentBackups }}
-            <div class="dashboard-feed">
-                {{ range .RecentBackups }}
-                <button class="dashboard-feed-row" hx-get="/nodes/{{ .NodeID }}/backups/{{ .ID }}/diff" hx-target="body" hx-swap="beforeend">
-                    <span class="dashboard-status-dot {{ if or (gt .DiffAdditions 0) (gt .DiffDeletions 0) }}accent{{ else }}success{{ end }}"></span>
-                    <span class="dashboard-feed-copy">
-                        <strong>{{ .Node.Name }}</strong>
-                        <small>{{ .CreatedAt.Format "02/01/2006 15:04" }} - v{{ .Version }}</small>
-                    </span>
-                    <span class="dashboard-diff">
-                        <b class="success">+{{ .DiffAdditions }}</b>
-                        <b class="danger">-{{ .DiffDeletions }}</b>
-                    </span>
-                </button>
-                {{ end }}
+            <div class="dashboard-risk-list">
+                {{ if or (eq .Role "Administrator") (eq .Role "Operator") }}<a href="/settings/export" class="dashboard-risk-row">{{ else }}<div class="dashboard-risk-row">{{ end }}
+                    <span class="dashboard-risk-icon is-warning">EX</span>
+                    <div><strong>{{ .Dashboard.Stats.PendingExportNodes }} pending exports</strong><small>{{ .Dashboard.SFTP.Detail }}</small></div>
+                    <span class="dashboard-state is-{{ .Dashboard.SFTP.Tone }}">{{ .Dashboard.SFTP.State }}</span>
+                {{ if or (eq .Role "Administrator") (eq .Role "Operator") }}</a>{{ else }}</div>{{ end }}
+                {{ if or (eq .Role "Administrator") (eq .Role "Auditor") }}<a href="/settings/security" class="dashboard-risk-row">{{ else }}<div class="dashboard-risk-row">{{ end }}
+                    <span class="dashboard-risk-icon {{ if gt .Dashboard.Stats.SecurityRiskNodes 0 }}is-danger{{ else }}is-success{{ end }}">SC</span>
+                    <div><strong>{{ .Dashboard.Stats.SecurityRiskNodes }} security risk nodes</strong><small>Fleet average score: {{ .Dashboard.Stats.AverageSecurityScore }}/100</small></div>
+                {{ if or (eq .Role "Administrator") (eq .Role "Auditor") }}</a>{{ else }}</div>{{ end }}
             </div>
-            {{ else }}
-            <div class="dashboard-empty">
-                <i class="bx bx-history"></i>
-                <strong>No recent history</strong>
-                <span>Upcoming configuration changes will appear here.</span>
-            </div>
-            {{ end }}
         </article>
 
-        <article class="dashboard-panel">
-            <div class="dashboard-panel-header">
-                <div>
-                    <span class="dashboard-card-label">Schedule</span>
-                    <h2>Upcoming runs</h2>
-                </div>
-                <span class="badge badge-muted">{{ len .NextBackups }} scheduled</span>
-            </div>
-
-            {{ if .NextBackups }}
-            <div class="dashboard-schedule">
-                {{ range .NextBackups }}
-                <a href="/nodes/{{ .ID }}" class="dashboard-schedule-row">
-                    <span class="dashboard-schedule-time">{{ .NextBackupAt.Format "15:04" }}</span>
-                    <span>
-                        <strong>{{ .Name }}</strong>
-                        <small>{{ .NextBackupAt.Format "02/01/2006" }}</small>
-                    </span>
+        <article class="dashboard-section-card dashboard-upcoming-card">
+            <header class="dashboard-section-header">
+                <div><span class="dashboard-eyebrow">Schedule</span><h2>Next executions</h2><p>Upcoming automated backup window.</p></div>
+                {{ if or (eq .Role "Administrator") (eq .Role "Operator") }}<a href="/settings/routines" class="dashboard-text-link">Manage</a>{{ end }}
+            </header>
+            {{ if .Dashboard.Upcoming }}
+            <div class="dashboard-upcoming-list">
+                {{ range .Dashboard.Upcoming }}
+                <a href="/nodes/{{ .ID }}" class="dashboard-upcoming-row">
+                    <time><strong>{{ .NextBackupAt.Format "15:04" }}</strong><small>{{ .NextBackupAt.Format "02 Jan" }}</small></time>
+                    <div><strong>{{ .Name }}</strong><small>{{ .Vendor }} · {{ .IP }}</small></div>
+                    <span>{{ .Group }}</span>
                 </a>
                 {{ end }}
             </div>
             {{ else }}
-            <div class="dashboard-empty">
-                <i class="bx bx-calendar"></i>
-                <strong>No backups scheduled</strong>
-                <span>Review routines or schedules for active nodes.</span>
+            <div class="dashboard-empty-state">
+                <span>--</span>
+                <div><strong>No upcoming executions</strong><p>Assign a routine or individual schedule to active nodes.</p></div>
             </div>
             {{ end }}
         </article>
-
-        <article class="dashboard-panel">
-            <div class="dashboard-panel-header">
-                <div>
-                    <span class="dashboard-card-label">Vendors</span>
-                    <h2>Failures by vendor</h2>
-                </div>
-            </div>
-
-            {{ if .VendorFailures }}
-            <div class="dashboard-vendors">
-                {{ range .VendorFailures }}
-                <div class="dashboard-vendor">
-                    <span>{{ .Vendor }}</span>
-                    <strong>{{ .Count }}</strong>
-                </div>
-                {{ end }}
-            </div>
-            {{ else }}
-            <div class="dashboard-empty compact">
-                <i class="bx bx-shield-quarter"></i>
-                <strong>No vendors with failures</strong>
-            </div>
-            {{ end }}
-        </article>
-    </div>
+    </aside>
 </section>
+
+<section class="dashboard-intelligence-grid">
+    <article class="dashboard-section-card">
+        <header class="dashboard-section-header">
+            <div><span class="dashboard-eyebrow">Configuration intelligence</span><h2>Recent changes</h2><p>Latest successful backups with detected drift.</p></div>
+            <a href="/nodes" class="dashboard-text-link">Open inventory</a>
+        </header>
+        {{ if .Dashboard.RecentChanges }}
+        <div class="dashboard-change-list">
+            {{ range .Dashboard.RecentChanges }}
+            <button type="button" class="dashboard-change-row" hx-get="/backups/{{ .ID }}/diff" hx-target="body" hx-swap="beforeend">
+                <span class="dashboard-change-node"><strong>{{ .Node.Name }}</strong><small>{{ .Node.Vendor }} · v{{ .Version }} · {{ .CreatedAt.Format "02 Jan 15:04" }}</small></span>
+                <span class="dashboard-change-diff"><b>+{{ .DiffAdditions }}</b><b>-{{ .DiffDeletions }}</b></span>
+                <span class="dashboard-change-action">Compare</span>
+            </button>
+            {{ end }}
+        </div>
+        {{ else }}
+        <div class="dashboard-empty-state">
+            <span>DF</span>
+            <div><strong>No configuration drift recorded</strong><p>Changes will appear after two successful snapshots are compared.</p></div>
+        </div>
+        {{ end }}
+    </article>
+
+    <article class="dashboard-section-card">
+        <header class="dashboard-section-header">
+            <div><span class="dashboard-eyebrow">Audit trail</span><h2>Recent activity</h2><p>Backup, export, authentication and system events.</p></div>
+            {{ if or (eq .Role "Administrator") (eq .Role "Auditor") }}<a href="/settings/logs" class="dashboard-text-link">View logs</a>{{ end }}
+        </header>
+        {{ if .Dashboard.RecentActivity }}
+        <div class="dashboard-activity-list">
+            {{ range .Dashboard.RecentActivity }}
+            <div class="dashboard-activity-row">
+                <span class="dashboard-activity-marker is-{{ .Level }}"></span>
+                <div><strong>{{ .Message }}</strong><small>{{ .Category }} · {{ .CreatedAt.Format "02 Jan 15:04" }}</small></div>
+                <span class="dashboard-state is-{{ .Level }}">{{ .Level }}</span>
+            </div>
+            {{ end }}
+        </div>
+        {{ else }}
+        <div class="dashboard-empty-state">
+            <span>--</span>
+            <div><strong>No recent activity</strong><p>Operational events will appear here as the system runs.</p></div>
+        </div>
+        {{ end }}
+    </article>
+</section>
+{{ end }}
+{{ end }}

@@ -1,7 +1,7 @@
-<div class="page-enter dashboard-page">
+<div class="dashboard-page">
     <div id="dashboard-content"
          hx-get="/"
-         hx-trigger="every 30s"
+         hx-trigger="every 45s, dashboardRefresh from:body"
          hx-target="this"
          hx-swap="innerHTML">
         {{ template "partials/dashboard_stats" . }}

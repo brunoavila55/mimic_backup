@@ -156,7 +156,7 @@ func main() {
 
 	// Handlers
 	sftpService := &sftp.SftpService{DB: db}
-	setupHandler := &handlers.SetupHandler{DB: db}
+	setupHandler := &handlers.SetupHandler{DB: db, Store: store}
 	authHandler := &handlers.AuthHandler{DB: db, Store: store}
 	dashboardHandler := &handlers.DashboardHandler{DB: db}
 	nodeHandler := &handlers.NodeHandler{DB: db}
@@ -170,7 +170,8 @@ func main() {
 	app.Get("/setup", setupHandler.GetDatabaseSetup)
 	app.Post("/setup", setupHandler.PostDatabaseSetup)
 	app.Get("/setup/superuser", setupHandler.GetCreateSuperuser)
-	app.Post("/setup/superuser", setupHandler.PostCreateSuperuser)
+	setupLimiter := limiter.New(limiter.Config{Max: 10, Expiration: time.Minute})
+	app.Post("/setup/superuser", setupLimiter, setupHandler.PostCreateSuperuser)
 
 	// ── Auth Routes (public) ──────────────────────────
 	app.Get("/login", authHandler.GetLogin)

@@ -3,108 +3,111 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mimic | Initial Setup</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <title>Mimic | Initial setup</title>
     <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico" />
     <link rel="stylesheet" href="/static/css/style.css" />
     <link rel="stylesheet" href="/static/css/login.css" />
 </head>
-<body>
-    <div class="login-split">
-        <!-- ===== Left Panel: Setup Branding ===== -->
-        <div class="login-brand">
-            <div class="login-brand-content">
-                <img src="/static/img/logo_texto.svg" alt="Logo Mimic" class="login-logo" />
-                
-                <div class="login-brand-features">
-                    <div class="login-feature">
-                        <div class="login-feature-icon">
-                            <i class="bx bx-cog"></i>
-                        </div>
-                        <div>
-                            <div class="login-feature-title">Assisted Setup</div>
-                            <div class="login-feature-desc">We set everything up for you to start in minutes.</div>
-                        </div>
-                    </div>
-                    <div class="login-feature">
-                        <div class="login-feature-icon">
-                            <i class="bx bx-data"></i>
-                        </div>
-                        <div>
-                            <div class="login-feature-title">Data Integrity</div>
-                            <div class="login-feature-desc">We check tables and connections automatically.</div>
-                        </div>
-                    </div>
+<body class="setup-body">
+    <main class="setup-shell">
+        <aside class="setup-aside">
+            <div class="setup-aside-top">
+                <img src="/static/img/logo_texto.svg" alt="Mimic Backup Systems" class="setup-logo" />
+                <span class="setup-edition">Backup infrastructure</span>
+            </div>
+
+            <div class="setup-aside-copy">
+                <span class="setup-eyebrow">Welcome to Mimic</span>
+                <h1>Build your backup operation on a verified foundation.</h1>
+                <p>This short setup validates the services that protect your configurations, then creates the first administrative account.</p>
+            </div>
+
+            <div class="setup-benefits" aria-label="Setup benefits">
+                <div class="setup-benefit">
+                    <span class="setup-benefit-index">01</span>
+                    <div><strong>Verified storage</strong><small>PostgreSQL connectivity and core tables</small></div>
+                </div>
+                <div class="setup-benefit">
+                    <span class="setup-benefit-index">02</span>
+                    <div><strong>Protected credentials</strong><small>Encryption key checked before first use</small></div>
+                </div>
+                <div class="setup-benefit">
+                    <span class="setup-benefit-index">03</span>
+                    <div><strong>Controlled access</strong><small>A dedicated initial Administrator account</small></div>
                 </div>
             </div>
 
-            <div class="login-brand-footer">
-                &copy; 2025 Mimic Backup Systems
-            </div>
-        </div>
+            <p class="setup-aside-footer">Mimic Backup Systems · v{{ AppVersion }}</p>
+        </aside>
 
-        <!-- ===== Right Panel: Setup Status ===== -->
-        <div class="login-form-panel">
-            <div class="login-form-wrapper">
-                
-                <div class="setup-stepper" style="margin-bottom: 40px; justify-content: flex-start;">
-                    <div class="setup-step active">
-                        <div class="setup-step-num">1</div>
-                        <span>Database</span>
+        <section class="setup-main">
+            <div class="setup-card setup-card-readiness">
+                <header class="setup-card-header">
+                    <div class="setup-progress" aria-label="Setup progress">
+                        <div class="setup-progress-step active"><span>1</span><strong>System check</strong></div>
+                        <div class="setup-progress-line"></div>
+                        <div class="setup-progress-step"><span>2</span><strong>Administrator</strong></div>
                     </div>
-                    <div class="setup-divider"></div>
-                    <div class="setup-step">
-                        <div class="setup-step-num">2</div>
-                        <span>Administrator</span>
-                    </div>
+                    <span class="setup-progress-label">Step 1 of 2</span>
+                </header>
+
+                <div class="setup-heading">
+                    <span class="setup-kicker">Installation readiness</span>
+                    <h2>Confirm the environment</h2>
+                    <p>Mimic checks the required services before allowing the first account to be created.</p>
                 </div>
 
-                <div class="login-greeting" style="margin-bottom: 24px;">
-                    <h1 class="login-title">Database</h1>
-                    <p class="login-subtitle">Checking the basic system infrastructure.</p>
+                <div class="setup-check-list">
+                    <article class="setup-check {{ if .Status.DatabaseOK }}is-ready{{ else }}has-error{{ end }}">
+                        <span class="setup-check-mark">{{ if .Status.DatabaseOK }}✓{{ else }}!{{ end }}</span>
+                        <div class="setup-check-copy">
+                            <strong>Database connection</strong>
+                            <small>{{ if .Status.DatabaseOK }}Connected to {{ if .Status.DatabaseName }}{{ .Status.DatabaseName }}{{ else }}PostgreSQL{{ end }}{{ else }}PostgreSQL is not reachable{{ end }}</small>
+                        </div>
+                        <span class="setup-check-state">{{ if .Status.DatabaseOK }}Ready{{ else }}Action needed{{ end }}</span>
+                    </article>
+
+                    <article class="setup-check {{ if .Status.SchemaOK }}is-ready{{ else }}{{ if .Status.DatabaseOK }}has-error{{ else }}is-waiting{{ end }}{{ end }}">
+                        <span class="setup-check-mark">{{ if .Status.SchemaOK }}✓{{ else }}{{ if .Status.DatabaseOK }}!{{ else }}–{{ end }}{{ end }}</span>
+                        <div class="setup-check-copy">
+                            <strong>Application schema</strong>
+                            <small>{{ if .Status.SchemaOK }}Core tables and migrations are available{{ else }}Waiting for a valid database structure{{ end }}</small>
+                        </div>
+                        <span class="setup-check-state">{{ if .Status.SchemaOK }}Ready{{ else }}{{ if .Status.DatabaseOK }}Action needed{{ else }}Waiting{{ end }}{{ end }}</span>
+                    </article>
+
+                    <article class="setup-check {{ if .Status.EncryptionOK }}is-ready{{ else }}{{ if .Status.SchemaOK }}has-error{{ else }}is-waiting{{ end }}{{ end }}">
+                        <span class="setup-check-mark">{{ if .Status.EncryptionOK }}✓{{ else }}{{ if .Status.SchemaOK }}!{{ else }}–{{ end }}{{ end }}</span>
+                        <div class="setup-check-copy">
+                            <strong>Credential encryption</strong>
+                            <small>{{ if .Status.EncryptionOK }}The secret key is valid and ready{{ else }}Waiting for a valid encryption key{{ end }}</small>
+                        </div>
+                        <span class="setup-check-state">{{ if .Status.EncryptionOK }}Ready{{ else }}{{ if .Status.SchemaOK }}Action needed{{ else }}Waiting{{ end }}{{ end }}</span>
+                    </article>
                 </div>
 
-                <div class="setup-status">
-                    <div class="setup-status-icon {{ if .DBOk }}ok{{ else }}pending{{ end }}">
-                        <i class="bx {{ if .DBOk }}bx-check{{ else }}bx-x{{ end }}"></i>
-                    </div>
-                    <div>
-                        <div class="setup-status-text">{{ if .DBOk }}Connection established{{ else }}Connection failed{{ end }}</div>
-                        <div class="setup-status-detail">PostgreSQL</div>
-                    </div>
-                </div>
-
-                <div class="setup-status" style="margin-bottom: 32px;">
-                    <div class="setup-status-icon {{ if .TablesOk }}ok{{ else }}pending{{ end }}">
-                        <i class="bx {{ if .TablesOk }}bx-check{{ else }}bx-x{{ end }}"></i>
-                    </div>
-                    <div>
-                        <div class="setup-status-text">{{ if .TablesOk }}Tables created{{ else }}Tables pending{{ end }}</div>
-                        <div class="setup-status-detail">System structure</div>
-                    </div>
-                </div>
-
-                {{ if .Error }}
-                <div class="login-error">
-                    <i class="bx bx-error-circle"></i>
-                    <span>{{ .Error }}</span>
+                {{ if .Status.Error }}
+                <div class="setup-alert" role="alert">
+                    <span>!</span>
+                    <div><strong>Setup cannot continue yet</strong><p>{{ .Status.Error }}</p></div>
                 </div>
                 {{ end }}
 
-                <form action="/setup" method="POST">
-                    <button type="submit" class="login-btn">
-                        <span>Continue</span>
-                        <i class="bx bx-right-arrow-alt"></i>
-                    </button>
-                </form>
-
-                <div class="auth-footer" style="text-align: center; margin-top: 32px; color: var(--text-muted); font-size: 13px;">
-                    Mimic Backup Systems <span>v{{ AppVersion }}</span>
+                <div class="setup-actions">
+                    <div class="setup-actions-note">
+                        <strong>{{ if .Status.Ready }}Environment ready{{ else }}Configuration required{{ end }}</strong>
+                        <small>{{ if .Status.Ready }}Continue to create the account that will manage Mimic.{{ else }}Correct the issue and run the check again.{{ end }}</small>
+                    </div>
+                    {{ if .Status.Ready }}
+                    <form action="/setup" method="POST">
+                        <button type="submit" class="setup-primary">Continue <span>→</span></button>
+                    </form>
+                    {{ else }}
+                    <a href="/setup" class="setup-secondary">Run check again</a>
+                    {{ end }}
                 </div>
             </div>
-        </div>
-    </div>
+        </section>
+    </main>
 </body>
 </html>

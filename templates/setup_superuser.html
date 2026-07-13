@@ -3,124 +3,153 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mimic | Create Administrator</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <title>Mimic | Create administrator</title>
     <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico" />
     <link rel="stylesheet" href="/static/css/style.css" />
     <link rel="stylesheet" href="/static/css/login.css" />
 </head>
-<body>
-    <div class="login-split">
-        <!-- ===== Left Panel: Setup Branding ===== -->
-        <div class="login-brand">
-            <div class="login-brand-content">
-                <img src="/static/img/logo_texto.svg" alt="Mimic Logo" class="login-logo" />
-                
-                <div class="login-brand-features">
-                    <div class="login-feature">
-                        <div class="login-feature-icon">
-                            <i class="bx bx-user-voice"></i>
-                        </div>
-                        <div>
-                            <div class="login-feature-title">Full Access</div>
-                            <div class="login-feature-desc">Your first user will have global administrative permissions.</div>
-                        </div>
-                    </div>
-                    <div class="login-feature">
-                        <div class="login-feature-icon">
-                            <i class="bx bx-lock-alt"></i>
-                        </div>
-                        <div>
-                            <div class="login-feature-title">Maximum Security</div>
-                            <div class="login-feature-desc">We use state-of-the-art hashing to protect your password.</div>
-                        </div>
-                    </div>
+<body class="setup-body">
+    <main class="setup-shell">
+        <aside class="setup-aside">
+            <div class="setup-aside-top">
+                <img src="/static/img/logo_texto.svg" alt="Mimic Backup Systems" class="setup-logo" />
+                <span class="setup-edition">Backup infrastructure</span>
+            </div>
+
+            <div class="setup-aside-copy">
+                <span class="setup-eyebrow">One final step</span>
+                <h1>Create the account that owns the environment.</h1>
+                <p>The first user receives full administrative access. Additional users and permission levels can be configured afterward.</p>
+            </div>
+
+            <div class="setup-security-note">
+                <span class="setup-security-icon">✓</span>
+                <div>
+                    <strong>Environment verified</strong>
+                    <p>Database, schema, and credential encryption are ready.</p>
                 </div>
             </div>
 
-            <div class="login-brand-footer">
-                &copy; 2026 Mimic Backup Systems
+            <div class="setup-role-summary">
+                <span>Initial role</span>
+                <strong>Administrator</strong>
+                <small>Users · Nodes · Policies · Exports · System</small>
             </div>
-        </div>
 
-        <!-- ===== Right Panel: Admin Form ===== -->
-        <div class="login-form-panel">
-            <div class="login-form-wrapper">
-                
-                <div class="setup-stepper" style="margin-bottom: 40px; justify-content: flex-start;">
-                    <div class="setup-step done">
-                        <div class="setup-step-num"><i class="bx bx-check"></i></div>
-                        <span>Database</span>
-                    </div>
-                    <div class="setup-divider"></div>
-                    <div class="setup-step active">
-                        <div class="setup-step-num">2</div>
-                        <span>Administrator</span>
-                    </div>
-                </div>
+            <p class="setup-aside-footer">Mimic Backup Systems · v{{ AppVersion }}</p>
+        </aside>
 
-                <div class="login-greeting" style="margin-bottom: 24px;">
-                    <h1 class="login-title">Create Administrator</h1>
-                    <p class="login-subtitle">Configure the main system access account.</p>
+        <section class="setup-main">
+            <div class="setup-card setup-card-account">
+                <header class="setup-card-header">
+                    <div class="setup-progress" aria-label="Setup progress">
+                        <div class="setup-progress-step done"><span>✓</span><strong>System check</strong></div>
+                        <div class="setup-progress-line done"></div>
+                        <div class="setup-progress-step active"><span>2</span><strong>Administrator</strong></div>
+                    </div>
+                    <span class="setup-progress-label">Step 2 of 2</span>
+                </header>
+
+                <div class="setup-heading">
+                    <span class="setup-kicker">Primary account</span>
+                    <h2>Create your Administrator</h2>
+                    <p>Use a personal account so operational changes remain attributable in the audit log.</p>
                 </div>
 
                 {{ if .Error }}
-                <div class="login-error">
-                    <i class="bx bx-error-circle"></i>
-                    <span>{{ .Error }}</span>
+                <div class="setup-alert" role="alert">
+                    <span>!</span>
+                    <div><strong>Review the account details</strong><p>{{ .Error }}</p></div>
                 </div>
                 {{ end }}
 
-                <form action="/setup/superuser" method="POST" class="login-form">
-                    <div class="login-field">
-                        <label for="setup-user">
-                            <i class="bx bx-user"></i>
-                            Username
-                        </label>
-                        <input id="setup-user" type="text" name="username" 
-                               placeholder="e.g. admin" required autocomplete="username" />
+                <form action="/setup/superuser" method="POST" class="setup-form" id="setup-admin-form">
+                    <div class="setup-form-grid">
+                        <div class="setup-field">
+                            <label for="setup-user">Username <span>Required</span></label>
+                            <input id="setup-user" type="text" name="username" value="{{ .UsernameValue }}" placeholder="e.g. bruno" required minlength="3" maxlength="64" autocomplete="username" autofocus />
+                            <small>No spaces; 3–64 characters.</small>
+                        </div>
+                        <div class="setup-field">
+                            <label for="setup-email">Email <span>Optional</span></label>
+                            <input id="setup-email" type="email" name="email" value="{{ .EmailValue }}" placeholder="admin@company.com" autocomplete="email" />
+                            <small>Used as account identification.</small>
+                        </div>
                     </div>
 
-                    <div class="login-field">
-                        <label for="setup-email">
-                            <i class="bx bx-envelope"></i>
-                            E-mail (optional)
-                        </label>
-                        <input id="setup-email" type="email" name="email" 
-                               placeholder="admin@company.com" autocomplete="email" />
+                    <div class="setup-form-grid">
+                        <div class="setup-field">
+                            <label for="setup-pass">Password <span>Required</span></label>
+                            <div class="setup-password">
+                                <input id="setup-pass" type="password" name="password" placeholder="At least 8 characters" required minlength="8" maxlength="128" autocomplete="new-password" />
+                                <button type="button" class="setup-reveal" data-target="setup-pass" aria-label="Show password">Show</button>
+                            </div>
+                        </div>
+                        <div class="setup-field">
+                            <label for="setup-confirm">Confirm password <span>Required</span></label>
+                            <div class="setup-password">
+                                <input id="setup-confirm" type="password" name="confirm_password" placeholder="Repeat the password" required minlength="8" maxlength="128" autocomplete="new-password" />
+                                <button type="button" class="setup-reveal" data-target="setup-confirm" aria-label="Show password confirmation">Show</button>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="login-field">
-                        <label for="setup-pass">
-                            <i class="bx bx-lock-open-alt"></i>
-                            Password
-                        </label>
-                        <input id="setup-pass" type="password" name="password" 
-                               placeholder="Minimum 6 characters" required minlength="6" autocomplete="new-password" />
+                    <div class="setup-password-quality" aria-live="polite">
+                        <div class="setup-quality-bar"><span id="password-quality-bar"></span></div>
+                        <div><strong id="password-quality-label">Password strength</strong><small id="password-match-label">Use a unique password for this environment.</small></div>
                     </div>
 
-                    <div class="login-field">
-                        <label for="setup-confirm">
-                            <i class="bx bx-lock-alt"></i>
-                            Confirm Password
-                        </label>
-                        <input id="setup-confirm" type="password" name="confirm_password" 
-                               placeholder="Repeat your password" required minlength="6" autocomplete="new-password" />
+                    <div class="setup-submit-row">
+                        <a href="/setup" class="setup-back">← Back to system check</a>
+                        <button type="submit" class="setup-primary">Create account <span>→</span></button>
                     </div>
-
-                    <button type="submit" class="login-btn">
-                        <span>Create Administrator</span>
-                        <i class="bx bx-user-plus"></i>
-                    </button>
                 </form>
-
-                <div class="auth-footer" style="text-align: center; margin-top: 32px; color: var(--text-muted); font-size: 13px;">
-                    Mimic Backup Systems <span>v{{ AppVersion }}</span>
-                </div>
             </div>
-        </div>
-    </div>
+        </section>
+    </main>
+
+    <script>
+        document.querySelectorAll('.setup-reveal').forEach((button) => {
+            button.addEventListener('click', () => {
+                const input = document.getElementById(button.dataset.target);
+                const show = input.type === 'password';
+                input.type = show ? 'text' : 'password';
+                button.textContent = show ? 'Hide' : 'Show';
+                button.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+            });
+        });
+
+        const password = document.getElementById('setup-pass');
+        const confirmation = document.getElementById('setup-confirm');
+        const qualityBar = document.getElementById('password-quality-bar');
+        const qualityLabel = document.getElementById('password-quality-label');
+        const matchLabel = document.getElementById('password-match-label');
+
+        function updatePasswordQuality() {
+            const value = password.value;
+            let score = 0;
+            if (value.length >= 8) score++;
+            if (value.length >= 12) score++;
+            if (/[A-Z]/.test(value) && /[a-z]/.test(value)) score++;
+            if (/\d/.test(value)) score++;
+            if (/[^A-Za-z0-9]/.test(value)) score++;
+            const labels = ['Password strength', 'Weak', 'Fair', 'Good', 'Strong', 'Excellent'];
+            qualityBar.style.width = value ? `${Math.max(20, score * 20)}%` : '0';
+            qualityBar.dataset.score = String(score);
+            qualityLabel.textContent = labels[score];
+
+            if (confirmation.value) {
+                const matches = value === confirmation.value;
+                matchLabel.textContent = matches ? 'Passwords match.' : 'Passwords do not match yet.';
+                matchLabel.className = matches ? 'is-valid' : 'is-invalid';
+            } else {
+                matchLabel.textContent = 'Use a unique password for this environment.';
+                matchLabel.className = '';
+            }
+        }
+
+        password.addEventListener('input', updatePasswordQuality);
+        confirmation.addEventListener('input', updatePasswordQuality);
+    </script>
 </body>
 </html>

@@ -176,6 +176,63 @@ func (s *SchedulerService) recordLog(level, category, message, details string) {
 	}
 }
 
+// nextRunAfter computes the next scheduled backup time after `after`.
+//
+// When no preferred time is configured it falls back to a simple rolling
+// interval (after + freqHours), matching the previous behavior. When a
+// preferred backup_hour (and, for weekly cadences, backup_day) is set, the
+// result is anchored to that time of day so the node actually runs when the
+// operator configured it to, instead of drifting from whenever the last
+// backup happened to finish.
+func nextRunAfter(after time.Time, freqHours int, backupHour, backupDay string) time.Time {
+	if freqHours <= 0 {
+		freqHours = 24
+	}
+	interval := time.Duration(freqHours) * time.Hour
+
+	if backupHour == "" {
+		return after.Add(interval)
+	}
+	anchor, err := time.Parse("15:04", backupHour)
+	if err != nil {
+		return after.Add(interval)
+	}
+	hour, minute := anchor.Hour(), anchor.Minute()
+
+	// Weekly cadence: anchor to a specific weekday and time of day.
+	if freqHours%(24*7) == 0 {
+		weekday := after.Weekday()
+		if dayIdx, err := strconv.Atoi(backupDay); err == nil && dayIdx >= 0 && dayIdx <= 6 {
+			// Stored as 0=Monday..6=Sunday; time.Weekday is 0=Sunday..6=Saturday.
+			weekday = time.Weekday((dayIdx + 1) % 7)
+		}
+		candidate := time.Date(after.Year(), after.Month(), after.Day(), hour, minute, 0, 0, after.Location())
+		for candidate.Weekday() != weekday || !candidate.After(after) {
+			candidate = candidate.AddDate(0, 0, 1)
+		}
+		return candidate
+	}
+
+	// Daily (or slower, non-weekly-aligned) cadence: anchor to the same time
+	// of day, moving to the next day if that time has already passed today.
+	if freqHours%24 == 0 {
+		candidate := time.Date(after.Year(), after.Month(), after.Day(), hour, minute, 0, 0, after.Location())
+		if !candidate.After(after) {
+			candidate = candidate.AddDate(0, 0, 1)
+		}
+		return candidate
+	}
+
+	// Sub-daily cadence: anchor to fixed slots starting at backupHour and
+	// repeating every freqHours (e.g. hour=02:00, freq=6 -> 02:00, 08:00,
+	// 14:00, 20:00, ...), so displayed and actual run times always match.
+	candidate := time.Date(after.Year(), after.Month(), after.Day(), hour, minute, 0, 0, after.Location())
+	for !candidate.After(after) {
+		candidate = candidate.Add(interval)
+	}
+	return candidate
+}
+
 func (s *SchedulerService) runBackup(node *models.Node) {
 	log.Printf("Starting backup for node: %s", node.Name)
 	config, err := s.ssh.PerformBackup(node)
@@ -335,12 +392,17 @@ func (s *SchedulerService) runBackup(node *models.Node) {
 	now := time.Now()
 	node.LastBackupAt = &now
 
-	// Calculate next backup time based on frequency
+	// Calculate next backup time based on frequency, anchored to the
+	// operator's preferred backup time/day when one is configured.
 	freqHours := 24
+	backupHour := node.BackupHour
+	backupDay := node.BackupDay
 	if node.ScheduleType == "routine" && node.RoutineID != nil {
 		var routine models.BackupRoutine
 		s.db.First(&routine, node.RoutineID)
 		freqHours, _ = strconv.Atoi(routine.Frequency)
+		backupHour = routine.BackupHour
+		backupDay = routine.BackupDay
 	} else {
 		freqHours, _ = strconv.Atoi(node.Frequency)
 	}
@@ -348,7 +410,7 @@ func (s *SchedulerService) runBackup(node *models.Node) {
 		freqHours = 24
 	}
 
-	next := now.Add(time.Duration(freqHours) * time.Hour)
+	next := nextRunAfter(now, freqHours, backupHour, backupDay)
 	node.NextBackupAt = &next
 
 	if err := s.db.Model(&models.Node{}).Where("id = ?", node.ID).Updates(map[string]any{

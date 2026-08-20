@@ -27,6 +27,10 @@ COPY --from=builder /app/mimic_bin .
 COPY --from=builder /app/static ./static
 COPY --from=builder /app/templates ./templates
 
+# Executar como usuário não-privilegiado
+RUN addgroup -S mimic && adduser -S mimic -G mimic && chown -R mimic:mimic /app
+USER mimic
+
 # Expor a porta
 EXPOSE 3000
 

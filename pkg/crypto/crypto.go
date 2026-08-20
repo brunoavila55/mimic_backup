@@ -8,11 +8,28 @@ import (
 	"errors"
 	"io"
 	"os"
+	"sync"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
+var (
+	secretKeyOnce sync.Once
+	secretKey     []byte
+	secretKeyErr  error
+)
+
+// getSecretKey resolves and caches the encryption key for the lifetime of the
+// process. The key is read from the environment or disk only once, instead of
+// on every Encrypt/Decrypt call.
 func getSecretKey() ([]byte, error) {
+	secretKeyOnce.Do(func() {
+		secretKey, secretKeyErr = loadSecretKey()
+	})
+	return secretKey, secretKeyErr
+}
+
+func loadSecretKey() ([]byte, error) {
 	key := os.Getenv("SECRET_KEY")
 	if key != "" {
 		if len(key) < 32 {

@@ -19,7 +19,6 @@ import (
 	"mimic/pkg/crypto"
 	"net/http"
 	"net/mail"
-	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -211,28 +210,7 @@ func (h *FormHandler) nodeGroups() []string {
 }
 
 func (h *FormHandler) NewNode(c *fiber.Ctx) error {
-	var routines []models.BackupRoutine
-	h.DB.Find(&routines)
-
-	var credentials []models.Credential
-	h.DB.Find(&credentials)
-
-	var agents []models.AccessAgent
-	h.DB.Find(&agents)
-
-	groups := h.nodeGroups()
-
-	return c.Render("node_form", fiber.Map{
-		"Title":        "New Node",
-		"Username":     c.Locals("username"),
-		"Avatar":       c.Locals("avatar"),
-		"Role":         c.Locals("role"),
-		"CurrentRoute": "nodes",
-		"Routines":     routines,
-		"Credentials":  credentials,
-		"Agents":       agents,
-		"Groups":       groups,
-	}, "base")
+	return h.renderNodeForm(c, models.Node{}, "", 0)
 }
 
 func (h *FormHandler) EditNode(c *fiber.Ctx) error {
@@ -240,6 +218,18 @@ func (h *FormHandler) EditNode(c *fiber.Ctx) error {
 	var node models.Node
 	if err := h.DB.Where("id = ?", id).First(&node).Error; err != nil {
 		return c.Status(404).SendString("Node not found")
+	}
+
+	return h.renderNodeForm(c, node, "", 0)
+}
+
+// renderNodeForm re-renders the node form with whatever the operator already
+// entered, plus a visible error banner. It mirrors renderUserForm,
+// renderCredentialForm and renderRoutineForm so a validation failure never
+// drops the operator onto a blank error page and loses their input.
+func (h *FormHandler) renderNodeForm(c *fiber.Ctx, node models.Node, errMsg string, status int) error {
+	if status != 0 {
+		c.Status(status)
 	}
 
 	var routines []models.BackupRoutine
@@ -253,8 +243,13 @@ func (h *FormHandler) EditNode(c *fiber.Ctx) error {
 
 	groups := h.nodeGroups()
 
+	title := "New Node"
+	if node.ID != 0 {
+		title = "Edit " + node.Name
+	}
+
 	return c.Render("node_form", fiber.Map{
-		"Title":        "Edit " + node.Name,
+		"Title":        title,
 		"Username":     c.Locals("username"),
 		"Avatar":       c.Locals("avatar"),
 		"Role":         c.Locals("role"),
@@ -264,6 +259,7 @@ func (h *FormHandler) EditNode(c *fiber.Ctx) error {
 		"Credentials":  credentials,
 		"Agents":       agents,
 		"Groups":       groups,
+		"Error":        errMsg,
 	}, "base")
 }
 
@@ -283,17 +279,17 @@ func (h *FormHandler) SaveNode(c *fiber.Ctx) error {
 	node.Username = strings.TrimSpace(c.FormValue("username"))
 
 	if node.Name == "" || node.IP == "" {
-		return c.Status(400).SendString("Node name and IP are required")
+		return h.renderNodeForm(c, node, "Node name and IP are required.", fiber.StatusBadRequest)
 	}
 	if !supportedNodeVendors[node.Vendor] {
-		return c.Status(400).SendString("Invalid node vendor")
+		return h.renderNodeForm(c, node, "Invalid node vendor.", fiber.StatusBadRequest)
 	}
 
 	rawPass := c.FormValue("password")
 	if rawPass != "" {
 		encPass, err := crypto.Encrypt(rawPass)
 		if err != nil {
-			return c.Status(500).SendString("Error encrypting password: " + err.Error())
+			return h.renderNodeForm(c, node, "Error encrypting password: "+err.Error(), fiber.StatusInternalServerError)
 		}
 		node.Password = encPass
 	}
@@ -315,9 +311,14 @@ func (h *FormHandler) SaveNode(c *fiber.Ctx) error {
 	}
 	node.BackupHour = strings.TrimSpace(c.FormValue("backup_hour"))
 	node.BackupDay = strings.TrimSpace(c.FormValue("backup_day"))
+	if node.Frequency != "168" {
+		// The weekday picker only applies to weekly cadences; clear any
+		// leftover value from a previous edit instead of keeping stale data.
+		node.BackupDay = ""
+	}
 
 	if err := validateNodeSchedule(node.ScheduleType, node.Frequency, node.BackupHour, node.BackupDay); err != nil {
-		return c.Status(400).SendString(err.Error())
+		return h.renderNodeForm(c, node, err.Error()+".", fiber.StatusBadRequest)
 	}
 
 	routineID, _ := strconv.Atoi(c.FormValue("routine_id"))
@@ -348,7 +349,7 @@ func (h *FormHandler) SaveNode(c *fiber.Ctx) error {
 
 	if err := h.DB.Save(&node).Error; err != nil {
 		log.Printf("[Node] Failed to save node: %v", err)
-		return c.Status(500).SendString("Could not save node")
+		return h.renderNodeForm(c, node, "Could not save node.", fiber.StatusInternalServerError)
 	}
 	writeAuditLog(h.DB, c, "success", "node", "Node saved", "node="+node.Name)
 
@@ -1069,6 +1070,11 @@ func (h *FormHandler) SaveRoutine(c *fiber.Ctx) error {
 	}
 	routine.BackupHour = strings.TrimSpace(c.FormValue("backup_hour"))
 	routine.BackupDay = strings.TrimSpace(c.FormValue("backup_day"))
+	if routine.Frequency != "168" {
+		// The weekday picker only applies to weekly cadences; clear any
+		// leftover value from a previous edit instead of keeping stale data.
+		routine.BackupDay = ""
+	}
 	routine.Enabled = c.FormValue("enabled") == "on"
 
 	if routine.Name == "" {
@@ -1654,12 +1660,8 @@ func normalizeAlertTargetGroup(value string) string {
 }
 
 func validateAlertURL(value string) error {
-	parsed, err := url.ParseRequestURI(value)
-	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
-		return fmt.Errorf("enter a valid webhook URL")
-	}
-	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return fmt.Errorf("webhook URL must start with http:// or https://")
+	if err := alert.ValidateWebhookURL(value); err != nil {
+		return err
 	}
 	return nil
 }

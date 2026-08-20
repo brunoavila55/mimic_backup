@@ -14,6 +14,18 @@ type AuthHandler struct {
 	Store *session.Store
 }
 
+// dummyPasswordHash is compared against when a username does not exist, so that
+// bcrypt runs on every login attempt regardless of whether the user is real.
+// This keeps failed-login response time independent of username existence and
+// prevents timing-based username enumeration.
+var dummyPasswordHash = func() string {
+	hash, err := bcrypt.GenerateFromPassword([]byte("mimic-dummy-password-for-timing-safety"), bcrypt.DefaultCost)
+	if err != nil {
+		panic("failed to precompute dummy password hash: " + err.Error())
+	}
+	return string(hash)
+}()
+
 func (h *AuthHandler) GetLogin(c *fiber.Ctx) error {
 	sess, err := h.Store.Get(c)
 	if err == nil && sess.Get("user_id") != nil {
@@ -27,12 +39,17 @@ func (h *AuthHandler) PostLogin(c *fiber.Ctx) error {
 	password := c.FormValue("password")
 
 	var user models.User
-	if err := h.DB.Where("username = ?", username).First(&user).Error; err != nil {
-		writeAuditLog(h.DB, c, "warning", "auth", "Failed login attempt", "username="+username)
-		return c.Render("login", fiber.Map{"Title": "Login", "Error": "Invalid credentials", "LoginUsername": username})
-	}
+	userFound := h.DB.Where("username = ?", username).First(&user).Error == nil
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+	hash := dummyPasswordHash
+	if userFound && user.Password != "" {
+		hash = user.Password
+	}
+	// Always run bcrypt, even for unknown usernames, so response time does not
+	// leak whether the username exists.
+	passwordMatches := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
+
+	if !userFound || !passwordMatches {
 		writeAuditLog(h.DB, c, "warning", "auth", "Failed login attempt", "username="+username)
 		return c.Render("login", fiber.Map{"Title": "Login", "Error": "Invalid credentials", "LoginUsername": username})
 	}

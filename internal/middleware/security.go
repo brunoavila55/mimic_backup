@@ -36,11 +36,15 @@ func SecurityHeadersAndOrigin() fiber.Handler {
 			return c.Next()
 		}
 
-		if referer := c.Get(fiber.HeaderReferer); referer != "" {
-			parsed, err := url.Parse(referer)
-			if err != nil || !strings.EqualFold(parsed.Host, c.Get("Host")) {
-				return c.SendStatus(fiber.StatusForbidden)
-			}
+		referer := c.Get(fiber.HeaderReferer)
+		if referer == "" {
+			// Neither Origin nor Referer was sent on a state-changing request.
+			// Fail closed instead of allowing it through unchecked.
+			return c.SendStatus(fiber.StatusForbidden)
+		}
+		parsed, err := url.Parse(referer)
+		if err != nil || !strings.EqualFold(parsed.Host, c.Get("Host")) {
+			return c.SendStatus(fiber.StatusForbidden)
 		}
 		return c.Next()
 	}

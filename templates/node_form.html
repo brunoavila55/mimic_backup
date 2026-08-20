@@ -10,16 +10,17 @@
             let parts = this.backupHour.split(':');
             if (parts.length < 2) return 'Preferred time of day to start the backup.';
             let hour = parseInt(parts[0]);
+            let minute = parts[1];
             let freq = parseInt(this.frequency);
             if (freq === 24) return 'Runs once a day at ' + this.backupHour + '.';
             if (freq === 168) return 'Runs once a week at ' + this.backupHour + '.';
-            if (freq === 1) return 'Runs every hour.';
+            if (freq === 1) return 'Runs every hour, at :' + minute + ' past the hour.';
 
             let times = [];
             for (let i = 0; i < 24; i += freq) {
                 let next = (hour + i) % 24;
-                let hStr = next < 10 ? '0' + next : next;
-                times.push(hStr + ':00');
+                let hStr = next < 10 ? '0' + next : String(next);
+                times.push(hStr + ':' + minute);
             }
             times.sort();
             return 'Runs at: ' + times.join(', ') + '.';
@@ -38,6 +39,13 @@
             </div>
         </div>
     </div>
+
+    {{ if .Error }}
+    <div class="node-form-error">
+        <i class="bx bx-error-circle"></i>
+        <span>{{ .Error }}</span>
+    </div>
+    {{ end }}
 
     <form action="{{ if .Node.ID }}/nodes/save/{{ .Node.ID }}{{ else }}/nodes/save{{ end }}" method="POST" class="node-form-shell">
         <aside class="node-form-rail">

@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
+	neturl "net/url"
 	"time"
 
 	"gorm.io/gorm"
@@ -80,7 +82,56 @@ func Dispatch(db *gorm.DB, rule models.AlertRule, message string) {
 	}()
 }
 
+// ValidateWebhookURL rejects malformed URLs, non-HTTP(S) schemes, and hosts that
+// resolve to loopback, link-local, or private network addresses. This prevents
+// the webhook feature from being used to reach internal services (SSRF).
+func ValidateWebhookURL(rawURL string) error {
+	parsed, err := neturl.ParseRequestURI(rawURL)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return fmt.Errorf("enter a valid webhook URL")
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return fmt.Errorf("webhook URL must start with http:// or https://")
+	}
+	if isBlockedWebhookHost(parsed.Host) {
+		return fmt.Errorf("webhook URL must not point to a private or internal network address")
+	}
+	return nil
+}
+
+func isBlockedWebhookHost(host string) bool {
+	hostname := host
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		hostname = h
+	}
+	hostname = trimHostBrackets(hostname)
+
+	ips, err := net.LookupIP(hostname)
+	if err != nil || len(ips) == 0 {
+		// Unable to resolve: fail safe and block rather than risk an internal target.
+		return true
+	}
+	for _, ip := range ips {
+		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
+			return true
+		}
+	}
+	return false
+}
+
+// trimHostBrackets strips the surrounding [] from an IPv6 literal host, if present.
+func trimHostBrackets(host string) string {
+	if len(host) >= 2 && host[0] == '[' && host[len(host)-1] == ']' {
+		return host[1 : len(host)-1]
+	}
+	return host
+}
+
 func SendWebhook(url string, message string) error {
+	if err := ValidateWebhookURL(url); err != nil {
+		return err
+	}
+
 	payload := WebhookPayload{Text: message}
 	body, err := json.Marshal(payload)
 	if err != nil {

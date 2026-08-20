@@ -44,4 +44,14 @@ func TestSecurityHeadersAndOrigin(t *testing.T) {
 	if resp.StatusCode != fiber.StatusOK {
 		t.Fatalf("expected same-origin POST to succeed, got %d", resp.StatusCode)
 	}
+
+	noHeaders := httptest.NewRequest(fiber.MethodPost, "/save", nil)
+	noHeaders.Host = "mimic.local"
+	resp, err = app.Test(noHeaders)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusForbidden {
+		t.Fatalf("expected POST without Origin/Referer to be forbidden, got %d", resp.StatusCode)
+	}
 }

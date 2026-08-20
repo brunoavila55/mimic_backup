@@ -103,12 +103,12 @@
                            class="form-input"
                            x-model="backupHour"
                            value="{{ .Routine.BackupHour }}" />
-                    <div class="form-hint">Optional. The scheduler stores the cadence and shows this as the preferred window.</div>
+                    <div class="form-hint">Optional. When set, backups anchor to this time of day instead of drifting from whenever the last run finished.</div>
                 </div>
             </div>
 
             <div class="routine-form-grid">
-                <div class="form-group">
+                <div class="form-group" x-show="frequency === '168'" x-transition>
                     <label class="form-label" for="routine-backup-day">Weekly day</label>
                     <select id="routine-backup-day" name="backup_day" class="form-input" x-model="backupDay">
                         <option value="">Any day</option>

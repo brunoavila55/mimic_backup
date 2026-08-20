@@ -1856,6 +1856,24 @@ a.dashboard-metric-card:hover { border-color: var(--border-focus); background: v
     margin-bottom: 20px;
 }
 
+.node-form-error {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 14px;
+    padding: 12px 14px;
+    background: var(--danger-soft);
+    border: 1px solid rgba(239, 68, 68, 0.24);
+    border-radius: var(--radius-lg);
+    color: var(--danger);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.node-form-error i {
+    font-size: 19px;
+}
+
 .node-form-shell {
     display: grid;
     grid-template-columns: 240px minmax(0, 1fr);

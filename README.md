@@ -1,6 +1,6 @@
 # Mimic Backup Systems
 
-**Current interface version:** `0.8.0`
+**Current interface version:** `0.8.1`
 
 Mimic is a platform for automating, versioning, auditing, and centralizing configuration backups for network equipment such as switches, routers, OLTs, and firewalls. It connects to devices over SSH, captures their configurations, compares versions, and keeps a searchable history for operational visibility, compliance, and disaster recovery.
 
@@ -63,6 +63,15 @@ Rules can target:
 - **Logging / Auditing:** Syslog, NTP, and operational audit requirements.
 
 Rules support vendor filters, group filters, regex matching, context blocks, severities, penalties, remediation text, and per-node exceptions.
+
+## Recent Updates (v0.8.1)
+
+- **Backup Scheduling Fix:** The preferred backup time and weekday (individual nodes and routines) are now actually honored by the scheduler instead of being cosmetic; next-run times are anchored to the configured time of day.
+- **Node Form Reliability:** Saving a node with a validation error now redisplays the form with the entered data and an inline error message, instead of a blank error page.
+- **Login Hardening:** Failed logins take the same time whether the username exists or not, closing a timing side-channel.
+- **CSRF Hardening:** State-changing requests without an Origin or Referer header are now rejected instead of allowed through.
+- **Webhook SSRF Guard:** Alert webhook URLs are validated against loopback/private/link-local destinations before every dispatch.
+- **Container Hardening:** The Docker image now runs as a non-root user.
 
 ## Recent Updates (v0.8.0)
 

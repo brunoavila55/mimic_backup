@@ -22,23 +22,21 @@ type DashboardHandler struct {
 }
 
 type DashboardStats struct {
-	TotalNodes           int64
-	ActiveNodes          int64
-	HealthyNodes         int64
-	FailedNodes          int64
-	SilentNodes          int64
-	AttentionNodes       int64
-	ScheduledNodes       int64
-	SecurityRiskNodes    int64
-	AverageSecurityScore int64
-	PendingExportNodes   int64
-	Backups24h           int64
-	Successful24h        int64
-	Failed24h            int64
-	Changes24h           int64
-	HealthRate           int64
-	SuccessRate24h       int64
-	ScheduleCoverage     int64
+	TotalNodes         int64
+	ActiveNodes        int64
+	HealthyNodes       int64
+	FailedNodes        int64
+	SilentNodes        int64
+	AttentionNodes     int64
+	ScheduledNodes     int64
+	PendingExportNodes int64
+	Backups24h         int64
+	Successful24h      int64
+	Failed24h          int64
+	Changes24h         int64
+	HealthRate         int64
+	SuccessRate24h     int64
+	ScheduleCoverage   int64
 }
 
 type DashboardAttentionItem struct {
@@ -82,14 +80,12 @@ type DashboardSnapshot struct {
 }
 
 type dashboardNodeAggregate struct {
-	TotalNodes           int64
-	ActiveNodes          int64
-	HealthyNodes         int64
-	FailedNodes          int64
-	SilentNodes          int64
-	ScheduledNodes       int64
-	SecurityRiskNodes    int64
-	AverageSecurityScore int64
+	TotalNodes     int64
+	ActiveNodes    int64
+	HealthyNodes   int64
+	FailedNodes    int64
+	SilentNodes    int64
+	ScheduledNodes int64
 }
 
 type dashboardBackupAggregate struct {
@@ -221,9 +217,7 @@ func (h *DashboardHandler) loadDashboard(now time.Time) (DashboardSnapshot, erro
 		COUNT(*) FILTER (WHERE enabled = TRUE AND last_status = 'success' AND last_backup_at >= ?) AS healthy_nodes,
 		COUNT(*) FILTER (WHERE enabled = TRUE AND last_status = 'error') AS failed_nodes,
 		COUNT(*) FILTER (WHERE enabled = TRUE AND (last_status IS NULL OR last_status <> 'error') AND (last_backup_at IS NULL OR last_backup_at < ?)) AS silent_nodes,
-		COUNT(*) FILTER (WHERE enabled = TRUE AND next_backup_at > ?) AS scheduled_nodes,
-		COUNT(*) FILTER (WHERE enabled = TRUE AND security_score < 70) AS security_risk_nodes,
-		COALESCE(ROUND(AVG(security_score) FILTER (WHERE enabled = TRUE)), 0) AS average_security_score
+		COUNT(*) FILTER (WHERE enabled = TRUE AND next_backup_at > ?) AS scheduled_nodes
 	`, threshold, threshold, now).Scan(&nodes).Error; err != nil {
 		return snapshot, fmt.Errorf("load fleet summary: %w", err)
 	}
@@ -239,22 +233,20 @@ func (h *DashboardHandler) loadDashboard(now time.Time) (DashboardSnapshot, erro
 	}
 
 	snapshot.Stats = DashboardStats{
-		TotalNodes:           nodes.TotalNodes,
-		ActiveNodes:          nodes.ActiveNodes,
-		HealthyNodes:         nodes.HealthyNodes,
-		FailedNodes:          nodes.FailedNodes,
-		SilentNodes:          nodes.SilentNodes,
-		AttentionNodes:       nodes.FailedNodes + nodes.SilentNodes,
-		ScheduledNodes:       nodes.ScheduledNodes,
-		SecurityRiskNodes:    nodes.SecurityRiskNodes,
-		AverageSecurityScore: nodes.AverageSecurityScore,
-		Backups24h:           backups.Backups24h,
-		Successful24h:        backups.Successful24h,
-		Failed24h:            backups.Failed24h,
-		Changes24h:           backups.Changes24h,
-		HealthRate:           percent(nodes.HealthyNodes, nodes.ActiveNodes),
-		SuccessRate24h:       percent(backups.Successful24h, backups.Backups24h),
-		ScheduleCoverage:     percent(nodes.ScheduledNodes, nodes.ActiveNodes),
+		TotalNodes:       nodes.TotalNodes,
+		ActiveNodes:      nodes.ActiveNodes,
+		HealthyNodes:     nodes.HealthyNodes,
+		FailedNodes:      nodes.FailedNodes,
+		SilentNodes:      nodes.SilentNodes,
+		AttentionNodes:   nodes.FailedNodes + nodes.SilentNodes,
+		ScheduledNodes:   nodes.ScheduledNodes,
+		Backups24h:       backups.Backups24h,
+		Successful24h:    backups.Successful24h,
+		Failed24h:        backups.Failed24h,
+		Changes24h:       backups.Changes24h,
+		HealthRate:       percent(nodes.HealthyNodes, nodes.ActiveNodes),
+		SuccessRate24h:   percent(backups.Successful24h, backups.Backups24h),
+		ScheduleCoverage: percent(nodes.ScheduledNodes, nodes.ActiveNodes),
 	}
 
 	if err := h.DB.Model(&models.NodeBackup{}).

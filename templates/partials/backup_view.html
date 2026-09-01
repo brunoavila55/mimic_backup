@@ -1,10 +1,16 @@
 <div>
-    <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center justify-between mb-4 pb-2" style="border-bottom: 1px solid var(--border-light);">
         <div>
-            <h3 style="font-size: 14px; font-weight: 600; color: var(--text);">{{ .Backup.Node.Name }} - v{{ .Backup.Version }}</h3>
-            <p class="text-secondary" style="font-size: 12px; margin-top: 2px;">{{ .Backup.CreatedAt.Format "02/01/2006 15:04:05" }}</p>
+            <h3 style="font-size: 14px; font-weight: 600; color: var(--text);">
+                <i class="bx bx-code-block" style="color: var(--accent); vertical-align: middle; margin-right: 4px;"></i>
+                {{ .Backup.Node.Name }} &mdash; v{{ .Backup.Version }}
+            </h3>
+            <p class="text-secondary" style="font-size: 11px; margin-top: 2px;">{{ .Backup.CreatedAt.Format "02/01/2006 15:04:05" }}</p>
         </div>
-        <span class="badge {{ if eq .Backup.Status "success" }}badge-success{{ else }}badge-danger{{ end }}">{{ .Backup.Status }}</span>
+        <div class="flex items-center gap-3">
+            <span class="badge {{ if eq .Backup.Status "success" }}badge-success{{ else }}badge-danger{{ end }}">{{ .Backup.Status }}</span>
+            <button @click="modalOpen = false" class="modal-close" aria-label="Close"></button>
+        </div>
     </div>
     {{ if .Backup.Config }}
     <div class="code-block">{{ .Backup.Config }}</div>

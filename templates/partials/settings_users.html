@@ -126,7 +126,7 @@
             <div class="user-access">
                 <span>Access level</span>
                 <strong>{{ if eq .Role "Administrator" }}Full{{ else if eq .Role "Operator" }}Operational{{ else if eq .Role "Auditor" }}Audit{{ else }}Read-only{{ end }}</strong>
-                <small>{{ if eq .Role "Administrator" }}Manages users, settings and every operation.{{ else if eq .Role "Operator" }}Manages nodes, credentials, routines and backup runs.{{ else if eq .Role "Auditor" }}Reviews policies, Golden Configs and system logs.{{ else }}Views inventory, backups and status only.{{ end }}</small>
+                <small>{{ if eq .Role "Administrator" }}Manages users, settings and every operation.{{ else if eq .Role "Operator" }}Manages nodes, credentials, routines and backup runs.{{ else if eq .Role "Auditor" }}Reviews system activity logs.{{ else }}Views inventory, backups and status only.{{ end }}</small>
             </div>
 
             <div class="user-actions">

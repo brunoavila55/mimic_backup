@@ -61,14 +61,6 @@
                 {{ else }}
                     <span class="badge badge-muted"><i class="bx bx-time"></i> Pending</span>
                 {{ end }}
-
-                {{ if eq .SecurityScore 100 }}
-                    <span class="node-score success"><i class="bx bx-shield-quarter"></i> 100</span>
-                {{ else if gt .SecurityScore 70 }}
-                    <span class="node-score warning"><i class="bx bx-shield-quarter"></i> {{ .SecurityScore }}</span>
-                {{ else }}
-                    <span class="node-score danger"><i class="bx bxs-shield-x"></i> {{ .SecurityScore }}</span>
-                {{ end }}
             </div>
         </td>
         <td>

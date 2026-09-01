@@ -7,7 +7,7 @@
             const descriptions = {
                 Administrator: 'Full access to users, settings, policies and every operation.',
                 Operator: 'Can manage nodes, credentials, routines, exports and backup runs.',
-                Auditor: 'Read-only access to security rules, Golden Configs and system logs.',
+                Auditor: 'Read-only access to system activity logs.',
                 Viewer: 'Read-only access to inventory, backups and status views.'
             };
             return descriptions[this.role] || descriptions.Viewer;

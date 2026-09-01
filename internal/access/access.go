@@ -14,7 +14,6 @@ const (
 	ManageNodes      Permission = "manage_nodes"
 	RunBackups       Permission = "run_backups"
 	ManageOperations Permission = "manage_operations"
-	ManagePolicies   Permission = "manage_policies"
 	ManageSystem     Permission = "manage_system"
 	ExportBackups    Permission = "export_backups"
 	ViewAudit        Permission = "view_audit"

@@ -114,24 +114,17 @@ func (h *NodeHandler) NodeDetails(c *fiber.Ctx) error {
 	var node models.Node
 	if err := h.DB.Preload("Backups", func(db *gorm.DB) *gorm.DB {
 		return db.Order("version desc")
-	}).Preload("Credential").Preload("Violations.Rule").Preload("Exceptions.Rule").Where("id = ?", id).First(&node).Error; err != nil {
+	}).Preload("Credential").Where("id = ?", id).First(&node).Error; err != nil {
 		return c.Status(404).SendString("Node not found")
 	}
 
-	var hasGoldenConfig bool
-	var gcs []models.GoldenConfig
-	if err := h.DB.Where("(LOWER(vendor) = LOWER(?) OR vendor = '*') AND (LOWER(target_group) = LOWER(?) OR target_group = '*')", node.Vendor, node.Group).Find(&gcs).Error; err == nil && len(gcs) > 0 {
-		hasGoldenConfig = true
-	}
-
 	data := fiber.Map{
-		"Title":           node.Name,
-		"Username":        c.Locals("username"),
-		"Avatar":          c.Locals("avatar"),
-		"Role":            c.Locals("role"),
-		"CurrentRoute":    "nodes",
-		"Node":            node,
-		"HasGoldenConfig": hasGoldenConfig,
+		"Title":        node.Name,
+		"Username":     c.Locals("username"),
+		"Avatar":       c.Locals("avatar"),
+		"Role":         c.Locals("role"),
+		"CurrentRoute": "nodes",
+		"Node":         node,
 	}
 
 	return c.Render("node_details", data, "base")
@@ -205,56 +198,6 @@ func (h *NodeHandler) GetBackupDiff(c *fiber.Ctx) error {
 	})
 }
 
-func (h *NodeHandler) GoldenDiffView(c *fiber.Ctx) error {
-	id := c.Params("id")
-	var backup models.NodeBackup
-
-	// Fetch the latest successful backup for this node
-	if err := h.DB.Preload("Node").Where("node_id = ? AND status = 'success'", id).Order("version desc").First(&backup).Error; err != nil {
-		return c.Status(404).SendString("No successful backups found for this node")
-	}
-
-	// Fetch matching Golden Config
-	var gcs []models.GoldenConfig
-	var gc models.GoldenConfig
-	if err := h.DB.Where("(LOWER(vendor) = LOWER(?) OR vendor = '*') AND (LOWER(target_group) = LOWER(?) OR target_group = '*')", backup.Node.Vendor, backup.Node.Group).Find(&gcs).Error; err != nil || len(gcs) == 0 {
-		return c.Status(404).SendString("No matching Golden Config found")
-	}
-
-	bestWeight := -1
-	for _, cfg := range gcs {
-		weight := 0
-		if cfg.TargetGroup != "*" {
-			weight += 2
-		}
-		if cfg.Vendor != "*" {
-			weight += 1
-		}
-		if weight > bestWeight {
-			bestWeight = weight
-			gc = cfg
-		}
-	}
-
-	// Compute diff
-	diffRes := diff.GenerateDiff(gc.ConfigTemplate, backup.Config)
-
-	return c.Render("partials/golden_diff_view", fiber.Map{
-		"Node":          backup.Node,
-		"CurrentBackup": backup,
-		"GoldenConfig":  gc,
-		"Backups":       []models.NodeBackup{backup}, // Only show the current backup in the dropdown context if needed
-		"HasPrev":       true,
-		"LeftVersion":   "Golden Baseline",
-		"LeftID":        0,
-		"RightID":       backup.ID,
-		"SplitRows":     diffRes.SplitRows,
-		"UnifiedRows":   diffRes.UnifiedRows,
-		"Additions":     diffRes.Additions,
-		"Deletions":     diffRes.Deletions,
-	})
-}
-
 func (h *NodeHandler) CompareBackups(c *fiber.Ctx) error {
 	leftID := c.Query("left_id")
 	rightID := c.Query("right_id")
@@ -289,6 +232,22 @@ func (h *NodeHandler) CompareBackups(c *fiber.Ctx) error {
 		"Additions":    diffRes.Additions,
 		"Deletions":    diffRes.Deletions,
 	})
+}
+
+// csvSafe neutralizes leading characters that spreadsheet applications (Excel,
+// Google Sheets, LibreOffice) interpret as the start of a formula, preventing
+// CSV/formula injection when a user-controlled field (e.g. node name or tags)
+// is exported and later opened by an operator.
+func csvSafe(value string) string {
+	if value == "" {
+		return value
+	}
+	switch value[0] {
+	case '=', '+', '-', '@', '\t', '\r':
+		return "'" + value
+	default:
+		return value
+	}
 }
 
 func (h *NodeHandler) ExportNodesCSV(c *fiber.Ctx) error {
@@ -333,21 +292,21 @@ func (h *NodeHandler) ExportNodesCSV(c *fiber.Ctx) error {
 		}
 
 		writer.Write([]string{
-			node.Name,
+			csvSafe(node.Name),
 			node.Vendor,
-			node.IP,
+			csvSafe(node.IP),
 			fmt.Sprintf("%d", node.Port),
-			node.Username,
+			csvSafe(node.Username),
 			"", // password omitted for security
-			node.Group,
-			node.Tags,
+			csvSafe(node.Group),
+			csvSafe(node.Tags),
 			node.ScheduleType,
 			node.Frequency,
 			node.BackupHour,
 			node.BackupDay,
-			credName,
-			routineName,
-			agentName,
+			csvSafe(credName),
+			csvSafe(routineName),
+			csvSafe(agentName),
 			enabled,
 		})
 	}
@@ -440,7 +399,7 @@ func (h *SettingsHandler) GetSettings(c *fiber.Ctx) error {
 	case access.RoleOperator:
 		return c.Redirect("/settings/credentials")
 	case access.RoleAuditor:
-		return c.Redirect("/settings/security")
+		return c.Redirect("/settings/logs")
 	default:
 		return c.Redirect("/settings/profile")
 	}
@@ -455,8 +414,6 @@ func (h *SettingsHandler) renderTab(c *fiber.Ctx, tab string, data fiber.Map) er
 		"export":      "Export",
 		"logs":        "System Logs",
 		"alerts":      "Alerting Rules",
-		"security":    "Security Auditing",
-		"golden":      "Golden Configs",
 		"profile":     "My Profile",
 	}
 
@@ -474,7 +431,6 @@ func (h *SettingsHandler) renderTab(c *fiber.Ctx, tab string, data fiber.Map) er
 	data["CanManageUsers"] = access.Allows(role, access.ManageUsers)
 	data["CanManageNodes"] = access.Allows(role, access.ManageNodes)
 	data["CanManageOperations"] = access.Allows(role, access.ManageOperations)
-	data["CanManagePolicies"] = access.Allows(role, access.ManagePolicies)
 	data["CanManageSystem"] = access.Allows(role, access.ManageSystem)
 	data["CanExportBackups"] = access.Allows(role, access.ExportBackups)
 	data["CanViewAudit"] = access.Allows(role, access.ViewAudit)
@@ -515,33 +471,6 @@ func (h *SettingsHandler) GetUsersTab(c *fiber.Ctx) error {
 		"UserStats":           stats,
 		"CurrentUserID":       c.Locals("user_id"),
 		"CurrentUserIDString": fmt.Sprintf("%v", c.Locals("user_id")),
-	})
-}
-
-func (h *SettingsHandler) GetSecurityTab(c *fiber.Ctx) error {
-	var rules []models.SecurityRule
-	h.DB.Order("enabled desc, severity asc, name asc").Find(&rules)
-	var enabled, critical int
-	for _, rule := range rules {
-		if rule.Enabled {
-			enabled++
-		}
-		if rule.Enabled && rule.Severity == "Critical" {
-			critical++
-		}
-	}
-
-	return h.renderTab(c, "security", fiber.Map{
-		"Rules": rules, "EnabledCount": enabled, "CriticalCount": critical,
-	})
-}
-
-func (h *SettingsHandler) GetGoldenTab(c *fiber.Ctx) error {
-	var configs []models.GoldenConfig
-	h.DB.Order("vendor asc, name asc").Find(&configs)
-
-	return h.renderTab(c, "golden", fiber.Map{
-		"Configs": configs,
 	})
 }
 
@@ -696,7 +625,7 @@ func (h *SettingsHandler) GetAlertsTab(c *fiber.Ctx) error {
 		if rule.TargetGroup == "*" || strings.EqualFold(rule.TargetGroup, "global") {
 			stats.Global++
 		}
-		if !rule.AlertOnDiff && !rule.AlertOnFailure && !rule.AlertOnSecurity {
+		if !rule.AlertOnDiff && !rule.AlertOnFailure {
 			stats.MissingEvents++
 		}
 	}

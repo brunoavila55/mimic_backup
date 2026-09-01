@@ -8,9 +8,7 @@
             </h3>
             <p class="text-secondary" style="font-size: 11px; margin-top: 2px;">{{ .Node.Vendor }} &mdash; <span class="font-mono">{{ .Node.IP }}</span></p>
         </div>
-        <button @click="modalOpen = false" class="modal-close" title="Close">
-            <i class="bx bx-x"></i>
-        </button>
+        <button @click="modalOpen = false" class="modal-close" aria-label="Close"></button>
     </div>
 
     <!-- Comparison Selector & Stats Bar -->

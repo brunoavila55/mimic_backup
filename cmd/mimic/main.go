@@ -71,17 +71,12 @@ func main() {
 		&models.SftpSettings{},
 		&models.SystemLog{},
 		&models.AlertRule{},
-		&models.SecurityRule{},
-		&models.GoldenConfig{},
-		&models.SecurityViolation{},
-		&models.NodeRuleException{},
 	); err != nil {
 		log.Fatalf("failed to migrate database schema: %v", err)
 	}
 	for _, statement := range []string{
 		"CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_lower ON users (LOWER(username)) WHERE deleted_at IS NULL",
 		"CREATE UNIQUE INDEX IF NOT EXISTS idx_node_backups_success_version ON node_backups (node_id, version) WHERE deleted_at IS NULL AND status = 'success'",
-		"CREATE UNIQUE INDEX IF NOT EXISTS idx_security_violations_node_rule ON security_violations (node_id, rule_id) WHERE deleted_at IS NULL",
 		"CREATE INDEX IF NOT EXISTS idx_node_backups_lookup ON node_backups (node_id, status, created_at DESC)",
 		"CREATE INDEX IF NOT EXISTS idx_system_logs_created_at ON system_logs (created_at DESC)",
 	} {
@@ -230,7 +225,6 @@ func main() {
 	app.Delete("/nodes/:id", middleware.RequirePermission(access.ManageNodes), formHandler.DeleteNode)
 	app.Get("/backups/:id/content", nodeHandler.GetBackupContent)
 	app.Get("/backups/:id/diff", nodeHandler.GetBackupDiff)
-	app.Get("/nodes/:id/golden-diff", nodeHandler.GoldenDiffView)
 	app.Get("/backups/diff/compare", middleware.RequireAdmin(), nodeHandler.CompareBackups)
 
 	// ── Settings Hub ──────────────────────────────────
@@ -238,13 +232,11 @@ func main() {
 	app.Get("/settings/users", middleware.RequireAdmin(), settingsHandler.GetUsersTab)
 	app.Get("/settings/credentials", middleware.RequirePermission(access.ManageOperations), settingsHandler.GetCredentialsTab)
 	app.Get("/settings/routines", middleware.RequirePermission(access.ManageOperations), settingsHandler.GetRoutinesTab)
-	app.Get("/settings/sftp", middleware.RequireAdmin(), settingsHandler.GetSFTPTab)
-	app.Get("/settings/sftp/explore", middleware.RequireAdmin(), settingsHandler.GetSFTPExplore)
+	app.Get("/settings/sftp", middleware.RequirePermission(access.ManageSystem), settingsHandler.GetSFTPTab)
+	app.Get("/settings/sftp/explore", middleware.RequirePermission(access.ManageSystem), settingsHandler.GetSFTPExplore)
 	app.Get("/settings/export", middleware.RequirePermission(access.ExportBackups), settingsHandler.GetExportTab)
-	app.Get("/settings/alerts", middleware.RequireAdmin(), settingsHandler.GetAlertsTab)
+	app.Get("/settings/alerts", middleware.RequirePermission(access.ManageSystem), settingsHandler.GetAlertsTab)
 	app.Get("/settings/logs", middleware.RequirePermission(access.ViewAudit), settingsHandler.GetLogsTab)
-	app.Get("/settings/security", middleware.RequirePermission(access.ViewAudit), settingsHandler.GetSecurityTab)
-	app.Get("/settings/golden", middleware.RequirePermission(access.ViewAudit), settingsHandler.GetGoldenTab)
 	app.Get("/settings/profile", settingsHandler.GetProfileTab)
 
 	// ── Settings Forms ────────────────────────────────
@@ -254,10 +246,8 @@ func main() {
 	app.Get("/settings/credentials/:id/edit", middleware.RequirePermission(access.ManageOperations), formHandler.EditCredential)
 	app.Get("/settings/routines/new", middleware.RequirePermission(access.ManageOperations), formHandler.NewRoutine)
 	app.Get("/settings/routines/:id/edit", middleware.RequirePermission(access.ManageOperations), formHandler.EditRoutine)
-	app.Get("/settings/alerts/new", middleware.RequireAdmin(), formHandler.NewAlertRule)
-	app.Get("/settings/alerts/:id/edit", middleware.RequireAdmin(), formHandler.EditAlertRule)
-	app.Get("/settings/security/new", middleware.RequireAdmin(), formHandler.NewSecurityRule)
-	app.Get("/settings/security/:id/edit", middleware.RequireAdmin(), formHandler.EditSecurityRule)
+	app.Get("/settings/alerts/new", middleware.RequirePermission(access.ManageSystem), formHandler.NewAlertRule)
+	app.Get("/settings/alerts/:id/edit", middleware.RequirePermission(access.ManageSystem), formHandler.EditAlertRule)
 
 	// ── Settings Actions ──────────────────────────────
 	app.Post("/settings/users/save", middleware.RequireAdmin(), formHandler.SaveUser)
@@ -266,27 +256,17 @@ func main() {
 	app.Post("/settings/credentials/save/:id", middleware.RequirePermission(access.ManageOperations), formHandler.SaveCredential)
 	app.Post("/settings/routines/save", middleware.RequirePermission(access.ManageOperations), formHandler.SaveRoutine)
 	app.Post("/settings/routines/save/:id", middleware.RequirePermission(access.ManageOperations), formHandler.SaveRoutine)
-	app.Post("/settings/alerts/save", middleware.RequireAdmin(), formHandler.SaveAlertRule)
-	app.Post("/settings/alerts/save/:id", middleware.RequireAdmin(), formHandler.SaveAlertRule)
-	app.Post("/settings/alerts/test", middleware.RequireAdmin(), formHandler.TestAlertRule)
-	app.Get("/settings/golden/new", middleware.RequireAdmin(), formHandler.GoldenForm)
-	app.Get("/settings/golden/:id/edit", middleware.RequireAdmin(), formHandler.GoldenForm)
-	app.Post("/settings/golden/save", middleware.RequireAdmin(), formHandler.SaveGoldenConfig)
-	app.Post("/settings/golden/save/:id", middleware.RequireAdmin(), formHandler.SaveGoldenConfig)
-	app.Post("/settings/security/save", middleware.RequireAdmin(), formHandler.SaveSecurityRule)
-	app.Post("/settings/security/save/:id", middleware.RequireAdmin(), formHandler.SaveSecurityRule)
-	app.Post("/nodes/:id/exceptions/:rule_id", middleware.RequireAdmin(), formHandler.AddRuleException)
+	app.Post("/settings/alerts/save", middleware.RequirePermission(access.ManageSystem), formHandler.SaveAlertRule)
+	app.Post("/settings/alerts/save/:id", middleware.RequirePermission(access.ManageSystem), formHandler.SaveAlertRule)
+	app.Post("/settings/alerts/test", middleware.RequirePermission(access.ManageSystem), formHandler.TestAlertRule)
 
 	// ── Delete Actions ────────────────────────────────
 	app.Delete("/settings/users/:id", middleware.RequireAdmin(), formHandler.DeleteUser)
 	app.Delete("/settings/credentials/:id", middleware.RequirePermission(access.ManageOperations), formHandler.DeleteCredential)
 	app.Delete("/settings/routines/:id", middleware.RequirePermission(access.ManageOperations), formHandler.DeleteRoutine)
-	app.Delete("/settings/alerts/:id", middleware.RequireAdmin(), formHandler.DeleteAlertRule)
-	app.Delete("/settings/golden/:id", middleware.RequireAdmin(), formHandler.DeleteGoldenConfig)
-	app.Delete("/settings/security/:id", middleware.RequireAdmin(), formHandler.DeleteSecurityRule)
-	app.Delete("/nodes/:id/exceptions/:rule_id", middleware.RequireAdmin(), formHandler.RemoveRuleException)
-	app.Post("/settings/sftp/save", middleware.RequireAdmin(), formHandler.SaveSettings)
-	app.Post("/settings/sftp/test", middleware.RequireAdmin(), formHandler.TestSFTPConnection)
+	app.Delete("/settings/alerts/:id", middleware.RequirePermission(access.ManageSystem), formHandler.DeleteAlertRule)
+	app.Post("/settings/sftp/save", middleware.RequirePermission(access.ManageSystem), formHandler.SaveSettings)
+	app.Post("/settings/sftp/test", middleware.RequirePermission(access.ManageSystem), formHandler.TestSFTPConnection)
 	app.Post("/settings/profile/save", formHandler.SaveProfile)
 	app.Post("/settings/export/sync", middleware.RequirePermission(access.ExportBackups), formHandler.PostSync)
 	app.Post("/backups/:backup_id/export", middleware.RequirePermission(access.ExportBackups), formHandler.ExportBackup)

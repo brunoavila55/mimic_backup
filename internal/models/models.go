@@ -72,11 +72,8 @@ type Node struct {
 	VerifyHostKey        bool       `gorm:"default:true"`
 	SSHPublicFingerprint string
 	SSHPrivateKey        string
-	AlertSnoozeUntil     *time.Time          `gorm:"index"`
-	SecurityScore        int                 `gorm:"default:100;index"`
-	Backups              []NodeBackup        `gorm:"foreignKey:NodeID"`
-	Violations           []SecurityViolation `gorm:"foreignKey:NodeID"`
-	Exceptions           []NodeRuleException `gorm:"foreignKey:NodeID"`
+	AlertSnoozeUntil     *time.Time   `gorm:"index"`
+	Backups              []NodeBackup `gorm:"foreignKey:NodeID"`
 }
 
 func (n *Node) IsSnoozed() bool {
@@ -122,56 +119,13 @@ type SystemLog struct {
 
 type AlertRule struct {
 	gorm.Model
-	Name            string `json:"name"`
-	TargetGroup     string `json:"target_group" gorm:"default:'Global'"` // 'Global' matches all
-	Enabled         bool   `json:"enabled" gorm:"default:true"`
-	Provider        string `json:"provider"` // "webhook" or "telegram"
-	WebhookURL      string `json:"webhook_url"`
-	TelegramToken   string `json:"telegram_token"`
-	TelegramChatID  string `json:"telegram_chat_id"`
-	AlertOnDiff     bool   `json:"alert_on_diff"`
-	AlertOnFailure  bool   `json:"alert_on_failure"`
-	AlertOnSecurity bool   `json:"alert_on_security"`
-}
-
-type SecurityRule struct {
-	gorm.Model
-	Name         string `json:"name" gorm:"not null"`
-	Description  string `json:"description"`
-	Category     string `json:"category" gorm:"default:'General';index"`
-	Vendor       string `json:"vendor" gorm:"default:'*'"` // '*' for any vendor
-	TargetGroup  string `json:"target_group" gorm:"default:'*';index"`
-	Enabled      bool   `json:"enabled" gorm:"default:true;index"`
-	RegexPattern string `json:"regex_pattern"`
-	ContextBlock string `json:"context_block"` // Optional regex to scope the search block
-	MatchType    string `json:"match_type" gorm:"default:'contains'"`
-	Penalty      int    `json:"penalty" gorm:"default:10"`
-	Severity     string `json:"severity" gorm:"default:'Warning'"` // Critical, Warning, Info
-	Remediation  string `json:"remediation"`
-}
-
-type GoldenConfig struct {
-	gorm.Model
 	Name           string `json:"name"`
-	Vendor         string `json:"vendor" gorm:"default:'*'"`
-	TargetGroup    string `json:"target_group" gorm:"default:'*'"`
-	ConfigTemplate string `json:"config_template"`
-}
-
-type SecurityViolation struct {
-	gorm.Model
-	NodeID        uint
-	Node          Node
-	RuleID        uint
-	Rule          SecurityRule
-	BackupVersion int
-}
-
-type NodeRuleException struct {
-	gorm.Model
-	NodeID uint `gorm:"uniqueIndex:idx_node_rule"`
-	Node   Node
-	RuleID uint `gorm:"uniqueIndex:idx_node_rule"`
-	Rule   SecurityRule
-	Reason string
+	TargetGroup    string `json:"target_group" gorm:"default:'Global'"` // 'Global' matches all
+	Enabled        bool   `json:"enabled" gorm:"default:true"`
+	Provider       string `json:"provider"` // "webhook" or "telegram"
+	WebhookURL     string `json:"webhook_url"`
+	TelegramToken  string `json:"telegram_token"`
+	TelegramChatID string `json:"telegram_chat_id"`
+	AlertOnDiff    bool   `json:"alert_on_diff"`
+	AlertOnFailure bool   `json:"alert_on_failure"`
 }

@@ -17,7 +17,7 @@
             </a>
             {{ end }}
 
-            {{ if or .CanManageSystem .CanManagePolicies .CanExportBackups .CanViewAudit }}
+            {{ if or .CanManageSystem .CanExportBackups .CanViewAudit }}
             <div class="settings-nav-section">System</div>
             {{ end }}
             {{ if .CanManageSystem }}
@@ -26,18 +26,8 @@
                class="settings-tab {{ if eq .ActiveTab "sftp" }}active{{ end }}">
                 <i class="bx bx-cloud-upload"></i> SFTP
             </a>
-            {{ end }}
-            {{ if .CanManagePolicies }}
             <a href="/settings/alerts" class="settings-tab {{ if eq .ActiveTab "alerts" }}active{{ end }}" hx-get="/settings/alerts" hx-target="#settings-content" hx-push-url="true" hx-swap="innerHTML">
                 <i class='bx bx-bell'></i> Alerting Rules
-            </a>
-            {{ end }}
-            {{ if .CanViewAudit }}
-            <a href="/settings/security" class="settings-tab {{ if eq .ActiveTab "security" }}active{{ end }}" hx-get="/settings/security" hx-target="#settings-content" hx-push-url="true" hx-swap="innerHTML">
-                <i class='bx bx-shield-quarter'></i> Security Rules
-            </a>
-            <a href="/settings/golden" class="settings-tab {{ if eq .ActiveTab "golden" }}active{{ end }}" hx-get="/settings/golden" hx-target="#settings-content" hx-push-url="true" hx-swap="innerHTML">
-                <i class='bx bx-check-shield'></i> Golden Configs
             </a>
             {{ end }}
             {{ if .CanExportBackups }}
@@ -69,8 +59,6 @@
             {{ else if eq .ActiveTab "routines" }}{{ template "partials/settings_routines" . }}
             {{ else if eq .ActiveTab "sftp" }}{{ template "partials/settings_sftp" . }}
             {{ else if eq .ActiveTab "alerts" }}{{ template "partials/settings_alerts" . }}
-            {{ else if eq .ActiveTab "security" }}{{ template "partials/settings_security" . }}
-            {{ else if eq .ActiveTab "golden" }}{{ template "partials/settings_golden" . }}
             {{ else if eq .ActiveTab "export" }}{{ template "partials/settings_export" . }}
             {{ else if eq .ActiveTab "logs" }}{{ template "partials/settings_logs" . }}
             {{ else if eq .ActiveTab "profile" }}{{ template "partials/settings_profile" . }}

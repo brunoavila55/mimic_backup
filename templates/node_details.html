@@ -8,11 +8,6 @@
             </div>
         </div>
         <div class="flex gap-2">
-            {{ if .HasGoldenConfig }}
-            <button @click="modalOpen = true" hx-get="/nodes/{{ .Node.ID }}/golden-diff" hx-target="#modal-content-area" class="btn btn-secondary" style="border-color: var(--warning); color: var(--warning);">
-                <i class="bx bx-check-shield"></i> Golden Config Diff
-            </button>
-            {{ end }}
             {{ if or (eq .Role "Administrator") (eq .Role "Operator") }}
             <button hx-post="/nodes/{{ .Node.ID }}/trigger" hx-swap="none" class="btn btn-secondary">
                 <i class="bx bx-play-circle"></i> Manual Backup
@@ -49,114 +44,9 @@
             <div class="detail-value">{{ if .Node.Enabled }}Yes{{ else }}No{{ end }}</div>
         </div>
     </div>
-    
-    <!-- Security & Compliance Card -->
-    <div class="card mb-4">
-        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <span class="card-title"><i class='bx bx-check-shield'></i> Security & Compliance</span>
-            <div>
-                {{ if eq .Node.SecurityScore 100 }}
-                    <span class="badge badge-success" style="font-size: 16px; padding: 4px 8px;">Score: 100</span>
-                {{ else if gt .Node.SecurityScore 70 }}
-                    <span class="badge badge-warning" style="font-size: 16px; padding: 4px 8px;">Score: {{ .Node.SecurityScore }}</span>
-                {{ else }}
-                    <span class="badge badge-danger" style="font-size: 16px; padding: 4px 8px;">Score: {{ .Node.SecurityScore }}</span>
-                {{ end }}
-            </div>
-        </div>
-        <div class="card-body">
-            {{ if .Node.Violations }}
-                <div class="table-container">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Rule</th>
-                                <th>Severity / Penalty</th>
-                                <th>First Detected Version</th>
-                                {{ if eq $.Role "Administrator" }}
-                                <th style="width: 100px; text-align: center;">Actions</th>
-                                {{ end }}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {{ range .Node.Violations }}
-                            <tr>
-                                <td>
-                                    <div style="font-weight: 600;">{{ .Rule.Name }}</div>
-                                    <div style="font-size: 12px; color: var(--text-muted);">{{ .Rule.Description }}</div>
-                                    {{ if .Rule.Remediation }}<div style="font-size: 12px; color: var(--text-muted); margin-top:6px;"><strong>Remediation:</strong> {{ .Rule.Remediation }}</div>{{ end }}
-                                </td>
-                                <td>
-                                    {{ if eq .Rule.Severity "Critical" }}
-                                        <span class="badge badge-danger">Critical (-{{ .Rule.Penalty }})</span>
-                                    {{ else if eq .Rule.Severity "Warning" }}
-                                        <span class="badge badge-warning">Warning (-{{ .Rule.Penalty }})</span>
-                                    {{ else }}
-                                        <span class="badge badge-info">Info (-{{ .Rule.Penalty }})</span>
-                                    {{ end }}
-                                </td>
-                                <td>v{{ .BackupVersion }}<div style="font-size:11px;color:var(--text-muted);">Active since {{ .CreatedAt.Format "02/01/2006" }}</div></td>
-                                {{ if eq $.Role "Administrator" }}
-                                <td style="text-align: center;">
-                                    <button hx-post="/nodes/{{ $.Node.ID }}/exceptions/{{ .RuleID }}" 
-                                            hx-swap="none"
-                                            class="action-btn" title="Whitelist / Ignore Rule" style="color: var(--text-muted);">
-                                        <i class='bx bx-hide'></i>
-                                    </button>
-                                </td>
-                                {{ end }}
-                            </tr>
-                            {{ end }}
-                        </tbody>
-                    </table>
-                </div>
-            {{ else }}
-                <div style="text-align: center; color: var(--success); padding: 20px 0; font-weight: 500;">
-                    <i class='bx bx-shield-check' style="font-size: 48px; display: block; margin-bottom: 8px;"></i>
-                    No configuration vulnerabilities found in the latest backup.
-                </div>
-            {{ end }}
-
-            {{ if .Node.Exceptions }}
-                <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
-                    <h4 style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;"><i class='bx bx-hide'></i> Whitelisted Rules (Ignored)</h4>
-                    <div class="table-container">
-                        <table class="table" style="font-size: 13px;">
-                            <thead>
-                                <tr>
-                                    <th>Rule Name</th>
-                                    <th>Reason</th>
-                                    {{ if eq $.Role "Administrator" }}
-                                    <th style="width: 100px; text-align: center;">Actions</th>
-                                    {{ end }}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {{ range .Node.Exceptions }}
-                                <tr>
-                                    <td style="color: var(--text-muted);"><del>{{ .Rule.Name }}</del></td>
-                                    <td style="color: var(--text-muted);">{{ .Reason }}</td>
-                                    {{ if eq $.Role "Administrator" }}
-                                    <td style="text-align: center;">
-                                        <button hx-delete="/nodes/{{ $.Node.ID }}/exceptions/{{ .RuleID }}" 
-                                                hx-swap="none"
-                                                class="action-btn" title="Revoke Exception" style="color: var(--accent);">
-                                            <i class='bx bx-revision'></i>
-                                        </button>
-                                    </td>
-                                    {{ end }}
-                                </tr>
-                                {{ end }}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            {{ end }}
-        </div>
-    </div>
 
     {{ if .Node.LastError }}
-    <div class="card mb-4" style="border-color: rgba(239, 68, 68, 0.2);">
+    <div class="card mb-4" style="border-color: rgba(240, 85, 61, 0.25);">
         <div class="card-header">
             <span class="card-title text-danger"><i class="bx bx-error-circle"></i> Last Error</span>
         </div>

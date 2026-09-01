@@ -103,7 +103,7 @@
 
 <section class="dashboard-workspace">
     <div class="dashboard-primary-column">
-        <article id="attention-queue" class="dashboard-section-card dashboard-attention-card">
+        <article id="attention-queue" class="dashboard-section-card dashboard-attention-card {{ if gt .Dashboard.Stats.AttentionNodes 0 }}is-alert{{ else }}is-clear{{ end }}">
             <header class="dashboard-section-header">
                 <div>
                     <span class="dashboard-eyebrow">Priority queue</span>
@@ -193,10 +193,6 @@
                     <div><strong>{{ .Dashboard.Stats.PendingExportNodes }} pending exports</strong><small>{{ .Dashboard.SFTP.Detail }}</small></div>
                     <span class="dashboard-state is-{{ .Dashboard.SFTP.Tone }}">{{ .Dashboard.SFTP.State }}</span>
                 {{ if or (eq .Role "Administrator") (eq .Role "Operator") }}</a>{{ else }}</div>{{ end }}
-                {{ if or (eq .Role "Administrator") (eq .Role "Auditor") }}<a href="/settings/security" class="dashboard-risk-row">{{ else }}<div class="dashboard-risk-row">{{ end }}
-                    <span class="dashboard-risk-icon {{ if gt .Dashboard.Stats.SecurityRiskNodes 0 }}is-danger{{ else }}is-success{{ end }}">SC</span>
-                    <div><strong>{{ .Dashboard.Stats.SecurityRiskNodes }} security risk nodes</strong><small>Fleet average score: {{ .Dashboard.Stats.AverageSecurityScore }}/100</small></div>
-                {{ if or (eq .Role "Administrator") (eq .Role "Auditor") }}</a>{{ else }}</div>{{ end }}
             </div>
         </article>
 
@@ -234,7 +230,7 @@
         {{ if .Dashboard.RecentChanges }}
         <div class="dashboard-change-list">
             {{ range .Dashboard.RecentChanges }}
-            <button type="button" class="dashboard-change-row" hx-get="/backups/{{ .ID }}/diff" hx-target="body" hx-swap="beforeend">
+            <button type="button" class="dashboard-change-row" @click="modalOpen = true" hx-get="/backups/{{ .ID }}/diff" hx-target="#modal-content-area" hx-swap="innerHTML">
                 <span class="dashboard-change-node"><strong>{{ .Node.Name }}</strong><small>{{ .Node.Vendor }} · v{{ .Version }} · {{ .CreatedAt.Format "02 Jan 15:04" }}</small></span>
                 <span class="dashboard-change-diff"><b>+{{ .DiffAdditions }}</b><b>-{{ .DiffDeletions }}</b></span>
                 <span class="dashboard-change-action">Compare</span>

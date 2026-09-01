@@ -14,7 +14,6 @@ import (
 	"mimic/internal/access"
 	"mimic/internal/models"
 	"mimic/internal/services/alert"
-	"mimic/internal/services/audit"
 	"mimic/internal/services/sftp"
 	"mimic/pkg/crypto"
 	"net/http"
@@ -377,10 +376,8 @@ func (h *FormHandler) DeleteNodeConfirm(c *fiber.Ctx) error {
 func (h *FormHandler) DeleteNode(c *fiber.Ctx) error {
 	id := c.Params("id")
 	err := h.DB.Transaction(func(tx *gorm.DB) error {
-		for _, target := range []any{&models.NodeBackup{}, &models.SecurityViolation{}, &models.NodeRuleException{}} {
-			if err := tx.Where("node_id = ?", id).Delete(target).Error; err != nil {
-				return err
-			}
+		if err := tx.Where("node_id = ?", id).Delete(&models.NodeBackup{}).Error; err != nil {
+			return err
 		}
 		return tx.Where("id = ?", id).Delete(&models.Node{}).Error
 	})
@@ -1422,7 +1419,6 @@ func (h *FormHandler) renderProfileForm(c *fiber.Ctx, user models.User, errMsg s
 		"Error":               errMsg,
 		"CanManageUsers":      access.Allows(role, access.ManageUsers),
 		"CanManageOperations": access.Allows(role, access.ManageOperations),
-		"CanManagePolicies":   access.Allows(role, access.ManagePolicies),
 		"CanManageSystem":     access.Allows(role, access.ManageSystem),
 		"CanExportBackups":    access.Allows(role, access.ExportBackups),
 		"CanViewAudit":        access.Allows(role, access.ViewAudit),
@@ -1679,7 +1675,7 @@ func validateAlertRule(rule models.AlertRule, hasWebhook bool, hasTelegramToken 
 	if !supportedAlertProviders[rule.Provider] {
 		return fmt.Errorf("choose a valid alert provider")
 	}
-	if !rule.AlertOnDiff && !rule.AlertOnFailure && !rule.AlertOnSecurity {
+	if !rule.AlertOnDiff && !rule.AlertOnFailure {
 		return fmt.Errorf("select at least one event that should trigger this rule")
 	}
 	if rule.Provider == "webhook" && !hasWebhook {
@@ -1730,7 +1726,6 @@ func (h *FormHandler) SaveAlertRule(c *fiber.Ctx) error {
 	}
 	rule.AlertOnDiff = c.FormValue("alert_on_diff") == "on"
 	rule.AlertOnFailure = c.FormValue("alert_on_failure") == "on"
-	rule.AlertOnSecurity = c.FormValue("alert_on_security") == "on"
 
 	whURL := strings.TrimSpace(c.FormValue("webhook_url"))
 	if whURL != "" {
@@ -1911,311 +1906,5 @@ func (h *FormHandler) SnoozeNode(c *fiber.Ctx) error {
 	writeAuditLog(h.DB, c, "info", "node", "Node alert mute state updated", fmt.Sprintf("node=%s hours=%d", node.Name, hours))
 
 	c.Set("HX-Redirect", "/nodes")
-	return c.SendStatus(200)
-}
-
-// ── Security Rules ────────────────────────────────
-var supportedSecuritySeverities = map[string]bool{
-	"Info":     true,
-	"Warning":  true,
-	"Critical": true,
-}
-
-var supportedSecurityVendors = map[string]bool{
-	"*":        true,
-	"cisco":    true,
-	"mikrotik": true,
-	"huawei":   true,
-	"juniper":  true,
-}
-
-func renderSecurityRuleForm(c *fiber.Ctx, rule models.SecurityRule, errMsg string, status int) error {
-	if status != 0 {
-		c.Status(status)
-	}
-
-	title := "New Security Rule"
-	if rule.ID != 0 {
-		title = "Edit Security Rule"
-	}
-
-	return c.Render("security_form", fiber.Map{
-		"Title":        title,
-		"Username":     c.Locals("username"),
-		"Avatar":       c.Locals("avatar"),
-		"Role":         c.Locals("role"),
-		"CurrentRoute": "settings",
-		"ActiveTab":    "security",
-		"Rule":         rule,
-		"IsEdit":       rule.ID != 0,
-		"Error":        errMsg,
-	}, "base")
-}
-
-func (h *FormHandler) reEvaluateAllNodesAsync() {
-	db := h.DB
-	go func() {
-		var nodes []models.Node
-		db.Find(&nodes)
-
-		for _, node := range nodes {
-			var lastBackup models.NodeBackup
-			if err := db.Where("node_id = ? AND status = 'success'", node.ID).Order("version desc").First(&lastBackup).Error; err == nil {
-				audit.RunAudit(db, &node, lastBackup.Version, lastBackup.Config)
-			}
-			time.Sleep(100 * time.Millisecond)
-		}
-	}()
-}
-
-func (h *FormHandler) reEvaluateNodeAsync(nodeID uint) {
-	db := h.DB
-	go func() {
-		var node models.Node
-		if err := db.First(&node, nodeID).Error; err != nil {
-			return
-		}
-
-		var lastBackup models.NodeBackup
-		if err := db.Where("node_id = ? AND status = 'success'", node.ID).Order("version desc").First(&lastBackup).Error; err == nil {
-			audit.RunAudit(db, &node, lastBackup.Version, lastBackup.Config)
-		}
-	}()
-}
-
-func (h *FormHandler) NewSecurityRule(c *fiber.Ctx) error {
-	return renderSecurityRuleForm(c, models.SecurityRule{
-		Category:    "General",
-		Vendor:      "*",
-		TargetGroup: "*",
-		Enabled:     true,
-		MatchType:   "contains",
-		Penalty:     10,
-		Severity:    "Warning",
-	}, "", 0)
-}
-
-func (h *FormHandler) EditSecurityRule(c *fiber.Ctx) error {
-	id := c.Params("id")
-	var rule models.SecurityRule
-	if err := h.DB.First(&rule, id).Error; err != nil {
-		return c.Redirect("/settings/security")
-	}
-
-	return renderSecurityRuleForm(c, rule, "", 0)
-}
-
-func (h *FormHandler) SaveSecurityRule(c *fiber.Ctx) error {
-	id := c.Params("id")
-	var rule models.SecurityRule
-
-	if id != "" {
-		if err := h.DB.Where("id = ?", id).First(&rule).Error; err != nil {
-			return c.Status(404).SendString("Security rule not found")
-		}
-	}
-
-	rule.Name = strings.TrimSpace(c.FormValue("name"))
-	rule.Description = strings.TrimSpace(c.FormValue("description"))
-	rule.Category = strings.TrimSpace(c.FormValue("category"))
-	if rule.Category == "" {
-		rule.Category = "General"
-	}
-	rule.Vendor = strings.ToLower(strings.TrimSpace(c.FormValue("vendor")))
-	if rule.Vendor == "" {
-		rule.Vendor = "*"
-	}
-	rule.TargetGroup = strings.TrimSpace(c.FormValue("target_group"))
-	if rule.TargetGroup == "" {
-		rule.TargetGroup = "*"
-	}
-	rule.Enabled = c.FormValue("enabled") == "on"
-	rule.RegexPattern = strings.TrimSpace(c.FormValue("regex_pattern"))
-	rule.ContextBlock = strings.TrimSpace(c.FormValue("context_block"))
-	rule.MatchType = strings.TrimSpace(c.FormValue("match_type"))
-	if rule.MatchType == "" {
-		rule.MatchType = "contains"
-	}
-
-	rule.Severity = strings.TrimSpace(c.FormValue("severity"))
-	if rule.Severity == "" {
-		rule.Severity = "Warning"
-	}
-
-	penalty, err := strconv.Atoi(strings.TrimSpace(c.FormValue("penalty")))
-	if err != nil {
-		return renderSecurityRuleForm(c, rule, "Score impact must be a number between 0 and 100.", fiber.StatusBadRequest)
-	}
-	rule.Penalty = penalty
-	rule.Remediation = strings.TrimSpace(c.FormValue("remediation"))
-
-	if !supportedSecurityVendors[rule.Vendor] {
-		return renderSecurityRuleForm(c, rule, "Invalid vendor scope.", fiber.StatusBadRequest)
-	}
-	if !supportedSecuritySeverities[rule.Severity] {
-		return renderSecurityRuleForm(c, rule, "Invalid severity.", fiber.StatusBadRequest)
-	}
-
-	if err := audit.ValidateRule(rule); err != nil {
-		return renderSecurityRuleForm(c, rule, err.Error(), fiber.StatusBadRequest)
-	}
-
-	if err := h.DB.Save(&rule).Error; err != nil {
-		setNotification(c, fmt.Sprintf("Failed to save security rule: %v", err), "error")
-		return c.SendStatus(500)
-	}
-	writeAuditLog(h.DB, c, "success", "security", "Security rule saved", "name="+rule.Name)
-
-	h.reEvaluateAllNodesAsync()
-
-	setNotification(c, "Security rule saved. Nodes are being re-evaluated in the background.", "success")
-	return c.Redirect("/settings/security")
-}
-
-func (h *FormHandler) DeleteSecurityRule(c *fiber.Ctx) error {
-	id := c.Params("id")
-	if err := h.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("rule_id = ?", id).Delete(&models.SecurityViolation{}).Error; err != nil {
-			return err
-		}
-		if err := tx.Where("rule_id = ?", id).Delete(&models.NodeRuleException{}).Error; err != nil {
-			return err
-		}
-		return tx.Where("id = ?", id).Delete(&models.SecurityRule{}).Error
-	}); err != nil {
-		setNotification(c, fmt.Sprintf("Failed to delete security rule: %v", err), "error")
-		return c.SendStatus(500)
-	}
-	writeAuditLog(h.DB, c, "warning", "security", "Security rule deleted", "rule_id="+id)
-	h.reEvaluateAllNodesAsync()
-
-	if c.Get("HX-Request") == "true" {
-		setNotification(c, "Security rule deleted. Nodes are being re-evaluated.", "success")
-		return c.SendStatus(200)
-	}
-
-	return c.Redirect("/settings/security")
-}
-
-// ── Golden Configs ────────────────────────────────
-
-func (h *FormHandler) GoldenForm(c *fiber.Ctx) error {
-	id := c.Params("id")
-	var gc models.GoldenConfig
-
-	if id != "" {
-		if err := h.DB.First(&gc, id).Error; err != nil {
-			return c.Status(404).SendString("Golden Config not found")
-		}
-	}
-
-	return c.Render("golden_form", fiber.Map{
-		"Title":  "Golden Config",
-		"Config": gc,
-	}, "base")
-}
-
-func (h *FormHandler) SaveGoldenConfig(c *fiber.Ctx) error {
-	id := c.Params("id")
-	var gc models.GoldenConfig
-
-	if id != "" {
-		if err := h.DB.Where("id = ?", id).First(&gc).Error; err != nil {
-			return c.Status(fiber.StatusNotFound).SendString("Golden Config not found")
-		}
-	}
-
-	gc.Name = strings.TrimSpace(c.FormValue("name"))
-	gc.Vendor = strings.ToLower(strings.TrimSpace(c.FormValue("vendor")))
-	if gc.Vendor == "" {
-		gc.Vendor = "*"
-	}
-	gc.TargetGroup = strings.TrimSpace(c.FormValue("target_group"))
-	if gc.TargetGroup == "" {
-		gc.TargetGroup = "*"
-	}
-	gc.ConfigTemplate = strings.TrimSpace(c.FormValue("config_template"))
-	if gc.Name == "" || gc.ConfigTemplate == "" {
-		return c.Status(fiber.StatusBadRequest).SendString("Name and configuration template are required")
-	}
-	if !supportedSecurityVendors[gc.Vendor] {
-		return c.Status(fiber.StatusBadRequest).SendString("Invalid vendor scope")
-	}
-
-	if err := h.DB.Save(&gc).Error; err != nil {
-		setNotification(c, fmt.Sprintf("Failed to save golden config: %v", err), "error")
-		return c.SendStatus(500)
-	}
-	writeAuditLog(h.DB, c, "success", "golden", "Golden config saved", "name="+gc.Name)
-
-	setNotification(c, "Golden config saved successfully", "success")
-	return c.Redirect("/settings/golden")
-}
-
-func (h *FormHandler) DeleteGoldenConfig(c *fiber.Ctx) error {
-	id := c.Params("id")
-	if err := h.DB.Where("id = ?", id).Delete(&models.GoldenConfig{}).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString("Could not delete golden config")
-	}
-	writeAuditLog(h.DB, c, "warning", "golden", "Golden config deleted", "config_id="+id)
-
-	if c.Get("HX-Request") == "true" {
-		setNotification(c, "Golden config deleted", "success")
-		return c.SendStatus(200)
-	}
-
-	return c.Redirect("/settings/golden")
-}
-
-// ── Rule Exceptions ────────────────────────────────
-
-func (h *FormHandler) AddRuleException(c *fiber.Ctx) error {
-	nodeID, _ := strconv.Atoi(c.Params("id"))
-	ruleID, _ := strconv.Atoi(c.Params("rule_id"))
-
-	var node models.Node
-	if err := h.DB.First(&node, nodeID).Error; err != nil {
-		setNotification(c, "Node not found", "error")
-		return c.SendStatus(404)
-	}
-
-	var rule models.SecurityRule
-	if err := h.DB.First(&rule, ruleID).Error; err != nil {
-		setNotification(c, "Security rule not found", "error")
-		return c.SendStatus(404)
-	}
-
-	exception := models.NodeRuleException{
-		NodeID: uint(nodeID),
-		RuleID: uint(ruleID),
-		Reason: "Whitelisted by user",
-	}
-	if err := h.DB.Where("node_id = ? AND rule_id = ?", nodeID, ruleID).FirstOrCreate(&exception).Error; err != nil {
-		setNotification(c, fmt.Sprintf("Failed to ignore rule: %v", err), "error")
-		return c.SendStatus(500)
-	}
-	writeAuditLog(h.DB, c, "warning", "security", "Security rule exception added", fmt.Sprintf("node=%s rule=%s", node.Name, rule.Name))
-
-	h.reEvaluateNodeAsync(uint(nodeID))
-
-	setNotification(c, "Rule ignored for this node.", "info")
-	c.Set("HX-Redirect", fmt.Sprintf("/nodes/%d", nodeID))
-	return c.SendStatus(200)
-}
-
-func (h *FormHandler) RemoveRuleException(c *fiber.Ctx) error {
-	nodeID, _ := strconv.Atoi(c.Params("id"))
-	ruleID, _ := strconv.Atoi(c.Params("rule_id"))
-
-	if err := h.DB.Unscoped().Where("node_id = ? AND rule_id = ?", nodeID, ruleID).Delete(&models.NodeRuleException{}).Error; err != nil {
-		setNotification(c, "Could not revoke the exception", "error")
-		return c.SendStatus(fiber.StatusInternalServerError)
-	}
-	writeAuditLog(h.DB, c, "info", "security", "Security rule exception removed", fmt.Sprintf("node_id=%d rule_id=%d", nodeID, ruleID))
-
-	h.reEvaluateNodeAsync(uint(nodeID))
-
-	setNotification(c, "Exception revoked. Rule is active again.", "success")
-	c.Set("HX-Redirect", fmt.Sprintf("/nodes/%d", nodeID))
 	return c.SendStatus(200)
 }

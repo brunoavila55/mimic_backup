@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<title>Relatório de Auditoria — Mimic Backup Systems</title>
+<style>
+  :root{
+    --ink:#0f172a; --muted:#475569; --line:#e2e8f0; --bg:#ffffff; --panel:#f8fafc;
+    --critica:#B91C1C; --alta:#EA580C; --media:#D97706; --baixa:#2563EB; --forte:#059669;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Arial,sans-serif;
+    color:var(--ink); background:var(--bg); font-size:12.5px; line-height:1.55;
+  }
+  h1,h2,h3,h4{font-family:'Segoe UI',Arial,sans-serif; margin:0 0 8px 0; color:var(--ink)}
+  p{margin:0 0 8px 0}
+  code{font-family:'Consolas','Courier New',monospace; background:#f1f5f9; padding:1px 5px; border-radius:4px; font-size:11px}
+  .page{page-break-after:always; padding:4px 2px}
+  .page:last-child{page-break-after:auto}
+
+  /* Capa */
+  .cover{display:flex; flex-direction:column; justify-content:center; min-height:920px; text-align:left}
+  .cover .kicker{color:var(--muted); letter-spacing:2px; text-transform:uppercase; font-size:11px; font-weight:600; margin-bottom:18px}
+  .cover h1{font-size:34px; line-height:1.25; max-width:620px}
+  .cover .sub{font-size:15px; color:var(--muted); margin-top:10px; max-width:560px}
+  .cover .meta{margin-top:40px; display:flex; gap:40px}
+  .cover .meta div strong{display:block; font-size:11px; text-transform:uppercase; color:var(--muted); letter-spacing:1px; margin-bottom:4px}
+  .cover .badge-bar{display:flex; gap:8px; margin-top:34px}
+  .cover .badge-bar span{padding:5px 12px; border-radius:20px; font-size:11px; font-weight:600; color:#fff}
+  .cover-footer{margin-top:60px; border-top:1px solid var(--line); padding-top:16px; color:var(--muted); font-size:11px}
+
+  .section-title{font-size:20px; border-bottom:3px solid var(--ink); padding-bottom:8px; margin-bottom:18px}
+  .section-sub{color:var(--muted); font-size:12px; margin-top:-10px; margin-bottom:18px}
+
+  table.stack-table{width:100%; border-collapse:collapse; margin-top:8px}
+  table.stack-table td{padding:6px 10px; border-bottom:1px solid var(--line); font-size:12px; vertical-align:top}
+  table.stack-table td:first-child{color:var(--muted); width:220px; font-weight:600}
+
+  .method-row{display:flex; gap:14px; padding:10px 0; border-bottom:1px solid var(--line)}
+  .method-key{width:230px; font-weight:700; font-size:11.5px; flex-shrink:0}
+  .method-val{font-size:11.5px; color:var(--ink)}
+
+  /* Resumo executivo / gráficos */
+  .charts-row{display:flex; gap:24px; margin-top:10px}
+  .chart-card{flex:1; border:1px solid var(--line); border-radius:10px; padding:16px; background:var(--panel)}
+  .chart-card h3{font-size:13px; margin-bottom:14px}
+  .donut-wrap{display:flex; align-items:center; gap:20px}
+  .donut{width:150px; height:150px; border-radius:50%; position:relative; flex-shrink:0}
+  .donut-hole{position:absolute; inset:26px; background:#fff; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow:inset 0 0 0 1px var(--line)}
+  .donut-hole strong{font-size:22px; line-height:1}
+  .donut-hole span{font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px}
+  .legend{display:flex; flex-direction:column; gap:7px}
+  .legend-row{display:flex; align-items:center; gap:8px; font-size:11.5px}
+  .legend-dot{width:9px; height:9px; border-radius:50%; display:inline-block; flex-shrink:0}
+  .legend-label{flex:1; min-width:90px}
+  .legend-value{font-weight:700}
+  .bars{display:flex; flex-direction:column; gap:12px; margin-top:6px}
+  .bar-row{display:flex; align-items:center; gap:10px}
+  .bar-label{width:160px; font-size:11px; color:var(--muted); flex-shrink:0}
+  .bar-track{flex:1; background:#e2e8f0; border-radius:5px; height:14px; overflow:hidden}
+  .bar-fill{height:100%; border-radius:5px}
+  .bar-value{width:18px; text-align:right; font-weight:700; font-size:11.5px}
+
+  .kpi-row{display:flex; gap:14px; margin:18px 0}
+  .kpi{flex:1; border:1px solid var(--line); border-radius:10px; padding:12px 14px; text-align:center; background:#fff}
+  .kpi strong{display:block; font-size:22px}
+  .kpi span{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px}
+
+  /* Pontos fortes / fracos */
+  .strength-card{border:1px solid var(--line); border-left:4px solid var(--forte); border-radius:6px; padding:10px 14px; margin-bottom:10px; background:#fff}
+  .strength-title{font-weight:700; font-size:12px; margin-bottom:4px; display:flex; align-items:center; gap:8px}
+  .strength-dot{width:8px; height:8px; border-radius:50%; background:var(--forte); flex-shrink:0}
+  .strength-card p{font-size:11px; color:var(--muted); margin:0}
+
+  /* Tabela de achados */
+  table.findings-table{width:100%; border-collapse:collapse; margin-top:10px}
+  table.findings-table th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); border-bottom:2px solid var(--ink); padding:6px 8px}
+  table.findings-table td{padding:8px; border-bottom:1px solid var(--line); font-size:11px; vertical-align:top}
+  .chip{display:inline-block; color:#fff; font-size:10px; font-weight:700; padding:3px 9px; border-radius:20px; text-transform:uppercase; letter-spacing:0.3px}
+
+  /* Cards de achado detalhado */
+  .finding-card{border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:16px; page-break-inside:avoid}
+  .finding-head{display:flex; align-items:center; gap:10px; margin-bottom:8px}
+  .finding-id{font-weight:800; color:var(--muted); font-size:11px}
+  .finding-title{font-weight:700; font-size:13px}
+  .finding-meta{display:flex; gap:18px; font-size:10.5px; color:var(--muted); margin-bottom:10px; flex-wrap:wrap}
+  .code-block{background:#0f172a; color:#e2e8f0; padding:10px 12px; border-radius:8px; font-size:10.5px; overflow-x:auto; white-space:pre-wrap; margin:8px 0}
+  .finding-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-top:10px}
+  .finding-grid h4{font-size:10.5px; text-transform:uppercase; letter-spacing:0.4px; color:var(--muted); margin-bottom:4px}
+  .finding-grid p{font-size:10.5px; margin:0}
+
+  /* Recomendações */
+  .reco-row{display:flex; gap:14px; padding:10px 0; border-bottom:1px solid var(--line); align-items:flex-start}
+  .reco-priority{width:34px; flex-shrink:0; font-weight:800; font-size:13px; color:#fff; background:var(--ink); border-radius:6px; text-align:center; padding:4px 0}
+  .reco-text{font-size:11.5px; padding-top:3px}
+
+  /* Issues GitHub */
+  .issue-block{margin-bottom:22px; page-break-inside:avoid}
+  .issue-marker{font-family:'Consolas','Courier New',monospace; font-size:10px; color:var(--muted); margin:6px 0}
+  .issue-body{background:#f8fafc; border:1px dashed #94a3b8; border-radius:8px; padding:14px; font-family:'Consolas','Courier New',monospace; font-size:9.5px; white-space:pre-wrap; word-wrap:break-word}
+
+  .toc{margin-top:10px}
+  .toc a{display:block; padding:5px 0; border-bottom:1px dotted var(--line); font-size:11.5px; color:var(--ink); text-decoration:none}
+</style>
+</head>
+<body>
+
+  <!-- CAPA -->
+  <section class="page cover">
+    <div class="kicker">Relatório confidencial de auditoria</div>
+    <h1>Relatório de Auditoria de Segurança<br/>Mimic Backup Systems</h1>
+    <p class="sub">Auditoria de código-fonte cobrindo isolamento de acesso (RBAC), autorização no
+    backend, IDOR, exposição de segredos e tratamento de entradas (XSS), com mapeamento de cada
+    categoria para a stack real do projeto.</p>
+
+    <div class="meta">
+      <div><strong>Data</strong>31 de agosto de 2026</div>
+      <div><strong>Versão auditada</strong>v0.8.1</div>
+      <div><strong>Repositório</strong>mimic_backup</div>
+    </div>
+
+    <div class="badge-bar">
+      <span style="background:#2563EB">2 achados de severidade baixa</span>
+      <span style="background:#64748B">3 achados informativos</span>
+      <span style="background:#059669">0 críticos / 0 altos</span>
+    </div>
+
+    <div class="cover-footer">
+      <strong>Escopo auditado:</strong> Código-fonte completo do backend Go (cmd/mimic, internal/handlers, internal/middleware, internal/access, internal/models, internal/services/{ssh,sftp,alert,scheduler}, pkg/crypto), todos os templates Go HTML server-side (templates/**), arquivos de deploy (Dockerfile, docker-compose.yml, .env.example), documentação de instalação (TUTORIAL.md, DOCKER.md) e histórico completo do git (git log --all -p) em busca de segredos commitados.
+    </div>
+  </section>
+
+  <!-- STACK E METODOLOGIA -->
+  <section class="page">
+    <h2 class="section-title">Stack detectada e nota metodológica</h2>
+    <p class="section-sub">Como cada categoria da auditoria foi mapeada para a stack real do projeto antes da varredura.</p>
+
+    <h3>Stack técnica identificada</h3>
+    <table class="stack-table"><tr><td>Linguagem / Runtime</td><td>Go 1.25</td></tr><tr><td>Framework web</td><td>Fiber v2 (gofiber/fiber)</td></tr><tr><td>ORM / Banco</td><td>GORM + PostgreSQL 15 (queries parametrizadas)</td></tr><tr><td>Autenticação</td><td>Sessão via cookie (gofiber/session), bcrypt para senhas</td></tr><tr><td>Autorização</td><td>RBAC por papel (Administrator/Operator/Auditor/Viewer) via middleware Fiber</td></tr><tr><td>Frontend</td><td>Go html/template (server-side, auto-escape) + HTMX + Alpine.js</td></tr><tr><td>Criptografia de segredos</td><td>AES-GCM 256-bit (pkg/crypto) para credenciais SSH/SFTP/Webhook</td></tr><tr><td>Deploy</td><td>Docker multi-stage + docker-compose (Postgres + app), usuário não-root</td></tr></table>
+
+    <h3 style="margin-top:22px">Mapeamento categoria → mecanismo real</h3>
+    <div class="method-list">
+    <div class="method-row">
+      <div class="method-key">1. Banco sem tranca (isolamento de inquilino)</div>
+      <div class="method-val">O projeto não usa Supabase/RLS e não possui modelo multi-tenant (não há OrgID/TenantID/WorkspaceID em nenhuma entidade GORM). É uma aplicação single-tenant: um deployment atende uma única organização. O mecanismo de isolamento real é o RBAC (papéis Administrator/Operator/Auditor/Viewer) aplicado via middleware Fiber (RequirePermission/RequireAdmin) em cada rota. A auditoria verificou a presença desse middleware em todas as 47 rotas registradas em cmd/mimic/main.go.</div>
+    </div>
+    <div class="method-row">
+      <div class="method-key">2. Permissão definida no navegador</div>
+      <div class="method-val">Cada elemento de UI condicionado por papel nos templates Go (CanManageUsers, CanManageNodes, comparações {{if eq .Role &quot;...&quot;}}) foi cruzado com o middleware da rota correspondente que o botão/link aciona em cmd/mimic/main.go.</div>
+    </div>
+    <div class="method-row">
+      <div class="method-key">3. IDOR</div>
+      <div class="method-val">Todo handler que recebe um :id via c.Params/c.Query/FormValue (nodes, backups, users, credentials, routines, alert rules) foi lido individualmente em internal/handlers/handlers.go e internal/handlers/forms.go (arquivos completos, não amostras) para confirmar existência de verificação de posse/permissão antes de ler, alterar ou excluir o recurso.</div>
+    </div>
+    <div class="method-row">
+      <div class="method-key">4. Chaves expostas</div>
+      <div class="method-val">Busca por regex de segredos (api key, secret key, senha literal, tokens, blocos BEGIN PRIVATE KEY) em todos os arquivos rastreados pelo git (git grep) e em todo o histórico de commits (git log --all -p), além de leitura manual de pkg/crypto/crypto.go, docker-compose.yml, Dockerfile, .env.example e TUTORIAL.md/DOCKER.md.</div>
+    </div>
+    <div class="method-row">
+      <div class="method-key">5. Inputs sem tratamento (XSS)</div>
+      <div class="method-val">Go html/template escapa por padrão qualquer valor interpolado em contexto HTML/atributo/URL/JS. A auditoria buscou (grep) por template.HTML, funções 'safe'/'noescape' e concatenação manual de HTML nos handlers. Como não há SPA (React/Vue), buscas por innerHTML/v-html/dangerouslySetInnerHTML foram feitas nos templates HTMX/Alpine.js para confirmar que hx-swap=innerHTML sempre recebe fragmentos já renderizados (e escapados) pelo próprio servidor, não dados brutos via JS.</div>
+    </div></div>
+  </section>
+
+  <!-- RESUMO EXECUTIVO -->
+  <section class="page">
+    <h2 class="section-title">Resumo executivo</h2>
+
+    <div class="kpi-row">
+      <div class="kpi"><strong>5</strong><span>Achados totais</span></div>
+      <div class="kpi"><strong>0</strong><span>Críticos</span></div>
+      <div class="kpi"><strong>0</strong><span>Altos</span></div>
+      <div class="kpi"><strong>2</strong><span>Baixos</span></div>
+      <div class="kpi"><strong>3</strong><span>Informativos</span></div>
+      <div class="kpi"><strong>11</strong><span>Pontos fortes verificados</span></div>
+    </div>
+
+    <div class="charts-row">
+      
+  <div class="chart-card">
+    <h3>Achados por severidade</h3>
+    <div class="donut-wrap">
+      <div class="donut" style="background:conic-gradient(#2563EB 0.00deg 144.00deg, #64748B 144.00deg 360.00deg)">
+        <div class="donut-hole"><strong>5</strong><span>achados</span></div>
+      </div>
+      <div class="legend"><div class="legend-row"><span class="legend-dot" style="background:#B91C1C"></span><span class="legend-label">Crítica</span><span class="legend-value">0</span></div><div class="legend-row"><span class="legend-dot" style="background:#EA580C"></span><span class="legend-label">Alta</span><span class="legend-value">0</span></div><div class="legend-row"><span class="legend-dot" style="background:#D97706"></span><span class="legend-label">Média</span><span class="legend-value">0</span></div><div class="legend-row"><span class="legend-dot" style="background:#2563EB"></span><span class="legend-label">Baixa</span><span class="legend-value">2</span></div><div class="legend-row"><span class="legend-dot" style="background:#64748B"></span><span class="legend-label">Informativa</span><span class="legend-value">3</span></div></div>
+    </div>
+  </div>
+      
+  <div class="chart-card">
+    <h3>Achados por categoria</h3>
+    <div class="bars">
+      <div class="bar-row">
+        <div class="bar-label">1. Isolamento / RBAC</div>
+        <div class="bar-track"><div class="bar-fill" style="width:0%;background:#cbd5e1"></div></div>
+        <div class="bar-value">0</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">2. Permissão no navegador</div>
+        <div class="bar-track"><div class="bar-fill" style="width:0%;background:#cbd5e1"></div></div>
+        <div class="bar-value">0</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">3. IDOR</div>
+        <div class="bar-track"><div class="bar-fill" style="width:0%;background:#cbd5e1"></div></div>
+        <div class="bar-value">0</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">4. Chaves expostas</div>
+        <div class="bar-track"><div class="bar-fill" style="width:66.66666666666666%;background:#334155"></div></div>
+        <div class="bar-value">2</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">5. XSS</div>
+        <div class="bar-track"><div class="bar-fill" style="width:0%;background:#cbd5e1"></div></div>
+        <div class="bar-value">0</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Outros (hardening)</div>
+        <div class="bar-track"><div class="bar-fill" style="width:100%;background:#334155"></div></div>
+        <div class="bar-value">3</div>
+      </div></div>
+  </div>
+    </div>
+
+    <p style="margin-top:18px; font-size:11.5px; color:var(--muted)">
+      Nenhuma falha crítica, alta ou média foi identificada. Os cinco achados reportados são de
+      severidade baixa ou informativa e, em sua maioria, exigem que o ator já possua privilégio
+      elevado (Administrator) ou dependam de uma escolha de configuração de deploy/documentação —
+      não representam uma via de comprometimento remoto não autenticado.
+    </p>
+  </section>
+
+  <!-- PONTOS FORTES -->
+  <section class="page">
+    <h2 class="section-title">Pontos fortes (protegido, com evidência)</h2>
+    <p class="section-sub">Comportamentos corretos verificados no código, listados para demonstrar a cobertura da auditoria.</p>
+    
+    <div class="strength-card">
+      <div class="strength-title"><span class="strength-dot"></span>RBAC aplicado no servidor em 100% das rotas sensíveis</div>
+      <p>cmd/mimic/main.go:213-272 — todas as 29 rotas de mutação/gestão (nodes, users, credentials, routines, sftp, alerts, export, trigger de backup) passam por middleware.RequirePermission(...) ou middleware.RequireAdmin() antes do handler. Nenhuma rota de escrita foi encontrada sem gate.</p>
+    </div>
+    <div class="strength-card">
+      <div class="strength-title"><span class="strength-dot"></span>Nenhuma inconsistência entre UI condicional e backend</div>
+      <p>templates/node_list.html:11, templates/partials/node_table_body.html:85,145,153 escondem 'New Node/Edit/Delete/Manual Backup' para papéis sem permissão; as rotas correspondentes (/nodes/new, /nodes/:id/edit, /nodes/:id/delete, /nodes/:id/trigger) exigem exatamente access.ManageNodes ou access.RunBackups no servidor (cmd/mimic/main.go:214-225,283-296).</p>
+    </div>
+    <div class="strength-card">
+      <div class="strength-title"><span class="strength-dot"></span>Nenhum IDOR encontrado nas rotas CRUD</div>
+      <p>Todos os handlers com :id (NodeDetails, EditNode/SaveNode/DeleteNode, EditUser/SaveUser/DeleteUser, EditCredential/SaveCredential/DeleteCredential, EditRoutine/SaveRoutine/DeleteRoutine, EditAlertRule/SaveAlertRule/DeleteAlertRule) buscam o recurso por ID e retornam 404 se ausente; como o app é single-tenant e RBAC-gated, não há escopo de 'dono' a violar. SaveProfile (internal/handlers/forms.go:1428) deriva o ID exclusivamente de c.Locals(&quot;user_id&quot;) da sessão, nunca de parâmetro externo — impossível editar o perfil de outro usuário por esse endpoint.</p>
+    </div>
+    <div class="strength-card">
+      <div class="strength-title"><span class="strength-dot"></span>Proteções de conta e sessão bem implementadas</div>
+      <p>internal/handlers/forms.go:762-776,826-837 impedem auto-rebaixamento e remoção do último administrador; internal/handlers/auth.go:21-55 usa hash bcrypt dummy para tempo constante (anti-enumeração de usuário); sess.Regenerate() é chamado em todo login bem-sucedido (auth.go:61, setup.go:188) prevenindo session fixation.</p>
+    </div>
+    <div class="strength-card">
+      <div class="strength-title"><span class="strength-dot"></span>Nenhum segredo hardcoded no código-fonte rastreado ou no histórico git</div>
+      <p>git grep e git log --all -p não encontraram chaves de API, senhas literais ou blocos de chave privada em nenhum arquivo rastreado. .env (com segredos reais gerados localmente) está listado em .gitignore:2-3 e nunca foi commitado (git log --all --oneline -- .env retornou vazio). docker-compose.yml:11,13,34 usa a sintaxe ${VAR:?mensagem}, que interrompe a subida do container se POSTGRES_PASSWORD/SECRET_KEY não forem definidos — não há fallback inseguro.</p>
+    </div>
+    <div class="strength-card">
+      <div class="strength-title"><span class="strength-dot"></span>SECRET_KEY validado no startup, nunca aceito com menos de 32 caracteres</div>
+      <p>pkg/crypto/crypto.go:32-39 rejeita SECRET_KEY com menos de 32 caracteres; cmd/mimic/main.go:54-56 chama appcrypto.ValidateSecretKey() antes de qualquer rota subir, com log.Fatalf em caso de falha.</p>
+    </div>
+    <div class="strength-card">
+      <div class="strength-title"><span class="strength-dot"></span>Nenhuma XSS encontrada — escaping consistente</div>
+      <p>Nenhuma ocorrência de template.HTML, template.JS ou funções 'safe'/'noescape' em todo o repositório (grep). A única construção manual de HTML fora do template engine (internal/handlers/handlers.go:688, mensagem de erro do explorador SFTP) usa html.EscapeString antes de interpolar. Exportação CSV usa csvSafe() (internal/handlers/handlers.go:241-251) para neutralizar injeção de fórmula em Excel/Sheets nos campos controlados pelo usuário.</p>
+    </div>
+    <div class="strength-card">
+      <div class="strength-title"><span class="strength-dot"></span>SSRF parcialmente mitigado em webhooks de alerta</div>
+      <p>internal/services/alert/alert.go:88-120 resolve o host do webhook e bloqueia IPs loopback, privados, link-local e não especificados antes de qualquer disparo (ValidateWebhookURL é chamado em SaveAlertRule, TestAlertRule e novamente dentro de SendWebhook). Ver achado F1 para o gap residual de DNS rebinding.</p>
+    </div>
+    <div class="strength-card">
+      <div class="strength-title"><span class="strength-dot"></span>CSRF mitigado por checagem de Origin/Referer com fail-closed</div>
+      <p>internal/middleware/security.go:14-51 rejeita qualquer requisição de mutação (não GET/HEAD/OPTIONS) sem Origin nem Referer, e rejeita Origin/Referer que não batam com o Host — coberto por teste (internal/middleware/security_test.go). Cookie de sessão usa SameSite=Strict e HttpOnly (cmd/mimic/main.go:108-113).</p>
+    </div>
+    <div class="strength-card">
+      <div class="strength-title"><span class="strength-dot"></span>Comandos SSH por vendor são strings estáticas, sem interpolação de dados do usuário</div>
+      <p>internal/services/ssh/vendors/{cisco,mikrotik,huawei,juniper}.go retornam comandos fixos (&quot;show running-config&quot;, &quot;/export&quot;, etc.); internal/services/ssh/service.go:223-237 apenas concatena essas strings estáticas com '; ', sem incluir Node.Name/IP/Username do usuário no comando remoto — não há injeção de comando no dispositivo de rede.</p>
+    </div>
+    <div class="strength-card">
+      <div class="strength-title"><span class="strength-dot"></span>Upload de avatar restrito e sem travessia de diretório</div>
+      <p>internal/handlers/forms.go:1336-1404 valida tamanho (2 MB), sniffa o Content-Type real (image/jpeg ou image/png apenas) e as dimensões da imagem antes de salvar; o nome do arquivo é gerado no servidor (user-&lt;id&gt;-&lt;timestamp&gt;.ext), nunca a partir de input do usuário, e a remoção usa filepath.Base() sobre o valor armazenado — sem risco de path traversal.</p>
+    </div>
+  </section>
+
+  <!-- TABELA DE ACHADOS -->
+  <section class="page">
+    <h2 class="section-title">Achados detalhados por categoria</h2>
+    <table class="findings-table">
+      <thead><tr><th>Severidade</th><th>Arquivo:linha</th><th>Descrição</th></tr></thead>
+      <tbody>
+        
+  <tr>
+    <td><span class="chip" style="background:#2563EB">Baixa</span></td>
+    <td><code>internal/services/alert/alert.go:88-159</code></td>
+    <td>SSRF via DNS rebinding (TOCTOU) na validação de webhooks de alerta</td>
+  </tr>
+  <tr>
+    <td><span class="chip" style="background:#2563EB">Baixa</span></td>
+    <td><code>cmd/mimic/main.go / .env.example:main.go:108-113</code></td>
+    <td>Cookie de sessão sem a flag Secure por padrão</td>
+  </tr>
+  <tr>
+    <td><span class="chip" style="background:#64748B">Informativa</span></td>
+    <td><code>TUTORIAL.md:63-66</code></td>
+    <td>Exemplo de senha literal fraca na documentação de instalação bare-metal</td>
+  </tr>
+  <tr>
+    <td><span class="chip" style="background:#64748B">Informativa</span></td>
+    <td><code>pkg/crypto/crypto.go:32-61</code></td>
+    <td>Fallback silencioso: chave de criptografia gerada e persistida em disco se SECRET_KEY não for definida</td>
+  </tr>
+  <tr>
+    <td><span class="chip" style="background:#64748B">Informativa</span></td>
+    <td><code>cmd/mimic/main.go:194-203</code></td>
+    <td>Rate limiting de login aplicado apenas por IP, sem bloqueio por conta</td>
+  </tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top:26px">Detalhamento técnico</h3>
+    
+  <div class="finding-card" id="finding-F1">
+    <div class="finding-head">
+      <span class="chip" style="background:#2563EB">Baixa</span>
+      <span class="finding-id">F1</span>
+      <span class="finding-title">SSRF via DNS rebinding (TOCTOU) na validação de webhooks de alerta</span>
+    </div>
+    <div class="finding-meta">
+      <span><strong>Arquivo:</strong> <code>internal/services/alert/alert.go</code></span>
+      <span><strong>Linhas:</strong> <code>88-159</code></span>
+      <span><strong>Categoria:</strong> Outros (SSRF)</span>
+    </div>
+    <p>ValidateWebhookURL/isBlockedWebhookHost resolvem o hostname do webhook e bloqueiam IPs privados/loopback/link-local no momento da validação (linhas 88-120). Porém SendWebhook (linhas 130-159) reutiliza um http.Client padrão que refaz a resolução DNS no momento da conexão TCP, sem fixar (pin) o IP validado. Um atacante que já possua a permissão ManageSystem (necessária para criar/testar Alert Rules) pode registrar um domínio com TTL curto que resolve para um IP público na validação e para 127.0.0.1/rede interna milissegundos depois, no momento real da requisição HTTP — contornando o bloqueio de SSRF.</p>
+    <pre class="code-block">func SendWebhook(url string, message string) error {
+	if err := ValidateWebhookURL(url); err != nil {
+		return err
+	}
+	...
+	client := &amp;http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req) // nova resolução DNS aqui, sem IP pinning</pre>
+    <div class="finding-grid">
+      <div><h4>Por que é explorável</h4><p>Técnica clássica de bypass de SSRF (DNS rebinding): validação e uso ocorrem em dois momentos distintos, cada um com sua própria resolução de nome.</p></div>
+      <div><h4>Condições de explorabilidade</h4><p>Pré-condição: exige um usuário já autenticado com papel Administrator (única role com permissão access.ManageSystem — ver internal/access/access.go:31-47), controle de um domínio próprio com TTL de DNS baixo, e uma rede interna alcançável a partir do host da aplicação. Como esse ator já possui controle total do sistema, o impacto adicional é limitado a reconhecimento/pivô de rede interna a partir do servidor da aplicação.</p></div>
+      <div><h4>Recomendação</h4><p>Resolver o host uma única vez, validar o IP resultante e reutilizá-lo na conexão real (ex.: net.Dialer com DialContext customizado que conecta diretamente ao IP validado, mantendo o header Host original), em vez de validar uma URL e deixar o net/http padrão re-resolver o DNS.</p></div>
+    </div>
+  </div>
+  <div class="finding-card" id="finding-F2">
+    <div class="finding-head">
+      <span class="chip" style="background:#2563EB">Baixa</span>
+      <span class="finding-id">F2</span>
+      <span class="finding-title">Cookie de sessão sem a flag Secure por padrão</span>
+    </div>
+    <div class="finding-meta">
+      <span><strong>Arquivo:</strong> <code>cmd/mimic/main.go / .env.example</code></span>
+      <span><strong>Linhas:</strong> <code>main.go:108-113; .env.example:8</code></span>
+      <span><strong>Categoria:</strong> Outros (Config)</span>
+    </div>
+    <p>O Secure flag do cookie de sessão só é ativado se a variável de ambiente COOKIE_SECURE estiver explicitamente definida como 'true'. O .env.example traz COOKIE_SECURE=false como valor padrão sugerido, e o docker-compose.yml usa ${COOKIE_SECURE:-false} como fallback. Uma instalação seguindo a documentação sem alterar esse valor roda com cookies de sessão transmissíveis em texto claro caso a aplicação seja exposta via HTTP (ex.: atrás de um reverse proxy mal configurado, ou em rede interna sem TLS).</p>
+    <pre class="code-block">store := session.New(session.Config{
+	Expiration:     24 * time.Hour,
+	CookieHTTPOnly: true,
+	CookieSameSite: &quot;Strict&quot;,
+	CookieSecure:   strings.EqualFold(os.Getenv(&quot;COOKIE_SECURE&quot;), &quot;true&quot;),
+})</pre>
+    <div class="finding-grid">
+      <div><h4>Por que é explorável</h4><p>Sem o atributo Secure, o navegador pode enviar o cookie de sessão em uma conexão HTTP não criptografada caso exista qualquer caminho de rede sem TLS até a aplicação, permitindo captura de sessão por um atacante na mesma rede (ex.: Wi-Fi compartilhado, proxy interno).</p></div>
+      <div><h4>Condições de explorabilidade</h4><p>Só é explorável se a instância for servida via HTTP (sem TLS) em algum ponto do caminho de rede do cliente — não afeta instalações atrás de TLS/reverse proxy com HTTPS ponta a ponta. O próprio README recomenda 'Enable this when the application is served through HTTPS', mas o valor padrão do exemplo é 'false'.</p></div>
+      <div><h4>Recomendação</h4><p>Inverter o padrão para 'true' e documentar a exceção explícita para ambientes de desenvolvimento local sem TLS, ou detectar automaticamente X-Forwarded-Proto quando atrás de um proxy confiável.</p></div>
+    </div>
+  </div>
+  <div class="finding-card" id="finding-F3">
+    <div class="finding-head">
+      <span class="chip" style="background:#64748B">Informativa</span>
+      <span class="finding-id">F3</span>
+      <span class="finding-title">Exemplo de senha literal fraca na documentação de instalação bare-metal</span>
+    </div>
+    <div class="finding-meta">
+      <span><strong>Arquivo:</strong> <code>TUTORIAL.md</code></span>
+      <span><strong>Linhas:</strong> <code>63-66, 83</code></span>
+      <span><strong>Categoria:</strong> 4. Chaves expostas</span>
+    </div>
+    <p>O tutorial de instalação manual mostra a criação do usuário PostgreSQL com a senha literal 'password' e a mesma string na DATABASE_URL do serviço systemd de exemplo. Há um aviso ('&gt; Warning: Change `password` to a secure password.') logo acima, mas o valor em si não é um placeholder obviamente inválido — instaladores apressados podem copiar e colar sem trocar.</p>
+    <pre class="code-block">&gt; **Warning:** Change `password` to a secure password.
+```sql
+CREATE USER mimic WITH ENCRYPTED PASSWORD 'password';
+```
+...
+Environment=&quot;DATABASE_URL=postgres://mimic:password@localhost:5432/mimic_db?sslmode=disable&quot;</pre>
+    <div class="finding-grid">
+      <div><h4>Por que é explorável</h4><p>Não é uma vulnerabilidade de código, mas um risco operacional: se o operador ignorar o aviso, o banco fica protegido por uma senha trivialmente adivinhável.</p></div>
+      <div><h4>Condições de explorabilidade</h4><p>Requer que o operador siga o tutorial sem seguir a instrução de troca, E que o PostgreSQL esteja acessível pela rede (por padrão TUTORIAL.md configura o serviço para localhost).</p></div>
+      <div><h4>Recomendação</h4><p>Substituir 'password' por um placeholder que falha de forma óbvia se não for trocado, ex. '&lt;TROQUE_ESTA_SENHA&gt;', em vez de uma senha que 'funciona' se deixada como está.</p></div>
+    </div>
+  </div>
+  <div class="finding-card" id="finding-F4">
+    <div class="finding-head">
+      <span class="chip" style="background:#64748B">Informativa</span>
+      <span class="finding-id">F4</span>
+      <span class="finding-title">Fallback silencioso: chave de criptografia gerada e persistida em disco se SECRET_KEY não for definida</span>
+    </div>
+    <div class="finding-meta">
+      <span><strong>Arquivo:</strong> <code>pkg/crypto/crypto.go</code></span>
+      <span><strong>Linhas:</strong> <code>32-61</code></span>
+      <span><strong>Categoria:</strong> 4. Chaves expostas</span>
+    </div>
+    <p>Quando SECRET_KEY não está no ambiente, loadSecretKey() tenta ler .mimic_secret e, se ausente, gera 24 bytes aleatórios, codifica em base64 e grava em .mimic_secret com permissão 0600. Isso evita uma chave hardcoded (positivo), mas é uma degradação silenciosa: a aplicação sobe normalmente sem avisar que está operando com uma chave não gerenciada pelo operador. Em Docker (docker-compose.yml) isso é mitigado porque SECRET_KEY é obrigatória via ${SECRET_KEY:?...}, mas uma instalação bare-metal (TUTORIAL.md) sem exportar SECRET_KEY cairia nesse fallback sem qualquer log de alerta.</p>
+    <pre class="code-block">secretFile := &quot;.mimic_secret&quot;
+data, err := os.ReadFile(secretFile)
+if err == nil { ... }
+// Generate new key
+newKey := make([]byte, 24)
+...
+os.WriteFile(secretFile, []byte(b64Key), 0600)</pre>
+    <div class="finding-grid">
+      <div><h4>Por que é explorável</h4><p>Se o arquivo .mimic_secret for perdido (ex.: reinstalação, migração de host sem copiar o arquivo), todas as credenciais SSH/SFTP/Webhook já criptografadas no banco tornam-se permanentemente indecifráveis — mais um risco de continuidade operacional do que de confidencialidade direta, mas vale nota de segurança porque mascara uma configuração ausente.</p></div>
+      <div><h4>Condições de explorabilidade</h4><p>Não é explorável remotamente; é um problema de gestão de configuração/chaves em instalações que não seguem o Docker Compose (que já força a variável).</p></div>
+      <div><h4>Recomendação</h4><p>Emitir um log.Printf de aviso claro quando o fallback for usado ('SECRET_KEY not set, generated and persisted a new key at .mimic_secret — back this file up'), e considerar recusar a subida em modo produção (ex. quando um APP_ENV=production estiver definido).</p></div>
+    </div>
+  </div>
+  <div class="finding-card" id="finding-F5">
+    <div class="finding-head">
+      <span class="chip" style="background:#64748B">Informativa</span>
+      <span class="finding-id">F5</span>
+      <span class="finding-title">Rate limiting de login aplicado apenas por IP, sem bloqueio por conta</span>
+    </div>
+    <div class="finding-meta">
+      <span><strong>Arquivo:</strong> <code>cmd/mimic/main.go</code></span>
+      <span><strong>Linhas:</strong> <code>194-203</code></span>
+      <span><strong>Categoria:</strong> Outros (Auth)</span>
+    </div>
+    <p>O limiter de /login permite 10 tentativas por minuto por IP (chave padrão do middleware limiter do Fiber é c.IP()). Não existe bloqueio complementar por username após N falhas. Um atacante distribuído (múltiplos IPs/proxies) pode tentar senhas contra uma única conta sem esbarrar nesse limite, já que cada IP tem sua própria cota.</p>
+    <pre class="code-block">loginLimiter := limiter.New(limiter.Config{
+	Max:        10,
+	Expiration: time.Minute,
+	...
+})
+app.Post(&quot;/login&quot;, loginLimiter, authHandler.PostLogin)</pre>
+    <div class="finding-grid">
+      <div><h4>Por que é explorável</h4><p>Rate limiting só por IP não impede brute force distribuído contra uma conta específica; bcrypt (DefaultCost) e a checagem de tempo constante (auth.go) já elevam bastante o custo por tentativa, mas o limite de taxa é a defesa que faltaria numa distribuição de origem.</p></div>
+      <div><h4>Condições de explorabilidade</h4><p>Requer um atacante com acesso a múltiplos endereços IP (botnet, proxies rotativos) e um username válido conhecido ou adivinhável.</p></div>
+      <div><h4>Recomendação</h4><p>Adicionar um contador de falhas por username (ex. Redis/DB) com bloqueio temporário progressivo após N tentativas, complementando o limite por IP já existente.</p></div>
+    </div>
+  </div>
+  </section>
+
+  <!-- RECOMENDAÇÕES -->
+  <section class="page">
+    <h2 class="section-title">Recomendações priorizadas</h2>
+    
+    <div class="reco-row">
+      <div class="reco-priority">P1</div>
+      <div class="reco-text">Corrigir o SSRF por DNS rebinding em internal/services/alert/alert.go: resolver o host uma única vez, validar o IP e reutilizá-lo na conexão HTTP real (Dialer customizado), em vez de validar a URL e deixar o net/http padrão re-resolver o DNS no momento da requisição.</div>
+    </div>
+    <div class="reco-row">
+      <div class="reco-priority">P2</div>
+      <div class="reco-text">Inverter o padrão de COOKIE_SECURE para 'true' em .env.example e docker-compose.yml, com instrução explícita de exceção apenas para desenvolvimento local sem TLS.</div>
+    </div>
+    <div class="reco-row">
+      <div class="reco-priority">P3</div>
+      <div class="reco-text">Higienizar exemplos de credenciais na documentação (TUTORIAL.md) trocando 'password' por um placeholder que falha visivelmente se não for substituído, e emitir um log de aviso quando pkg/crypto usar o fallback de geração automática de SECRET_KEY em disco.</div>
+    </div>
+    <div class="reco-row">
+      <div class="reco-priority">P4</div>
+      <div class="reco-text">Reforçar o rate limiting de /login com um contador de falhas por username (além do limite por IP já existente), para mitigar brute force distribuído contra uma conta específica.</div>
+    </div>
+  </section>
+
+  <!-- ISSUES PARA O GITHUB -->
+  <section class="page">
+    <h2 class="section-title">Issues para o GitHub</h2>
+    <p class="section-sub">Texto completo em Markdown, pronto para copiar e colar em uma nova issue.</p>
+    
+  <div class="issue-block">
+    <div class="issue-marker">--- ISSUE 1 ---</div>
+    <pre class="issue-body"># [Segurança] SSRF via DNS rebinding na validação de webhooks de alerta
+
+**Labels sugeridas:** security, baixa
+
+## Descrição do problema
+
+ValidateWebhookURL valida o host do webhook e bloqueia IPs privados/loopback no momento do salvamento/teste da regra, mas SendWebhook deixa o net/http padrão re-resolver o DNS no momento da conexão real, sem fixar o IP validado. Um domínio com TTL curto pode resolver para um IP público na validação e para um alvo interno (127.0.0.1, rede privada) no momento do disparo real, contornando o bloqueio de SSRF. Requer papel Administrator (permissão ManageSystem) para cadastrar a regra de alerta.
+
+## Evidência
+
+**internal/services/alert/alert.go:130-159**
+```
+func SendWebhook(url string, message string) error {
+	if err := ValidateWebhookURL(url); err != nil {
+		return err
+	}
+	...
+	client := &amp;http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+```
+
+## Impacto
+
+Um Administrator malicioso ou uma conta de Administrator comprometida pode usar o servidor da aplicação como pivô para escanear/alcançar serviços internos que não deveriam ser expostos, contornando o bloqueio de SSRF já existente.
+
+## Sugestão de correção
+
+Resolver o hostname uma única vez, validar o(s) IP(s) resultante(s) e reutilizá-los na conexão TCP real (por exemplo, um http.Transport com DialContext customizado que conecta diretamente ao IP validado, preservando o header Host original), em vez de validar a URL textual e deixar o cliente HTTP padrão resolver o DNS de novo no momento do request.
+
+## Critérios de aceite
+
+- [ ] SendWebhook (e qualquer outro chamador de rede a partir de URL fornecida pelo usuário) conecta ao IP resolvido e validado, não a um novo lookup de DNS
+- [ ] Teste automatizado cobrindo um cenário de DNS rebinding (mock de resolver retornando IPs diferentes em validação vs. conexão) confirma o bloqueio
+- [ ] Comportamento de bloqueio para IPs privados/loopback/link-local continua funcionando (regressão)</pre>
+    <div class="issue-marker">--- FIM ISSUE 1 ---</div>
+  </div>
+
+  <div class="issue-block">
+    <div class="issue-marker">--- ISSUE 2 ---</div>
+    <pre class="issue-body"># [Segurança] Cookie de sessão sem flag Secure por padrão
+
+**Labels sugeridas:** security, baixa
+
+## Descrição do problema
+
+CookieSecure só é habilitado se COOKIE_SECURE=true for definido explicitamente. .env.example e docker-compose.yml usam 'false' como padrão sugerido, então uma instalação seguindo a documentação sem alterar esse valor roda com cookies de sessão sem o atributo Secure, que poderiam ser transmitidos em texto claro se a aplicação for exposta via HTTP em algum trecho do caminho de rede.
+
+## Evidência
+
+**cmd/mimic/main.go:108-113**
+```
+store := session.New(session.Config{
+	Expiration:     24 * time.Hour,
+	CookieHTTPOnly: true,
+	CookieSameSite: &quot;Strict&quot;,
+	CookieSecure:   strings.EqualFold(os.Getenv(&quot;COOKIE_SECURE&quot;), &quot;true&quot;),
+})
+```
+
+**.env.example:7-8**
+```
+# Enable this when the application is served through HTTPS.
+COOKIE_SECURE=false
+```
+
+## Impacto
+
+Em uma instalação exposta via HTTP (sem TLS ponta a ponta), o cookie de sessão pode ser capturado por um atacante na mesma rede (ex. Wi-Fi compartilhado, proxy interno mal configurado), permitindo sequestro de sessão.
+
+## Sugestão de correção
+
+Inverter o valor padrão sugerido para 'true' em .env.example e docker-compose.yml, deixando clara a exceção apenas para desenvolvimento local sem TLS; opcionalmente, detectar automaticamente X-Forwarded-Proto quando atrás de um proxy confiável.
+
+## Critérios de aceite
+
+- [ ] .env.example e docker-compose.yml passam a sugerir COOKIE_SECURE=true por padrão
+- [ ] README/DOCKER.md documentam explicitamente quando é seguro definir 'false' (apenas dev local)</pre>
+    <div class="issue-marker">--- FIM ISSUE 2 ---</div>
+  </div>
+
+  <div class="issue-block">
+    <div class="issue-marker">--- ISSUE 3 ---</div>
+    <pre class="issue-body"># [Segurança] Hardening de segredos: exemplo de senha fraca na documentação e fallback silencioso de SECRET_KEY
+
+**Labels sugeridas:** security, informativa
+
+## Descrição do problema
+
+Dois achados relacionados a gestão de segredos, agrupados por serem do mesmo tema: (1) TUTORIAL.md usa a senha literal 'password' em um exemplo de criação de usuário PostgreSQL e na DATABASE_URL de um serviço systemd — com aviso ao lado, mas sem ser um placeholder obviamente inválido. (2) pkg/crypto/crypto.go gera e persiste silenciosamente uma nova SECRET_KEY em .mimic_secret quando a variável de ambiente não está definida, sem log de aviso, o que pode mascarar uma configuração ausente em instalações fora do Docker Compose (que já torna a variável obrigatória).
+
+## Evidência
+
+**TUTORIAL.md:63-66, 83**
+```
+&gt; **Warning:** Change `password` to a secure password.
+CREATE USER mimic WITH ENCRYPTED PASSWORD 'password';
+...
+Environment=&quot;DATABASE_URL=postgres://mimic:password@localhost:5432/mimic_db?sslmode=disable&quot;
+```
+
+**pkg/crypto/crypto.go:32-61**
+```
+secretFile := &quot;.mimic_secret&quot;
+data, err := os.ReadFile(secretFile)
+if err == nil { ... }
+// Generate new key
+newKey := make([]byte, 24)
+...
+os.WriteFile(secretFile, []byte(b64Key), 0600)
+```
+
+## Impacto
+
+(1) Banco de dados protegido por senha trivial se o operador ignorar o aviso. (2) Perda do arquivo .mimic_secret (reinstalação, migração sem backup) torna credenciais SSH/SFTP/Webhook já criptografadas permanentemente indecifráveis, sem que o operador tenha sido avisado de que dependia desse arquivo.
+
+## Sugestão de correção
+
+Trocar 'password' por um placeholder que falha visivelmente se não for substituído (ex. '&lt;TROQUE_ESTA_SENHA&gt;'). Emitir log.Printf de aviso quando o fallback de geração de SECRET_KEY for usado, e considerar recusar a subida quando um modo de produção estiver sinalizado.
+
+## Critérios de aceite
+
+- [ ] TUTORIAL.md não contém mais uma senha literal 'funcional' em exemplos de configuração
+- [ ] Aplicação loga um aviso claro no startup quando SECRET_KEY é gerada automaticamente
+- [ ] Documentação menciona explicitamente a necessidade de backup do .mimic_secret quando esse fallback é usado</pre>
+    <div class="issue-marker">--- FIM ISSUE 3 ---</div>
+  </div>
+
+  <div class="issue-block">
+    <div class="issue-marker">--- ISSUE 4 ---</div>
+    <pre class="issue-body"># [Segurança] Rate limiting de login apenas por IP, sem bloqueio por conta
+
+**Labels sugeridas:** security, informativa
+
+## Descrição do problema
+
+O limiter de POST /login usa a chave padrão do middleware Fiber (endereço IP do cliente), permitindo 10 tentativas por minuto por IP. Não existe um contador complementar por username, então um atacante com múltiplos IPs (proxies, botnet) pode tentar senhas contra uma conta específica sem esbarrar em limite algum.
+
+## Evidência
+
+**cmd/mimic/main.go:194-203**
+```
+loginLimiter := limiter.New(limiter.Config{
+	Max:        10,
+	Expiration: time.Minute,
+	LimitReached: func(c *fiber.Ctx) error { ... },
+})
+app.Post(&quot;/login&quot;, loginLimiter, authHandler.PostLogin)
+```
+
+## Impacto
+
+Brute force distribuído contra uma conta específica não é mitigado pelo rate limit atual, embora o custo por tentativa já seja elevado por bcrypt + comparação de tempo constante.
+
+## Sugestão de correção
+
+Adicionar um contador de falhas de login por username (Redis, tabela dedicada ou coluna em User) com bloqueio temporário progressivo após N tentativas, complementando — não substituindo — o rate limit por IP já existente.
+
+## Critérios de aceite
+
+- [ ] Login com um mesmo username falhando N vezes seguidas (mesmo de IPs diferentes) resulta em bloqueio temporário da conta
+- [ ] O bloqueio por conta não introduz um vetor de enumeração de usuários (mensagem de erro permanece genérica)</pre>
+    <div class="issue-marker">--- FIM ISSUE 4 ---</div>
+  </div>
+  </section>
+
+</body>
+</html>

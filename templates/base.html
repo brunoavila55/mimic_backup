@@ -6,7 +6,7 @@
     <title>Mimic | {{ .Title }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico" />
     <link rel="stylesheet" href="/static/css/style.css?v={{ AssetVersion "/static/css/style.css" }}" />
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
@@ -46,7 +46,7 @@
                 {{ end }}
 
                 <div class="sidebar-section">System</div>
-                <a href="{{ if eq .Role "Administrator" }}/settings{{ else if eq .Role "Auditor" }}/settings/security{{ else }}/settings/profile{{ end }}" class="sidebar-link {{ if or (eq .CurrentRoute "settings") (eq .CurrentRoute "users") (eq .CurrentRoute "sftp") (eq .CurrentRoute "alerts") (eq .CurrentRoute "export") (eq .CurrentRoute "logs") (eq .CurrentRoute "security") (eq .CurrentRoute "golden") (eq .CurrentRoute "profile") }}active{{ end }}">
+                <a href="{{ if eq .Role "Administrator" }}/settings{{ else if eq .Role "Auditor" }}/settings/logs{{ else }}/settings/profile{{ end }}" class="sidebar-link {{ if or (eq .CurrentRoute "settings") (eq .CurrentRoute "users") (eq .CurrentRoute "sftp") (eq .CurrentRoute "alerts") (eq .CurrentRoute "export") (eq .CurrentRoute "logs") (eq .CurrentRoute "profile") }}active{{ end }}">
                     <i class="bx bx-cog"></i>
                     <span>Settings</span>
                 </a>
@@ -62,12 +62,13 @@
                         <div class="user-name">{{ .Username }}</div>
                         <div class="user-role">{{ .Role }}</div>
                     </div>
-                    <form action="/logout" method="post">
-                        <button type="submit" class="user-logout" title="Sign Out">
-                            <i class="bx bx-log-out"></i>
-                        </button>
-                    </form>
                 </div>
+                <form action="/logout" method="post">
+                    <button type="submit" class="sidebar-logout">
+                        <i class="bx bx-log-out"></i>
+                        <span>Log out</span>
+                    </button>
+                </form>
                 <div style="padding: 12px 16px; font-size: 11px; font-weight: 500; color: var(--text-muted); opacity: 0.5; text-align: center;">
                     Mimic Backup v{{ AppVersion }}
                 </div>
@@ -118,7 +119,10 @@
          x-transition:leave="transition ease-in duration-150"
          x-transition:leave-start="opacity-100"
          x-transition:leave-end="opacity-0">
-        <div class="modal-box" @click.outside="modalOpen = false"
+        <div class="modal-box" role="dialog" aria-modal="true" tabindex="-1"
+             x-ref="modalBox"
+             x-effect="if (modalOpen) $nextTick(() => $refs.modalBox.focus())"
+             @click.outside="modalOpen = false"
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0 scale-95"
              x-transition:enter-end="opacity-100 scale-100">
@@ -152,12 +156,18 @@
             const el = document.createElement('div');
             el.className = 'notification';
             el.style.cssText = 'opacity:0; transform:translateX(16px);';
-            el.innerHTML = `
-                <div>
-                    <div class="notif-label" style="color:${c.color}">${c.label}</div>
-                    <div class="notif-message">${message}</div>
-                </div>
-            `;
+
+            const wrapper = document.createElement('div');
+            const labelEl = document.createElement('div');
+            labelEl.className = 'notif-label';
+            labelEl.style.color = c.color;
+            labelEl.textContent = c.label;
+            const messageEl = document.createElement('div');
+            messageEl.className = 'notif-message';
+            messageEl.textContent = message;
+            wrapper.appendChild(labelEl);
+            wrapper.appendChild(messageEl);
+            el.appendChild(wrapper);
             container.appendChild(el);
 
             requestAnimationFrame(() => {

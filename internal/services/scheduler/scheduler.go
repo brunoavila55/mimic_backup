@@ -7,7 +7,6 @@ import (
 	"log"
 	"mimic/internal/models"
 	"mimic/internal/services/alert"
-	"mimic/internal/services/audit"
 	"mimic/internal/services/sftp"
 	"mimic/internal/services/ssh"
 	"mimic/pkg/diff"
@@ -309,32 +308,6 @@ func (s *SchedulerService) runBackup(node *models.Node) {
 				log.Printf("[Scheduler] Failed to persist first backup for node %s: %v", node.Name, err)
 				s.recordLog("error", "backup", fmt.Sprintf("Failed to persist backup for %s", node.Name), err.Error())
 				return
-			}
-		}
-
-		// Calculate Security & Compliance Score
-		newViolations := audit.RunAudit(s.db, node, version, config)
-
-		// Alerta de Compliance (Security Violation)
-		if len(newViolations) > 0 {
-			isSnoozed := node.AlertSnoozeUntil != nil && time.Now().Before(*node.AlertSnoozeUntil)
-			if !isSnoozed {
-				var rules []models.AlertRule
-				s.db.Where("target_group = ? OR target_group = '*' OR target_group = 'Global'", node.Group).Find(&rules)
-				for _, rule := range rules {
-					if rule.Enabled && rule.AlertOnSecurity {
-						var viols []string
-						for _, v := range newViolations {
-							viols = append(viols, fmt.Sprintf("- %s (Penalty: %d)", v.Rule.Name, v.Rule.Penalty))
-						}
-
-						msg := fmt.Sprintf("*Security Violation Detected*\n\n*Node:* %s\n*IP:* %s\n*Current Score:* %d/100\n\n*New Violations:*\n%s",
-							node.Name, node.IP, node.SecurityScore, strings.Join(viols, "\n"))
-						alert.Dispatch(s.db, rule, msg)
-					}
-				}
-			} else {
-				log.Printf("[Scheduler] Security alert suppressed for node %s due to snooze mode.", node.Name)
 			}
 		}
 

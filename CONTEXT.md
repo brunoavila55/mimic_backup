@@ -36,9 +36,8 @@ internal/
   middleware/
     auth.go                    # RequireSetup and RequireAuth protection
   models/
-    models.go                  # GORM entities (User, Node, NodeBackup, AlertRule, SecurityRule, etc.)
+    models.go                  # GORM entities (User, Node, NodeBackup, AlertRule, etc.)
   services/
-    audit/                     # Security rule validation, evaluation, scoring, and violation lifecycle
     ssh/                       # Native SSH Engine
       vendors/                 # Per-vendor drivers (mikrotik, cisco, huawei, etc.)
     scheduler/                 # Internal cron-like scheduler
@@ -66,7 +65,7 @@ The system is data-driven, heavily relying on GORM models. Here is a breakdown o
 | `User` | **Access Control:** Manages system users (Administrator/Operator/Auditor/Viewer), profile photos and bcrypt passwords. The system forces a Setup Wizard on first boot if no users exist. |
 | `Credential` | **Reusable Auth:** Instead of defining passwords per node, you create an SSH Credential and link it to hundreds of nodes. When a password changes, you only update it here. Encrypted using AES-GCM. |
 | `BackupRoutine` | **Scheduling:** Defines when backups happen (e.g., "Every 24h", "Tuesdays at 02:00"). Linked to nodes. |
-| `Node` | **Inventory:** Network equipment. Tracks IP, Vendor, linked Credential, Routine, and `SecurityScore`. Features include manual backup execution, configuration viewing, and diff analysis. |
+| `Node` | **Inventory:** Network equipment. Tracks IP, Vendor, linked Credential, and Routine. Features include manual backup execution, configuration viewing, and diff analysis. |
 | `NodeBackup` | **Versioning:** Stores the actual configuration snapshot, version number, SHA-256 hash, and Diff additions/deletions. |
 
 ### External Integrations & Logging
@@ -74,36 +73,14 @@ The system is data-driven, heavily relying on GORM models. Here is a breakdown o
 |-------|-----------------|
 | `SftpSettings` | **Disaster Recovery:** Allows mirroring local backups to an external SFTP server, either manually or via bulk sync. |
 | `SystemLog` | **Auditing:** Records system activity, internal operations, SSH connection failures, and application errors for troubleshooting. |
-| `AlertRule` | **Notifications:** Sends alerts via Webhook or Telegram based on triggers (Diff changes, Failure, Security violations). |
-
-### Security & Compliance
-| Model | Feature Details |
-|-------|-----------------|
-| `SecurityRule` | **Compliance Checking:** Defines enabled/disabled RE2 Regex policies with category, vendor, node-group scope, severity, penalty, optional context block, and remediation guidance. |
-| `SecurityViolation` | **Current Findings:** Records active rule failures. Continuing findings retain their original `CreatedAt` while updating the latest backup version. Resolved findings are removed. |
-| `NodeRuleException` | **Overrides:** Allows ignoring specific security rules for specific nodes. |
-| `GoldenConfig` | **Templates:** Baseline configuration templates grouped by target or vendor for compliance tracking. |
-
-### Security Rules Engine
-
-The audit engine lives in `internal/services/audit/` and separates rule validation/evaluation from database orchestration:
-
-- `ValidateRule` rejects missing names, invalid match types, penalties outside `0-100`, and invalid main/context Regex patterns.
-- `EvaluateRule` deterministically evaluates one rule against configuration text and is shared by automated tests.
-- `contains` creates a violation when the pattern exists; `not_contains` creates one when the required pattern is absent.
-- `ContextBlock` optionally limits matching to an indented configuration section. A missing context counts as a missing pattern.
-- Only enabled rules matching `(vendor OR *)` and `(target group OR *)` apply to a node.
-- Node-specific exceptions are skipped before evaluation.
-- The score starts at `100`, subtracts each active rule penalty, and is clamped at `0`.
-- Saving or deleting a rule re-evaluates all nodes with successful backups so stale findings are removed when scope, vendor, status, or logic changes.
-- Only newly introduced violations are returned for alerting; continuing violations do not repeatedly trigger new-finding alerts.
+| `AlertRule` | **Notifications:** Sends alerts via Webhook or Telegram based on triggers (Diff changes, Failure/Recovery). |
 
 ## ⚙️ Operation Flow
 
 1. **First Access**: `RequireSetup` middleware detects 0 users -> `/setup` DB check -> `/setup/superuser` creation -> `/login`.
 2. **Normal Operation**: User creates `Credential` -> Creates `Node` linked to it.
 3. **Execution**: The `Scheduler` identifies it's time for a backup. It spawns a goroutine -> Opens SSH via PTY -> Identifies vendor in `ssh/vendors` -> Runs prep commands -> Runs backup command -> Runs Regex normalizations.
-4. **Validation**: Calculates SHA-256 of the new config. If different from the last, it calculates the Diff using `pkg/diff`, runs `SecurityRule` compliance checks, calculates the `SecurityScore`, and saves the `NodeBackup`.
+4. **Validation**: Calculates SHA-256 of the new config. If different from the last, it calculates the Diff using `pkg/diff` and saves the `NodeBackup`.
 5. **Alerting**: If configured, triggers `AlertRule` webhooks or Telegram messages based on the backup result.
 6. **Export**: Backups can be synced to SFTP via `sftp` service.
 
@@ -119,17 +96,8 @@ The `/settings` route is a unified hub with multiple tabs loaded via **HTMX** fo
 - **Logs (`/settings/logs`)**: System activity logs.
 - **Profile (`/settings/profile`)**: Logged-in user's identity, profile photo and password change.
 - **Alerts (`/settings/alerts`)**: Webhook and Telegram notification rules.
-- **Security Rules (`/settings/security`)**: Policy catalog with metrics, search, severity/status filters, vendor/group scope, and enabled state.
 
-### Security Rule Builder (`/settings/security/new`, `/settings/security/:id/edit`)
-
-The rule editor is a guided three-step Alpine.js interface designed for administrators who may not be Regex experts:
-
-1. **Policy intent:** Name, risk description, category, severity, and score impact.
-2. **Device scope:** Vendor and node group, with syntax guidance for MikroTik RouterOS, Cisco IOS/IOS-XE, Huawei VRP, and Juniper Junos.
-3. **Detection logic:** Plain-language `Flag when found` / `Flag when missing` choices, Regex pattern, optional advanced context block, remediation guidance, and enabled state.
-
-The editor includes vendor-aware starter checks for Telnet, NTP, and public SNMP, plus compliant/risky sample configurations. Its live sandbox previews match and compliance state in the browser; the Go engine validates the rule again when it is saved. The CSS asset query in `templates/base.html` must be bumped after significant stylesheet changes to prevent stale browser caching.
+The CSS asset query in `templates/base.html` must be bumped after significant stylesheet changes to prevent stale browser caching.
 
 The design utilizes a **Professional neutral dark theme** (`#0f1117` background, `#232730` surfaces) focused on performance, with fixed sidebars, mobile hamburger menus, and swipeable tables.
 
@@ -140,4 +108,4 @@ The design utilizes a **Professional neutral dark theme** (`#0f1117` background,
 - **Security**: The `SECRET_KEY` is mandatory. Do not commit `.mimic_secret`. All queries must use parameterized binding.
 
 ---
-*Document last updated in July 2026.*
+*Document last updated in August 2026.*

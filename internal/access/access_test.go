@@ -14,7 +14,7 @@ func TestRolePermissions(t *testing.T) {
 		{RoleOperator, RunBackups, true},
 		{RoleOperator, ManageUsers, false},
 		{RoleAuditor, ViewAudit, true},
-		{RoleAuditor, ManagePolicies, false},
+		{RoleAuditor, ManageSystem, false},
 		{RoleViewer, ViewAudit, false},
 		{"Unknown", ManageNodes, false},
 	}

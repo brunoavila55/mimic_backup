@@ -8,7 +8,7 @@ Mimic is a platform for automating, versioning, auditing, and centralizing confi
 
 Modern network environments need reliable configuration history, clear change tracking, and quick visibility into backup failures. Mimic schedules configuration captures, stores meaningful backup versions, highlights drift, and helps teams understand which devices need action.
 
-The interface is designed around operational workflows: dashboard triage, node inventory, settings management, CSV import/export, backup history, security rule auditing, alert routing, and SFTP synchronization.
+The interface is designed around operational workflows: dashboard triage, node inventory, settings management, CSV import/export, backup history, alert routing, and SFTP synchronization.
 
 ## Key Features
 
@@ -17,12 +17,10 @@ The interface is designed around operational workflows: dashboard triage, node i
 - **CSV Import/Export:** Import nodes in bulk with validation, delimiter detection, normalized names/groups/tags, and clear row-level feedback.
 - **Visual Diff Viewer:** Compare configuration versions and inspect additions/removals.
 - **Centralized Dashboard:** Monitor active nodes, failed backups, silent nodes, SFTP sync pending items, upcoming executions, and recent configuration changes.
-- **Security Rules Engine:** Audit configurations using vendor-aware rules, severity, regex matching, score penalties, exceptions, and remediation guidance.
-- **Golden Config Checks:** Compare device backups against expected baseline configurations.
 - **Secure Credential Management:** Store SSH credentials encrypted at rest using AES-GCM.
 - **SFTP Synchronization:** Export successful backups to an external SFTP destination.
-- **Alerting Rules:** Route drift, failure, recovery, and security notifications to Webhook or Telegram destinations.
-- **Role-Based Access Control:** Administrators have full control, Operators manage network operations, Auditors review policies and logs, and Viewers have read-only access.
+- **Alerting Rules:** Route drift, failure, and recovery notifications to Webhook or Telegram destinations.
+- **Role-Based Access Control:** Administrators have full control, Operators manage network operations, Auditors review system logs, and Viewers have read-only access.
 - **Audit Logs:** Track operational activity and backup/export events.
 
 ## Supported Vendors
@@ -33,8 +31,6 @@ The current UI and backend normalize the following vendor scopes:
 - MikroTik
 - Huawei
 - Juniper
-
-Security rules can also target all vendors using `*`.
 
 ## Prerequisites
 
@@ -51,18 +47,6 @@ Mimic supports two installation paths:
 ## First Setup
 
 On first run with an empty database, Mimic redirects to the setup wizard. The wizard verifies database readiness and creates the initial Administrator account. After setup, users authenticate through the login screen.
-
-## Security Rules
-
-The Security Rules Engine automatically evaluates successful backups for security vulnerabilities and compliance deviations.
-
-Rules can target:
-
-- **Authentication / Access:** Plain-text passwords, weak access patterns, Telnet/HTTP exposure.
-- **Network / Exposure:** VTY access controls, SNMP community usage, firewall-related checks.
-- **Logging / Auditing:** Syslog, NTP, and operational audit requirements.
-
-Rules support vendor filters, group filters, regex matching, context blocks, severities, penalties, remediation text, and per-node exceptions.
 
 ## Recent Updates (v0.8.1)
 
@@ -85,7 +69,7 @@ Rules support vendor filters, group filters, regex matching, context blocks, sev
 
 ## Extensibility
 
-Mimic is built to support additional network vendors. New drivers can implement vendor-specific SSH commands and configuration normalization while preserving the same backup, diff, audit, and dashboard workflows.
+Mimic is built to support additional network vendors. New drivers can implement vendor-specific SSH commands and configuration normalization while preserving the same backup, diff, and dashboard workflows.
 
 ## License
 

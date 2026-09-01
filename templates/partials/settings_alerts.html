@@ -21,7 +21,7 @@
                 Notification routing
             </div>
             <h1 class="page-title">Alerting Rules</h1>
-            <p class="page-desc">Route drift, backup failure and security notifications to the right destination without noisy duplicates.</p>
+            <p class="page-desc">Route drift and backup failure notifications to the right destination without noisy duplicates.</p>
         </div>
         <a href="/settings/alerts/new" class="btn btn-primary">
             <i class="bx bx-plus"></i>
@@ -85,8 +85,8 @@
                  data-status="{{ if .Enabled }}enabled{{ else }}disabled{{ end }}"
                  data-provider="{{ if eq .Provider "telegram" }}telegram{{ else }}webhook{{ end }}"
                  data-scope="{{ if or (eq .TargetGroup "*") (eq .TargetGroup "Global") }}global{{ else }}group{{ end }}"
-                 data-health="{{ if and (not .AlertOnDiff) (not .AlertOnFailure) (not .AlertOnSecurity) }}needs-events{{ else }}ready{{ end }}"
-                 data-search="{{ .Name }} {{ .TargetGroup }} {{ .Provider }} {{ if .AlertOnDiff }}drift {{ end }}{{ if .AlertOnFailure }}failure recovery {{ end }}{{ if .AlertOnSecurity }}security compliance {{ end }}"
+                 data-health="{{ if and (not .AlertOnDiff) (not .AlertOnFailure) }}needs-events{{ else }}ready{{ end }}"
+                 data-search="{{ .Name }} {{ .TargetGroup }} {{ .Provider }} {{ if .AlertOnDiff }}drift {{ end }}{{ if .AlertOnFailure }}failure recovery {{ end }}"
                  x-show="matches($el)"
                  x-transition>
             <div class="alert-card-main">
@@ -101,7 +101,7 @@
                         {{ else }}
                         <span class="badge badge-muted"><i class="bx bx-pause-circle"></i> Disabled</span>
                         {{ end }}
-                        {{ if and (not .AlertOnDiff) (not .AlertOnFailure) (not .AlertOnSecurity) }}
+                        {{ if and (not .AlertOnDiff) (not .AlertOnFailure) }}
                         <span class="badge badge-warning"><i class="bx bx-error-circle"></i> No events</span>
                         {{ end }}
                     </div>
@@ -118,8 +118,7 @@
                 <div>
                     {{ if .AlertOnDiff }}<small><i class="bx bx-git-compare"></i>Drift</small>{{ end }}
                     {{ if .AlertOnFailure }}<small><i class="bx bx-error"></i>Failure</small>{{ end }}
-                    {{ if .AlertOnSecurity }}<small><i class="bx bx-shield-quarter"></i>Security</small>{{ end }}
-                    {{ if and (not .AlertOnDiff) (not .AlertOnFailure) (not .AlertOnSecurity) }}<small class="warning"><i class="bx bx-error-circle"></i>Select events</small>{{ end }}
+                    {{ if and (not .AlertOnDiff) (not .AlertOnFailure) }}<small class="warning"><i class="bx bx-error-circle"></i>Select events</small>{{ end }}
                 </div>
             </div>
 
@@ -151,7 +150,7 @@
     <div class="alerts-empty">
         <i class="bx bx-bell-off"></i>
         <strong>No alert rules yet</strong>
-        <span>Create a rule to notify your team about drift, failures or security findings.</span>
+        <span>Create a rule to notify your team about drift or backup failures.</span>
         <a href="/settings/alerts/new" class="btn btn-primary">
             <i class="bx bx-plus"></i>
             Create first rule

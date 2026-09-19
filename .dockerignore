@@ -7,3 +7,5 @@ README.md
 TUTORIAL.md
 DOCKER.md
 CONTEXT.md
+frontend/node_modules
+frontend/dist

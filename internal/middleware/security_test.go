@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -53,5 +54,21 @@ func TestSecurityHeadersAndOrigin(t *testing.T) {
 	}
 	if resp.StatusCode != fiber.StatusForbidden {
 		t.Fatalf("expected POST without Origin/Referer to be forbidden, got %d", resp.StatusCode)
+	}
+}
+
+func TestSecurityOriginFailureIsJSONForAPI(t *testing.T) {
+	app := fiber.New()
+	app.Use(SecurityHeadersAndOrigin())
+	app.Post("/api/v1/save", func(c *fiber.Ctx) error { return c.SendStatus(fiber.StatusOK) })
+	req := httptest.NewRequest(fiber.MethodPost, "/api/v1/save", nil)
+	req.Host = "mimic.local"
+	req.Header.Set("Origin", "https://attacker.example")
+	response, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.StatusCode != fiber.StatusForbidden || !strings.Contains(response.Header.Get("Content-Type"), "application/json") {
+		t.Fatalf("expected JSON 403, got %d %q", response.StatusCode, response.Header.Get("Content-Type"))
 	}
 }

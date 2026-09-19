@@ -29,35 +29,46 @@ type NodeHandler struct {
 }
 
 type NodeListStats struct {
-	Total     int64
-	Active    int64
-	Attention int64
-	Muted     int64
+	Total     int64 `json:"total"`
+	Active    int64 `json:"active"`
+	Attention int64 `json:"attention"`
+	Muted     int64 `json:"muted"`
 }
 
-func (h *NodeHandler) ListNodes(c *fiber.Ctx) error {
+type NodeFilters struct {
+	Search string
+	Status string
+	Vendor string
+	Group  string
+}
+
+type NodeListResult struct {
+	Nodes  []models.Node
+	Stats  NodeListStats
+	Groups []string
+}
+
+// loadNodeList is shared by the legacy HTML handler and the JSON API so both
+// surfaces keep exactly the same filtering and aggregation semantics.
+func (h *NodeHandler) loadNodeList(filters NodeFilters, now time.Time) (NodeListResult, error) {
+	var result NodeListResult
 	var nodes []models.Node
 	query := h.DB.Preload("Routine").Preload("Credential")
 
-	search := c.Query("search")
-	status := c.Query("status")
-	vendor := c.Query("vendor")
-	group := c.Query("group")
-
-	if search != "" {
-		query = query.Where("name ILIKE ? OR ip ILIKE ? OR vendor ILIKE ? OR \"group\" ILIKE ? OR tags ILIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+	if filters.Search != "" {
+		term := "%" + filters.Search + "%"
+		query = query.Where("name ILIKE ? OR ip ILIKE ? OR vendor ILIKE ? OR \"group\" ILIKE ? OR tags ILIKE ?", term, term, term, term, term)
 	}
 
-	if vendor != "" {
-		query = query.Where("vendor = ?", vendor)
+	if filters.Vendor != "" {
+		query = query.Where("vendor = ?", filters.Vendor)
 	}
 
-	if group != "" {
-		query = query.Where("\"group\" = ?", group)
+	if filters.Group != "" {
+		query = query.Where("\"group\" = ?", filters.Group)
 	}
 
-	now := time.Now()
-	switch status {
+	switch filters.Status {
 	case "active":
 		query = query.Where("enabled = ?", true)
 	case "inactive":
@@ -72,20 +83,43 @@ func (h *NodeHandler) ListNodes(c *fiber.Ctx) error {
 		query = query.Where("alert_snooze_until IS NOT NULL AND alert_snooze_until > ?", now)
 	}
 
-	query.Order("name asc").Find(&nodes)
+	if err := query.Order("name asc").Find(&nodes).Error; err != nil {
+		return result, err
+	}
+	result.Nodes = nodes
 
-	var stats NodeListStats
-	h.DB.Model(&models.Node{}).Count(&stats.Total)
-	h.DB.Model(&models.Node{}).Where("enabled = ?", true).Count(&stats.Active)
-	h.DB.Model(&models.Node{}).Where("enabled = ? AND last_status = ?", true, "error").Count(&stats.Attention)
-	h.DB.Model(&models.Node{}).Where("alert_snooze_until IS NOT NULL AND alert_snooze_until > ?", now).Count(&stats.Muted)
+	if err := h.DB.Model(&models.Node{}).Count(&result.Stats.Total).Error; err != nil {
+		return result, err
+	}
+	if err := h.DB.Model(&models.Node{}).Where("enabled = ?", true).Count(&result.Stats.Active).Error; err != nil {
+		return result, err
+	}
+	if err := h.DB.Model(&models.Node{}).Where("enabled = ? AND last_status = ?", true, "error").Count(&result.Stats.Attention).Error; err != nil {
+		return result, err
+	}
+	if err := h.DB.Model(&models.Node{}).Where("alert_snooze_until IS NOT NULL AND alert_snooze_until > ?", now).Count(&result.Stats.Muted).Error; err != nil {
+		return result, err
+	}
 
-	var groups []string
-	h.DB.Model(&models.Node{}).
+	if err := h.DB.Model(&models.Node{}).
 		Where("\"group\" IS NOT NULL AND \"group\" != ''").
 		Distinct().
 		Order("\"group\" asc").
-		Pluck("group", &groups)
+		Pluck("group", &result.Groups).Error; err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
+func (h *NodeHandler) ListNodes(c *fiber.Ctx) error {
+	filters := NodeFilters{
+		Search: c.Query("search"), Status: c.Query("status"),
+		Vendor: c.Query("vendor"), Group: c.Query("group"),
+	}
+	result, err := h.loadNodeList(filters, time.Now())
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("Could not load nodes")
+	}
 
 	data := fiber.Map{
 		"Title":        "Nodes",
@@ -93,13 +127,13 @@ func (h *NodeHandler) ListNodes(c *fiber.Ctx) error {
 		"Avatar":       c.Locals("avatar"),
 		"Role":         c.Locals("role"),
 		"CurrentRoute": "nodes",
-		"Nodes":        nodes,
-		"Search":       search,
-		"FilterStatus": status,
-		"FilterVendor": vendor,
-		"FilterGroup":  group,
-		"NodeStats":    stats,
-		"Groups":       groups,
+		"Nodes":        result.Nodes,
+		"Search":       filters.Search,
+		"FilterStatus": filters.Status,
+		"FilterVendor": filters.Vendor,
+		"FilterGroup":  filters.Group,
+		"NodeStats":    result.Stats,
+		"Groups":       result.Groups,
 	}
 
 	if c.Get("HX-Request") == "true" && c.Get("HX-Target") == "node-table-container" {

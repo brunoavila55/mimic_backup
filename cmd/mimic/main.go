@@ -169,6 +169,7 @@ func main() {
 
 	// Static Files
 	app.Static("/static", "./static")
+	app.Static("/assets", "./frontend/dist/assets")
 
 	// Handlers
 	sftpService := &sftp.SftpService{DB: db}
@@ -178,9 +179,55 @@ func main() {
 	nodeHandler := &handlers.NodeHandler{DB: db}
 	settingsHandler := &handlers.SettingsHandler{DB: db, Store: store, Sftp: sftpService}
 	formHandler := &handlers.FormHandler{DB: db, Store: store, Sftp: sftpService}
+	apiHandler := &handlers.APIHandler{DB: db, Store: store}
 
 	// ── Setup Middleware ───────────────────────────────
 	app.Use(middleware.RequireSetup(db))
+
+	// ── JSON API (public foundation) ──────────────────────────
+	api := app.Group("/api/v1")
+	api.Get("/health", func(c *fiber.Ctx) error {
+		if err := sqlDB.Ping(); err != nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": fiber.Map{"code": "database_unavailable", "message": "Database is unavailable."},
+			})
+		}
+		return c.JSON(fiber.Map{"data": fiber.Map{"status": "ok"}})
+	})
+	apiLoginLimiter := limiter.New(limiter.Config{
+		Max: 10, Expiration: time.Minute,
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"error": fiber.Map{"code": "rate_limited", "message": "Too many login attempts. Try again in one minute."},
+			})
+		},
+	})
+	api.Post("/auth/login", apiLoginLimiter, apiHandler.Login)
+
+	// API authentication is registered before the legacy redirecting middleware
+	// so every /api/v1 failure remains JSON.
+	protectedAPI := api.Group("", middleware.RequireAPIAuth(store, db))
+	protectedAPI.Get("/auth/me", apiHandler.Me)
+	protectedAPI.Post("/auth/logout", apiHandler.Logout)
+	protectedAPI.Get("/dashboard", apiHandler.Dashboard)
+	protectedAPI.Get("/nodes", apiHandler.ListNodes)
+	protectedAPI.Get("/nodes/:id", apiHandler.Node)
+	protectedAPI.Get("/backups/diff/compare", middleware.RequireAPIPermission(access.ManageUsers), apiHandler.CompareBackups)
+	protectedAPI.Get("/backups/:id/diff", apiHandler.BackupDiff)
+	protectedAPI.Get("/backups/:id", apiHandler.Backup)
+	protectedAPI.Get("/profile", apiHandler.Profile)
+	protectedAPI.Get("/credentials", middleware.RequireAPIPermission(access.ManageOperations), apiHandler.Credentials)
+	protectedAPI.Get("/routines", middleware.RequireAPIPermission(access.ManageOperations), apiHandler.Routines)
+	protectedAPI.Get("/users", middleware.RequireAPIPermission(access.ManageUsers), apiHandler.Users)
+	protectedAPI.Get("/logs", middleware.RequireAPIPermission(access.ViewAudit), apiHandler.Logs)
+	protectedAPI.Get("/alerts", middleware.RequireAPIPermission(access.ManageSystem), apiHandler.Alerts)
+	protectedAPI.Get("/sftp", middleware.RequireAPIPermission(access.ManageSystem), apiHandler.SFTPSettings)
+	protectedAPI.Get("/export", middleware.RequireAPIPermission(access.ExportBackups), apiHandler.ExportStatus)
+	api.All("/*", func(c *fiber.Ctx) error {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": fiber.Map{"code": "not_found", "message": "API endpoint not found."},
+		})
+	})
 
 	// ── Setup Routes (public) ─────────────────────────
 	app.Get("/setup", setupHandler.GetDatabaseSetup)
@@ -190,7 +237,18 @@ func main() {
 	app.Post("/setup/superuser", setupLimiter, setupHandler.PostCreateSuperuser)
 
 	// ── Auth Routes (public) ──────────────────────────
-	app.Get("/login", authHandler.GetLogin)
+	spaEnabled := strings.EqualFold(os.Getenv("SPA_ENABLED"), "true")
+	serveSPA := func(c *fiber.Ctx) error {
+		if _, err := os.Stat("./frontend/dist/index.html"); err != nil {
+			return c.Status(fiber.StatusServiceUnavailable).SendString("React frontend is not built")
+		}
+		return c.SendFile("./frontend/dist/index.html")
+	}
+	if spaEnabled {
+		app.Get("/login", serveSPA)
+	} else {
+		app.Get("/login", authHandler.GetLogin)
+	}
 	loginLimiter := limiter.New(limiter.Config{
 		Max:        10,
 		Expiration: time.Minute,
@@ -207,15 +265,27 @@ func main() {
 	app.Use(middleware.RequireAuth(store, db))
 
 	// ── Dashboard ─────────────────────────────────────
-	app.Get("/", dashboardHandler.GetDashboard)
+	if spaEnabled {
+		app.Get("/", serveSPA)
+	} else {
+		app.Get("/", dashboardHandler.GetDashboard)
+	}
 
 	// ── Nodes ─────────────────────────────────────────
-	app.Get("/nodes", nodeHandler.ListNodes)
+	if spaEnabled {
+		app.Get("/nodes", serveSPA)
+	} else {
+		app.Get("/nodes", nodeHandler.ListNodes)
+	}
 	app.Get("/nodes/new", middleware.RequirePermission(access.ManageNodes), formHandler.NewNode)
 	app.Get("/nodes/import", middleware.RequirePermission(access.ManageNodes), formHandler.ImportNodesForm)
 	app.Post("/nodes/import", middleware.RequirePermission(access.ManageNodes), formHandler.ImportNodesCSV)
 	app.Get("/nodes/export", middleware.RequirePermission(access.ManageNodes), nodeHandler.ExportNodesCSV)
-	app.Get("/nodes/:id", nodeHandler.NodeDetails)
+	if spaEnabled {
+		app.Get("/nodes/:id", serveSPA)
+	} else {
+		app.Get("/nodes/:id", nodeHandler.NodeDetails)
+	}
 	app.Get("/nodes/:id/edit", middleware.RequirePermission(access.ManageNodes), formHandler.EditNode)
 	app.Get("/nodes/:id/delete", middleware.RequirePermission(access.ManageNodes), formHandler.DeleteNodeConfirm)
 	app.Post("/nodes/save", middleware.RequirePermission(access.ManageNodes), formHandler.SaveNode)
@@ -228,16 +298,24 @@ func main() {
 	app.Get("/backups/diff/compare", middleware.RequireAdmin(), nodeHandler.CompareBackups)
 
 	// ── Settings Hub ──────────────────────────────────
-	app.Get("/settings", settingsHandler.GetSettings)
-	app.Get("/settings/users", middleware.RequireAdmin(), settingsHandler.GetUsersTab)
-	app.Get("/settings/credentials", middleware.RequirePermission(access.ManageOperations), settingsHandler.GetCredentialsTab)
-	app.Get("/settings/routines", middleware.RequirePermission(access.ManageOperations), settingsHandler.GetRoutinesTab)
-	app.Get("/settings/sftp", middleware.RequirePermission(access.ManageSystem), settingsHandler.GetSFTPTab)
+	spaOrLegacy := func(legacy fiber.Handler) fiber.Handler {
+		return func(c *fiber.Ctx) error {
+			if spaEnabled && c.Query("legacy") != "1" {
+				return serveSPA(c)
+			}
+			return legacy(c)
+		}
+	}
+	app.Get("/settings", spaOrLegacy(settingsHandler.GetSettings))
+	app.Get("/settings/users", middleware.RequireAdmin(), spaOrLegacy(settingsHandler.GetUsersTab))
+	app.Get("/settings/credentials", middleware.RequirePermission(access.ManageOperations), spaOrLegacy(settingsHandler.GetCredentialsTab))
+	app.Get("/settings/routines", middleware.RequirePermission(access.ManageOperations), spaOrLegacy(settingsHandler.GetRoutinesTab))
+	app.Get("/settings/sftp", middleware.RequirePermission(access.ManageSystem), spaOrLegacy(settingsHandler.GetSFTPTab))
 	app.Get("/settings/sftp/explore", middleware.RequirePermission(access.ManageSystem), settingsHandler.GetSFTPExplore)
-	app.Get("/settings/export", middleware.RequirePermission(access.ExportBackups), settingsHandler.GetExportTab)
-	app.Get("/settings/alerts", middleware.RequirePermission(access.ManageSystem), settingsHandler.GetAlertsTab)
-	app.Get("/settings/logs", middleware.RequirePermission(access.ViewAudit), settingsHandler.GetLogsTab)
-	app.Get("/settings/profile", settingsHandler.GetProfileTab)
+	app.Get("/settings/export", middleware.RequirePermission(access.ExportBackups), spaOrLegacy(settingsHandler.GetExportTab))
+	app.Get("/settings/alerts", middleware.RequirePermission(access.ManageSystem), spaOrLegacy(settingsHandler.GetAlertsTab))
+	app.Get("/settings/logs", middleware.RequirePermission(access.ViewAudit), spaOrLegacy(settingsHandler.GetLogsTab))
+	app.Get("/settings/profile", spaOrLegacy(settingsHandler.GetProfileTab))
 
 	// ── Settings Forms ────────────────────────────────
 	app.Get("/settings/users/new", middleware.RequireAdmin(), formHandler.NewUser)

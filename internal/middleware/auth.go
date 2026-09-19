@@ -25,21 +25,30 @@ func RequireSetup(db *gorm.DB) fiber.Handler {
 		path := c.Path()
 
 		// Always allow setup routes and static files through
-		if strings.HasPrefix(path, "/setup") || strings.HasPrefix(path, "/static/") {
+		if strings.HasPrefix(path, "/setup") || strings.HasPrefix(path, "/static/") || strings.HasPrefix(path, "/assets/") || path == "/api/v1/health" {
 			return c.Next()
 		}
 
 		// Check if tables exist
 		if !db.Migrator().HasTable(&models.User{}) {
+			if strings.HasPrefix(path, "/api/") {
+				return apiError(c, fiber.StatusServiceUnavailable, "setup_required", "Initial setup is required.")
+			}
 			return c.Redirect("/setup")
 		}
 
 		// Check if at least one user exists
 		var count int64
 		if err := db.Model(&models.User{}).Count(&count).Error; err != nil {
+			if strings.HasPrefix(path, "/api/") {
+				return apiError(c, fiber.StatusServiceUnavailable, "database_unavailable", "Database temporarily unavailable.")
+			}
 			return c.Status(fiber.StatusServiceUnavailable).SendString("Database temporarily unavailable")
 		}
 		if count == 0 {
+			if strings.HasPrefix(path, "/api/") {
+				return apiError(c, fiber.StatusServiceUnavailable, "setup_required", "Initial setup is required.")
+			}
 			return c.Redirect("/setup")
 		}
 

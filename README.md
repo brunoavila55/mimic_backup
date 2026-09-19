@@ -36,6 +36,25 @@ The current UI and backend normalize the following vendor scopes:
 
 - PostgreSQL 15 or higher
 - Go runtime for local builds, or Docker for containerized deployment
+- Node.js 24+ and npm for React frontend development
+
+## React frontend
+
+The new React/Vite client lives in `frontend/` and uses the existing Fiber
+session cookie through `/api/v1`. To work on it locally, run the Go backend on
+port 3000 and then:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Use `npm run lint`, `npm test`, and `npm run build` before shipping changes.
+Production Docker builds compile both Go and React and set `SPA_ENABLED=true`.
+For a local Go build, set the same variable after building `frontend/dist`.
+The legacy templates remain available during the staged migration; settings
+mutations and operational forms deliberately continue to use them for now.
 
 ## Installation
 

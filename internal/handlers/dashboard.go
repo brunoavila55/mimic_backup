@@ -22,21 +22,21 @@ type DashboardHandler struct {
 }
 
 type DashboardStats struct {
-	TotalNodes         int64
-	ActiveNodes        int64
-	HealthyNodes       int64
-	FailedNodes        int64
-	SilentNodes        int64
-	AttentionNodes     int64
-	ScheduledNodes     int64
-	PendingExportNodes int64
-	Backups24h         int64
-	Successful24h      int64
-	Failed24h          int64
-	Changes24h         int64
-	HealthRate         int64
-	SuccessRate24h     int64
-	ScheduleCoverage   int64
+	TotalNodes         int64 `json:"total_nodes"`
+	ActiveNodes        int64 `json:"active_nodes"`
+	HealthyNodes       int64 `json:"healthy_nodes"`
+	FailedNodes        int64 `json:"failed_nodes"`
+	SilentNodes        int64 `json:"silent_nodes"`
+	AttentionNodes     int64 `json:"attention_nodes"`
+	ScheduledNodes     int64 `json:"scheduled_nodes"`
+	PendingExportNodes int64 `json:"pending_export_nodes"`
+	Backups24h         int64 `json:"backups_24h"`
+	Successful24h      int64 `json:"successful_24h"`
+	Failed24h          int64 `json:"failed_24h"`
+	Changes24h         int64 `json:"changes_24h"`
+	HealthRate         int64 `json:"health_rate"`
+	SuccessRate24h     int64 `json:"success_rate_24h"`
+	ScheduleCoverage   int64 `json:"schedule_coverage"`
 }
 
 type DashboardAttentionItem struct {
@@ -49,22 +49,22 @@ type DashboardAttentionItem struct {
 }
 
 type DashboardTrendDay struct {
-	Label         string
-	Date          string
-	Successful    int64
-	Failed        int64
-	Total         int64
-	SuccessRate   int64
-	SuccessHeight int64
-	FailureHeight int64
+	Label         string `json:"label"`
+	Date          string `json:"date"`
+	Successful    int64  `json:"successful"`
+	Failed        int64  `json:"failed"`
+	Total         int64  `json:"total"`
+	SuccessRate   int64  `json:"success_rate"`
+	SuccessHeight int64  `json:"success_height"`
+	FailureHeight int64  `json:"failure_height"`
 }
 
 type DashboardSFTPStatus struct {
-	Configured bool
-	Enabled    bool
-	State      string
-	Tone       string
-	Detail     string
+	Configured bool   `json:"configured"`
+	Enabled    bool   `json:"enabled"`
+	State      string `json:"state"`
+	Tone       string `json:"tone"`
+	Detail     string `json:"detail"`
 }
 
 type DashboardSnapshot struct {

@@ -14,6 +14,14 @@ import (
 func SecurityHeadersAndOrigin() fiber.Handler {
 	configuredOrigin := strings.TrimRight(strings.TrimSpace(os.Getenv("APP_ORIGIN")), "/")
 	return func(c *fiber.Ctx) error {
+		rejectOrigin := func() error {
+			if strings.HasPrefix(c.Path(), "/api/") {
+				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+					"error": fiber.Map{"code": "origin_forbidden", "message": "Cross-origin request rejected."},
+				})
+			}
+			return c.SendStatus(fiber.StatusForbidden)
+		}
 		c.Set(fiber.HeaderXContentTypeOptions, "nosniff")
 		c.Set(fiber.HeaderXFrameOptions, "DENY")
 		c.Set("Referrer-Policy", "same-origin")
@@ -28,10 +36,10 @@ func SecurityHeadersAndOrigin() fiber.Handler {
 		if origin != "" {
 			if configuredOrigin != "" {
 				if !strings.EqualFold(origin, configuredOrigin) {
-					return c.SendStatus(fiber.StatusForbidden)
+					return rejectOrigin()
 				}
 			} else if parsed, err := url.Parse(origin); err != nil || !strings.EqualFold(parsed.Host, c.Get("Host")) {
-				return c.SendStatus(fiber.StatusForbidden)
+				return rejectOrigin()
 			}
 			return c.Next()
 		}
@@ -40,11 +48,11 @@ func SecurityHeadersAndOrigin() fiber.Handler {
 		if referer == "" {
 			// Neither Origin nor Referer was sent on a state-changing request.
 			// Fail closed instead of allowing it through unchecked.
-			return c.SendStatus(fiber.StatusForbidden)
+			return rejectOrigin()
 		}
 		parsed, err := url.Parse(referer)
 		if err != nil || !strings.EqualFold(parsed.Host, c.Get("Host")) {
-			return c.SendStatus(fiber.StatusForbidden)
+			return rejectOrigin()
 		}
 		return c.Next()
 	}

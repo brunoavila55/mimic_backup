@@ -45,3 +45,24 @@ func Allows(role string, permission Permission) bool {
 		return false
 	}
 }
+
+// PermissionsForRole returns the public capability list used by browser
+// clients. Authorization still happens on the server for every request.
+func PermissionsForRole(role string) []Permission {
+	permissions := []Permission{
+		ManageUsers,
+		ManageNodes,
+		RunBackups,
+		ManageOperations,
+		ManageSystem,
+		ExportBackups,
+		ViewAudit,
+	}
+	allowed := make([]Permission, 0, len(permissions))
+	for _, permission := range permissions {
+		if Allows(role, permission) {
+			allowed = append(allowed, permission)
+		}
+	}
+	return allowed
+}
